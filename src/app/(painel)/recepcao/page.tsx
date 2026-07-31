@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
 import { ReceptionBoard } from './board';
+import { ReceptionLiveRefresh } from './live-refresh';
 
 import type { ReceptionRow } from './types';
 
@@ -40,6 +41,7 @@ export default async function RecepcaoPage() {
 
   return (
     <div>
+      <ReceptionLiveRefresh tenantId={ctx.tenant.id} />
       <PageHeader
         title="Recepcao"
         description="Confirme dados, exames e prioridade antes de liberar o paciente"

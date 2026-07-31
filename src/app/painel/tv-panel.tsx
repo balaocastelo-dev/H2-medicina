@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatTime } from '@/lib/format';
 
@@ -39,13 +39,32 @@ export function TvPanel({
   const [calls, setCalls] = useState<CallRow[]>(initialCalls);
   const [clock, setClock] = useState(() => new Date());
   const lastAnnounced = useRef<string | null>(initialCalls[0]?.id ?? null);
+  const signatureRef = useRef(initialCalls.map((call) => call.id).join('|'));
+
+  const syncCalls = useCallback(async () => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('tv_calls')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .order('called_at', { ascending: false })
+      .limit(historySize + 1)
+      .returns<CallRow[]>();
+
+    if (error || !data) return;
+
+    const nextSignature = data.map((call) => call.id).join('|');
+    if (nextSignature === signatureRef.current) return;
+
+    signatureRef.current = nextSignature;
+    setCalls(data);
+  }, [historySize, tenantId]);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // Realtime: novas chamadas aparecem sem recarregar a pagina
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
@@ -58,16 +77,21 @@ export function TvPanel({
           table: 'tv_calls',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload) => {
-          const row = payload.new as CallRow;
-          setCalls((prev) => [row, ...prev].slice(0, historySize + 1));
+        async () => {
+          await syncCalls();
         },
       )
       .subscribe();
+
+    const timer = window.setInterval(() => {
+      void syncCalls();
+    }, 3000);
+
     return () => {
+      window.clearInterval(timer);
       void supabase.removeChannel(channel);
     };
-  }, [tenantId, historySize]);
+  }, [syncCalls, tenantId]);
 
   // Aviso sonoro + voz
   useEffect(() => {

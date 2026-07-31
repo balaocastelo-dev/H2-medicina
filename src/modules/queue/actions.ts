@@ -149,6 +149,7 @@ export async function performCheckin(input: {
 
     revalidatePath('/crm');
     revalidatePath('/recepcao');
+    revalidatePath('/painel');
 
     return ok({
       attendanceId: payload.attendance_id,
