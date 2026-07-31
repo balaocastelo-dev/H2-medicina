@@ -6,8 +6,10 @@
 **Ultima sessao:** fundacao completa — banco, seguranca, autenticacao, white label
 e fluxo clinico ponta a ponta.
 
-**Ultimo passo concluido:** modulos de documentos/PDF, financeiro/Pix, PWA do
-paciente, testes (29 passando) e documentacao.
+**Ultimo passo concluido:** preparacao para deploy na Vercel — `vercel.json`,
+healthcheck em `/api/health`, icones do PWA, `DEPLOY.md` e correcao de dois
+bloqueadores reais de build (pacote `server-only` ausente e validacao de env
+avaliada no import).
 
 **Proximo passo exato:** implementar a loja publica (`/loja`) — vitrine, pagina de
 produto, carrinho, checkout e a conversao de pedido em agendamento. O modelo de
@@ -119,9 +121,26 @@ e os tipos ja estao prontos; falta a camada de UI e as Server Actions.
 
 ---
 
+## Pronto para deploy
+
+Ver **DEPLOY.md** para o roteiro completo.
+
+- [x] `vercel.json` (regiao gru1, cabecalhos de seguranca)
+- [x] `.vercelignore`, `.nvmrc` (Node 22)
+- [x] Healthcheck em `/api/health` — diz se falta variavel, migration ou seed
+- [x] Icones do PWA gerados (`npm run icons`)
+- [x] Validacao de env preguicosa (nao quebra o build quando a variavel falta)
+- [x] `npm run check:build` — detector de bloqueadores de build
+
 ## Nota sobre o build
 
-`npm run typecheck` e `npm test` rodam limpos. O `next build` **nao foi executado
-neste ambiente**: o binario nativo do Next 16 aborta com `Bus error` no sandbox
-usado nesta sessao (limitacao do ambiente, nao do codigo). Execute
-`npm run build` na sua maquina ou no CI antes do deploy.
+`npm run typecheck`, `npm run lint`, `npm run check:build` e `npm test` rodam
+limpos. O `next build` **nao foi executado neste ambiente**: o binario nativo do
+Next 16 aborta com `Bus error` no sandbox usado nesta sessao — confirmado que
+acontece ate num projeto Next vazio, ou seja, e limitacao do ambiente e nao do
+codigo. Execute `npm run build` na sua maquina antes do primeiro deploy; a
+propria Vercel tambem roda o build no push.
+
+Dois bloqueadores reais de build foram encontrados e corrigidos pela verificacao
+estatica: o pacote `server-only` nao estava declarado, e o schema de variaveis de
+ambiente era avaliado no import (quebraria o build sem as variaveis definidas).

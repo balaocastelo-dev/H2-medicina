@@ -3,20 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
 import { TriageWorkspace } from './workspace';
-import type { Triage } from '@/types/entities';
+
+import type { TriageRow } from './types';
 
 export const dynamic = 'force-dynamic';
-
-export interface TriageRow {
-  id: string;
-  stage_code: string;
-  priority: string;
-  checkin_at: string;
-  patients: { id: string; full_name: string; birth_date: string | null } | null;
-  companies: { trade_name: string | null; legal_name: string } | null;
-  queue_tickets: { code: string }[];
-  triages: Triage[];
-}
 
 export default async function TriagemPage() {
   const ctx = await requirePermission('triagem.preencher');

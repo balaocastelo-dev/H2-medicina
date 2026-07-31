@@ -6,23 +6,9 @@ import { FilterSelect } from '@/components/ui/data-controls';
 import { formatDate, formatMoney } from '@/lib/format';
 import { PaymentActions, NewChargeCard } from './client';
 
-export const dynamic = 'force-dynamic';
+import type { PaymentRow } from './types';
 
-export interface PaymentRow {
-  id: string;
-  description: string | null;
-  amount: number;
-  discount: number;
-  net_amount: number;
-  method: string;
-  status: string;
-  due_date: string | null;
-  paid_at: string | null;
-  created_at: string;
-  patients: { full_name: string } | null;
-  companies: { trade_name: string | null; legal_name: string } | null;
-  pix_charges: { payload: string; qrcode_data_url: string | null }[];
-}
+export const dynamic = 'force-dynamic';
 
 export default async function FinanceiroPage({
   searchParams,

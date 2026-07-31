@@ -15,7 +15,7 @@ import {
 import { calcAge, elapsedFrom, formatTime } from '@/lib/format';
 import { saveTriage } from '@/modules/clinical/actions';
 import type { ActionResult } from '@/lib/action-result';
-import type { TriageRow } from './page';
+import type { TriageRow } from './types';
 
 export function TriageWorkspace({ rows }: { rows: TriageRow[] }) {
   const [selectedId, setSelectedId] = useState(rows[0]?.id ?? null);

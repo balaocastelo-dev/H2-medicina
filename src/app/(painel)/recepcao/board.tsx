@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { elapsedFrom, formatCPF, formatTime } from '@/lib/format';
 import { finishReception, startReception } from '@/modules/queue/reception-actions';
-import type { ReceptionRow } from './page';
+import type { ReceptionRow } from './types';
 
 export function ReceptionBoard({
   rows,

@@ -15,7 +15,7 @@ import { Alert, Badge } from '@/components/ui';
 import { elapsedFrom, formatTime } from '@/lib/format';
 import { moveAttendanceStage } from '@/modules/queue/actions';
 import type { CrmStage } from '@/types/entities';
-import type { CrmCard } from './page';
+import type { CrmCard } from './types';
 
 export function CrmBoard({
   stages,

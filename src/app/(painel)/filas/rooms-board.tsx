@@ -5,7 +5,7 @@ import { CheckCircle2, PhoneCall, Play, RotateCcw, XCircle } from 'lucide-react'
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
 import { elapsedFrom } from '@/lib/format';
 import { callNextForRoom, recallTicket, updateExamStatus } from '@/modules/queue/actions';
-import type { QueueExam, RoomInfo } from './page';
+import type { QueueExam, RoomInfo } from './types';
 
 export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueExam[] }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);

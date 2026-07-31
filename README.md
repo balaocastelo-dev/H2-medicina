@@ -29,6 +29,8 @@ npm run db:seed        # tenant inicial
 npm run validate:sql   # valida SQL em Postgres real, offline
 npm test               # 29 testes (unitarios + RLS)
 npm run typecheck
+npm run lint
+npm run check:build    # detecta bloqueadores de build antes da Vercel
 npm run build
 ```
 

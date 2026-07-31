@@ -21,7 +21,7 @@ import {
 } from '@/modules/finance/actions';
 import type { ActionResult } from '@/lib/action-result';
 import type { Payment } from '@/types/entities';
-import type { PaymentRow } from './page';
+import type { PaymentRow } from './types';
 
 export function NewChargeCard({ hasPixKey }: { hasPixKey: boolean }) {
   const [state, formAction, pending] = useActionState<ActionResult<Payment> | null, FormData>(

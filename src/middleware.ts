@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   '/meu',
   '/verificar',
   '/api/public',
+  '/api/health',
   '/api/webhooks',
   '/manifest.webmanifest',
 ];

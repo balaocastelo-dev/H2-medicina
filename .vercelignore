@@ -1,0 +1,8 @@
+supabase/full_schema.sql
+tests
+docs
+scripts/sync.sh
+scripts/validate-sql.mjs
+scripts/check-build.mjs
+*.md
+!README.md
