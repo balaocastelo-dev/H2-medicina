@@ -1,10 +1,16 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
-import { publicEnv } from '@/lib/env';
+import { isSupabaseConfigured, publicEnv } from '@/lib/env';
 
 /** Renova a sessao e devolve o usuario para o middleware de rotas. */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  // No primeiro preview local ou antes de configurar a Vercel, ainda nao existe
+  // Supabase. Nessa fase, mantemos as rotas publicas acessiveis sem derrubar o app.
+  if (!isSupabaseConfigured()) {
+    return { response, user: null };
+  }
 
   const supabase = createServerClient(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,

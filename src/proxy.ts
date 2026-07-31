@@ -16,11 +16,25 @@ const PUBLIC_PREFIXES = [
   '/manifest.webmanifest',
 ];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const { response, user } = await updateSession(request);
-
   const isPublic = PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  let response = NextResponse.next({ request });
+  let user = null;
+
+  // Em produção, qualquer falha transitória do Supabase/Auth na borda não deve
+  // derrubar o deploy com MIDDLEWARE_INVOCATION_FAILED.
+  try {
+    if (!isPublic || pathname === '/' || pathname === '/login') {
+      const session = await updateSession(request);
+      response = session.response;
+      user = session.user;
+    }
+  } catch {
+    if (isPublic) {
+      return response;
+    }
+  }
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
