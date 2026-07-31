@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root {
+  /* Sobrescritos em tempo de execucao pelo branding do tenant */
+  --brand-primary: #0f766e;
+  --brand-secondary: #0ea5e9;
+  --brand-accent: #f59e0b;
+  --brand-sidebar: #0b1220;
+
+  --status-aguardando: #9ca3af;
+  --status-chamado: #facc15;
+  --status-pendente: #fb923c;
+  --status-em_atendimento: #3b82f6;
+  --status-concluido: #22c55e;
+  --status-alerta: #ef4444;
+  --status-aguardando_medico: #a855f7;
+  --status-cancelado: #4b5563;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+  font-family: var(--font-sans);
+}
+
+.btn-brand {
+  background-color: var(--brand-primary);
+}
+.text-brand {
+  color: var(--brand-primary);
+}
+.border-brand {
+  border-color: var(--brand-primary);
+}
+.ring-brand {
+  --tw-ring-color: var(--brand-primary);
+}
+.bg-sidebar {
+  background-color: var(--brand-sidebar);
+}
+
+/* Modo totem / TV: sem selecao acidental e fontes grandes */
+.kiosk {
+  @apply select-none;
+  font-size: 1.125rem;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300;
+}
