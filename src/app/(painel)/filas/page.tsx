@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
 import { RoomsBoard } from './rooms-board';
+import { ExamesForaDaFila } from './fora-da-fila';
 
 import type { QueueExam, RoomInfo } from './types';
 
@@ -29,12 +30,48 @@ export default async function FilasPage() {
       )
       .eq('tenant_id', ctx.tenant.id)
       .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
+      // Mesma condicao da RPC que chama o proximo: se a tela mostrasse alguem
+      // fora dessas etapas, o botao prometeria uma chamada que o servidor nega.
+      .in('attendances.stage_code', ['aguardando_exames', 'em_exames'])
       .order('queued_at', { ascending: true, nullsFirst: false })
       .returns<QueueExam[]>(),
   ]);
 
   const rooms = roomsRes.data ?? [];
   const exams = examsRes.data ?? [];
+
+  // Quem foi movido manualmente para frente pode ter deixado exames por fazer.
+  // Esses exames nao aparecem em fila nenhuma — e preciso avisar.
+  const { data: presos } = await supabase
+    .from('patient_exams')
+    .select('id, attendance_id, exam_types(name), attendances!inner(stage_code), patients(full_name)')
+    .eq('tenant_id', ctx.tenant.id)
+    .in('status', ['pendente', 'em_fila'])
+    .not('attendances.stage_code', 'in', '("aguardando_exames","em_exames")')
+    .not('attendances.stage_code', 'in', '("finalizado","cancelado","ausente")')
+    .returns<
+      {
+        id: string;
+        attendance_id: string;
+        exam_types: { name: string } | null;
+        attendances: { stage_code: string } | null;
+        patients: { full_name: string } | null;
+      }[]
+    >();
+
+  const foraDaFila = new Map<
+    string,
+    { nome: string; etapa: string; exames: string[] }
+  >();
+  for (const e of presos ?? []) {
+    const atual = foraDaFila.get(e.attendance_id) ?? {
+      nome: e.patients?.full_name ?? 'Paciente',
+      etapa: e.attendances?.stage_code ?? '',
+      exames: [],
+    };
+    if (e.exam_types?.name) atual.exames.push(e.exam_types.name);
+    foraDaFila.set(e.attendance_id, atual);
+  }
 
   return (
     <div>
@@ -61,6 +98,12 @@ export default async function FilasPage() {
           color="#FACC15"
         />
       </div>
+
+      {foraDaFila.size > 0 && (
+        <div className="mb-4">
+          <ExamesForaDaFila itens={Array.from(foraDaFila.entries())} />
+        </div>
+      )}
 
       {rooms.length === 0 ? (
         <Card>

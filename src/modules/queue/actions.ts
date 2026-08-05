@@ -242,6 +242,21 @@ async function explicarFilaVazia(tenantId: string, roomId: string): Promise<stri
     if ((naTriagem ?? []).length > 0) {
       return `Os pacientes ainda estão na triagem. Conclua a triagem para liberá-los aos exames.`;
     }
+
+    // Caso silencioso: alguem adiantou o cartao no CRM e deixou exames por
+    // fazer. O exame existe, mas o paciente nao esta em etapa de fila.
+    const { data: presos } = await supabase
+      .from('patient_exams')
+      .select('id, attendances!inner(stage_code)')
+      .eq('tenant_id', tenantId)
+      .in('status', ['pendente', 'em_fila'])
+      .not('attendances.stage_code', 'in', '("aguardando_exames","em_exames","finalizado","cancelado","ausente")')
+      .returns<{ id: string }[]>();
+
+    if ((presos ?? []).length > 0) {
+      return `Há exames pendentes, mas os pacientes foram movidos para outra etapa. Use "Devolver às filas" no aviso acima.`;
+    }
+
     return `Não há ninguém aguardando exames em ${nome} no momento.`;
   } catch {
     return 'Nenhum paciente elegível na fila desta sala.';
