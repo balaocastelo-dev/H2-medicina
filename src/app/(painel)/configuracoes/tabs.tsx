@@ -20,6 +20,7 @@ const TABS = [
   { key: 'email', label: 'E-mail' },
   { key: 'ia', label: 'Inteligencia artificial' },
   { key: 'scraper', label: 'Importacao' },
+  { key: 'saudacao', label: 'Saudacao de boas-vindas' },
   { key: 'institucional', label: 'Textos institucionais' },
   { key: 'modulos', label: 'Modulos' },
 ];
@@ -93,6 +94,10 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
       { name: 'modelo', label: 'Modelo' },
     ],
     scraper: [{ name: 'modo_padrao', label: 'Modo padrao (teste/homologacao/producao)' }],
+  saudacao: [
+    { name: 'tratamento_padrao', label: 'Tratamento padrao (ex.: Dra.)' },
+    { name: 'ativa', label: 'Ativa? (sim / nao)' },
+  ],
     institucional: [
       { name: 'sobre', label: 'Sobre a empresa', textarea: true },
       { name: 'politica_privacidade', label: 'Politica de privacidade', textarea: true },

@@ -1,6 +1,8 @@
 import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
+import { WelcomeGreeting } from '@/modules/greeting/welcome-greeting';
+import { saudacaoAtiva } from '@/modules/greeting/phrases';
 import {
   Alert,
   Badge,
@@ -111,8 +113,23 @@ export default async function DashboardPage() {
   const revenue = paid.reduce((sum, p) => sum + Number(p.net_amount ?? 0), 0);
   const pendingAmount = pending.reduce((sum, p) => sum + Number(p.net_amount ?? 0), 0);
 
+  const saudacao = (ctx.settings.saudacao ?? {}) as {
+    ativa?: unknown;
+    tratamento_padrao?: string;
+    tratamentos?: Record<string, string>;
+  };
+  const tratamento =
+    saudacao.tratamentos?.[ctx.userId] ?? saudacao.tratamento_padrao ?? null;
+
   return (
     <div>
+      <WelcomeGreeting
+        nome={ctx.profile.full_name || ctx.email || ''}
+        tratamento={tratamento}
+        ativa={saudacaoAtiva(saudacao.ativa)}
+        corPrimaria={ctx.branding.color_primary}
+      />
+
       <PageHeader
         title="Dashboard"
         description={`Panorama operacional de hoje — ${new Date().toLocaleDateString('pt-BR')}`}
