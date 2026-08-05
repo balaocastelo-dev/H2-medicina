@@ -7,6 +7,7 @@ import { audit } from '@/lib/audit';
 import { onlyDigits, startOfTodayISO, todayISO } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Priority, QueueTicket } from '@/types/entities';
+import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -562,6 +563,8 @@ export async function updateExamStatus(
       is_manual: true,
     });
 
+    await sincronizarAgendamento(ctx.tenant.id, data.attendance_id);
+
     await audit(ctx, {
       action: 'update',
       entity: 'patient_exams',
@@ -595,6 +598,7 @@ export async function moveAttendanceStage(
     if (error) return fail(toFriendlyError(error));
 
     await limparEstadoTerminal(ctx.tenant.id, attendanceId, stage);
+    await sincronizarAgendamento(ctx.tenant.id, attendanceId);
 
     await audit(ctx, {
       action: 'update',

@@ -7,6 +7,7 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 
 /**
  * Etapa de pagamento, entre a consulta e a emissão dos documentos.
@@ -190,6 +191,8 @@ export async function liberarDocumentos(attendanceId: string): Promise<ActionRes
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
 
+    await sincronizarAgendamento(ctx.tenant.id, attendanceId);
+
     await audit(ctx, {
       action: 'update',
       entity: 'attendances',
@@ -226,6 +229,8 @@ export async function encerrarAtendimento(attendanceId: string): Promise<ActionR
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
+
+    await sincronizarAgendamento(ctx.tenant.id, attendanceId);
 
     await audit(ctx, {
       action: 'update',

@@ -19,6 +19,7 @@ interface Row {
   patients: { id: string; full_name: string; cpf: string | null } | null;
   companies: { trade_name: string | null; legal_name: string } | null;
   appointment_exams: { exam_types: { name: string } | null }[];
+  attendances: { stage_code: string; finished_at: string | null }[];
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -31,6 +32,35 @@ const STATUS_COLORS: Record<string, string> = {
   ausente: '#EF4444',
   remarcado: '#A855F7',
 };
+
+/** Nome legivel da etapa, para quem olha a agenda sem conhecer os codigos. */
+function etapaNome(code: string): string {
+  const nomes: Record<string, string> = {
+    agendado: 'agendado',
+    checkin: 'check-in',
+    aguardando_recepcao: 'aguardando recepção',
+    na_recepcao: 'na recepção',
+    aguardando_triagem: 'aguardando triagem',
+    em_triagem: 'em triagem',
+    aguardando_exames: 'aguardando exames',
+    em_exames: 'em exames',
+    aguardando_medico: 'aguardando médico',
+    em_consulta: 'em consulta',
+    aguardando_pagamento: 'aguardando pagamento',
+    aguardando_documentos: 'aguardando documentos',
+    finalizado: 'finalizado',
+    cancelado: 'cancelado',
+    ausente: 'ausente',
+  };
+  return nomes[code] ?? code;
+}
+
+function etapaCor(atendimento: { stage_code: string; finished_at: string | null }): string {
+  if (atendimento.finished_at || atendimento.stage_code === 'finalizado') return '#22C55E';
+  if (['cancelado', 'ausente'].includes(atendimento.stage_code)) return '#EF4444';
+  if (atendimento.stage_code.startsWith('aguardando')) return '#FB923C';
+  return '#3B82F6';
+}
 
 export default async function AgendaPage({
   searchParams,
@@ -45,7 +75,7 @@ export default async function AgendaPage({
   let query = supabase
     .from('appointments')
     .select(
-      'id, scheduled_at, status, priority, attendance_kind, patients(id, full_name, cpf), companies(trade_name, legal_name), appointment_exams(exam_types(name))',
+      'id, scheduled_at, status, priority, attendance_kind, patients(id, full_name, cpf), companies(trade_name, legal_name), appointment_exams(exam_types(name)), attendances(stage_code, finished_at)',
     )
     .eq('tenant_id', ctx.tenant.id)
     .eq('scheduled_date', date)
@@ -128,6 +158,7 @@ export default async function AgendaPage({
                 <Th>Exames</Th>
                 <Th>Prioridade</Th>
                 <Th>Status</Th>
+                <Th>Etapa agora</Th>
               </tr>
             </thead>
             <tbody>
@@ -167,6 +198,15 @@ export default async function AgendaPage({
                   </Td>
                   <Td>
                     <Badge color={STATUS_COLORS[r.status] ?? '#9CA3AF'}>{r.status}</Badge>
+                  </Td>
+                  <Td>
+                    {r.attendances?.[0] ? (
+                      <Badge color={etapaCor(r.attendances[0])}>
+                        {etapaNome(r.attendances[0].stage_code)}
+                      </Badge>
+                    ) : (
+                      <span className="text-slate-400">não chegou</span>
+                    )}
                   </Td>
                 </tr>
               ))}

@@ -7,6 +7,7 @@ import { audit } from '@/lib/audit';
 import QRCode from 'qrcode';
 import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 
 /** Inicia o atendimento na recepcao. */
 export async function startReception(attendanceId: string): Promise<ActionResult> {
@@ -23,6 +24,8 @@ export async function startReception(attendanceId: string): Promise<ActionResult
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
+
+    await sincronizarAgendamento(ctx.tenant.id, attendanceId);
 
     await audit(ctx, {
       action: 'update',
@@ -142,6 +145,8 @@ export async function finishReception(input: {
       .eq('id', input.attendanceId)
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
+
+    await sincronizarAgendamento(ctx.tenant.id, input.attendanceId);
 
     await audit(ctx, {
       action: 'update',

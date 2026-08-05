@@ -7,6 +7,7 @@ import { assertPermission } from '@/lib/auth';
 import { audit, auditClinicalAccess } from '@/lib/audit';
 import { consultationSchema, triageSchema } from '@/lib/validators';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 
 function num(value: FormDataEntryValue | null): number | null {
   if (value === null || value === '') return null;
@@ -153,6 +154,8 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
         .eq('id', parsed.data.attendance_id)
         .eq('tenant_id', ctx.tenant.id);
     }
+
+    await sincronizarAgendamento(ctx.tenant.id, parsed.data.attendance_id);
 
     await auditClinicalAccess(ctx, attendance.patient_id, 'consulta', existing?.id);
     await audit(ctx, {
