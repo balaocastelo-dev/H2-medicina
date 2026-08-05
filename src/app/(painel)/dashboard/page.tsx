@@ -117,6 +117,8 @@ export default async function DashboardPage() {
     ativa?: unknown;
     tratamento_padrao?: string;
     tratamentos?: Record<string, string>;
+    voz?: string;
+    velocidade?: string | number;
   };
   const tratamento =
     saudacao.tratamentos?.[ctx.userId] ?? saudacao.tratamento_padrao ?? null;
@@ -128,6 +130,8 @@ export default async function DashboardPage() {
         tratamento={tratamento}
         ativa={saudacaoAtiva(saudacao.ativa)}
         corPrimaria={ctx.branding.color_primary}
+        voz={saudacao.voz ?? null}
+        velocidade={saudacao.velocidade ? Number(saudacao.velocidade) : null}
       />
 
       <PageHeader

@@ -97,6 +97,8 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
   saudacao: [
     { name: 'tratamento_padrao', label: 'Tratamento padrao (ex.: Dra.)' },
     { name: 'ativa', label: 'Ativa? (sim / nao)' },
+    { name: 'voz', label: 'Voz preferida (trecho do nome, ex.: Francisca)' },
+    { name: 'velocidade', label: 'Velocidade da fala (0.8 a 1.2)' },
   ],
     institucional: [
       { name: 'sobre', label: 'Sobre a empresa', textarea: true },

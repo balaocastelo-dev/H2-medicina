@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Sparkles, Volume2, VolumeX, X } from 'lucide-react';
 import { montarSaudacao } from './phrases';
+import { dividirEmTrechos, escolherVoz } from './voice';
 
 /**
  * Saudacao de boas-vindas ao entrar no sistema.
  *
- * Fala a frase com a melhor voz pt-BR disponivel no dispositivo e mostra um
+ * Fala a frase com a voz mais natural disponivel no dispositivo e mostra um
  * cartao animado. Aparece uma vez por sessao de navegacao.
  *
  * Navegadores bloqueiam audio sem interacao do usuario; quando isso acontece,
@@ -18,17 +19,25 @@ export function WelcomeGreeting({
   tratamento,
   ativa = true,
   corPrimaria,
+  voz,
+  velocidade,
 }: {
   nome: string;
   tratamento?: string | null;
   ativa?: boolean;
   corPrimaria: string;
+  /** Trecho do nome da voz preferida, definido em Configuracoes. */
+  voz?: string | null;
+  velocidade?: number | null;
 }) {
-  const [frase, setFrase] = useState('');
-  const [visivel, setVisivel] = useState(false);
+  // A frase depende do relogio, entao e calculada uma unica vez na montagem
+  // (inicializador preguicoso do useState) em vez de dentro de um efeito.
+  const [frase] = useState(() => montarSaudacao({ nome, tratamento, hora: new Date().getHours() }));
+  const [visivel, setVisivel] = useState(true);
   const [falando, setFalando] = useState(false);
   const [bloqueado, setBloqueado] = useState(false);
-  const jaTentou = useRef(false);
+  const montado = useRef(false);
+  const jaFalouSozinho = useRef(false);
 
   const falar = useCallback(
     (texto: string) => {
@@ -37,77 +46,88 @@ export function WelcomeGreeting({
         return;
       }
       const sintese = window.speechSynthesis;
-      const vozes = sintese.getVoices();
-
-      // Prefere vozes neurais/naturais pt-BR; cai para qualquer pt disponivel.
-      const preferidas = [
-        (v: SpeechSynthesisVoice) => /pt[-_]BR/i.test(v.lang) && /natural|neural|google/i.test(v.name),
-        (v: SpeechSynthesisVoice) => /pt[-_]BR/i.test(v.lang) && /luciana|francisca|maria|thalita/i.test(v.name),
-        (v: SpeechSynthesisVoice) => /pt[-_]BR/i.test(v.lang),
-        (v: SpeechSynthesisVoice) => /^pt/i.test(v.lang),
-      ];
-      let voz: SpeechSynthesisVoice | undefined;
-      for (const criterio of preferidas) {
-        voz = vozes.find(criterio);
-        if (voz) break;
-      }
-
-      const fala = new SpeechSynthesisUtterance(texto);
-      fala.lang = voz?.lang ?? 'pt-BR';
-      if (voz) fala.voice = voz;
-      fala.rate = 1.02;   // ritmo de conversa
-      fala.pitch = 1.08;  // levemente animado
-      fala.volume = 1;
-      fala.onstart = () => {
-        setFalando(true);
-        setBloqueado(false);
-      };
-      fala.onend = () => setFalando(false);
-      fala.onerror = () => {
-        setFalando(false);
-        setBloqueado(true);
-      };
+      const escolhida = escolherVoz(sintese.getVoices(), voz);
+      const trechos = dividirEmTrechos(texto);
 
       sintese.cancel();
-      sintese.speak(fala);
+
+      trechos.forEach((trecho, indice) => {
+        const fala = new SpeechSynthesisUtterance(trecho);
+        if (escolhida) fala.voice = escolhida;
+        fala.lang = escolhida?.lang ?? 'pt-BR';
+        // Ritmo de conversa. Tom neutro: acima de 1 soa artificial.
+        fala.rate = velocidade ?? 0.97;
+        fala.pitch = 1;
+        fala.volume = 1;
+
+        if (indice === 0) {
+          fala.onstart = () => {
+            setFalando(true);
+            setBloqueado(false);
+          };
+        }
+        if (indice === trechos.length - 1) {
+          fala.onend = () => setFalando(false);
+        }
+        fala.onerror = () => {
+          setFalando(false);
+          setBloqueado(true);
+        };
+
+        sintese.speak(fala);
+      });
 
       // Se nada comecou a tocar, o navegador barrou o audio automatico.
       window.setTimeout(() => {
         if (!sintese.speaking && !sintese.pending) setBloqueado(true);
-      }, 700);
+      }, 800);
     },
-    [],
+    [voz, velocidade],
   );
 
   useEffect(() => {
-    if (!ativa || jaTentou.current) return;
-    if (sessionStorage.getItem('saudacao-exibida') === '1') return;
-    jaTentou.current = true;
+    if (!ativa || montado.current) return;
+    montado.current = true;
+
+    // Uma vez por sessao de navegacao. O sessionStorage so existe no
+    // navegador, entao a verificacao precisa acontecer depois da montagem —
+    // fazer isso durante o render quebraria a hidratacao.
+    if (sessionStorage.getItem('saudacao-exibida') === '1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setVisivel(false);
+      return;
+    }
     sessionStorage.setItem('saudacao-exibida', '1');
+    const texto = frase;
 
-    const texto = montarSaudacao({ nome, tratamento, hora: new Date().getHours() });
+    // As vozes carregam de forma assincrona. Havia dois gatilhos concorrentes
+    // aqui (o evento e o temporizador de seguranca), e os dois disparavam —
+    // por isso a saudacao chegava a ser falada duas vezes. Agora so o primeiro
+    // que chegar fala, e o outro e descartado.
+    const falarUmaVezSo = () => {
+      if (jaFalouSozinho.current) return;
+      jaFalouSozinho.current = true;
+      falar(texto);
+    };
 
-    // O estado so pode ser definido depois da montagem: a frase depende do
-    // relogio e do sessionStorage, que nao existem na renderizacao do servidor.
-    // Calcular isso durante o render causaria divergencia de hidratacao.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setFrase(texto);
-    setVisivel(true);
+    const sintese = window.speechSynthesis;
+    const reserva = window.setTimeout(falarUmaVezSo, 1200);
 
-    // As vozes carregam de forma assincrona na primeira visita.
-    const disparar = () => falar(texto);
-    if (window.speechSynthesis?.getVoices().length) {
-      window.setTimeout(disparar, 350);
+    if (sintese?.getVoices().length) {
+      window.setTimeout(falarUmaVezSo, 300);
     } else {
-      window.speechSynthesis?.addEventListener('voiceschanged', disparar, { once: true });
-      window.setTimeout(disparar, 1200);
+      sintese?.addEventListener('voiceschanged', falarUmaVezSo, { once: true });
     }
 
-    const sumir = window.setTimeout(() => setVisivel(false), 14000);
-    return () => window.clearTimeout(sumir);
-  }, [ativa, nome, tratamento, falar]);
+    const sumir = window.setTimeout(() => setVisivel(false), 15000);
+    return () => {
+      window.clearTimeout(reserva);
+      window.clearTimeout(sumir);
+      sintese?.removeEventListener('voiceschanged', falarUmaVezSo);
+    };
+  }, [ativa, frase, falar]);
 
-  if (!visivel || !frase) return null;
+  if (!ativa || !visivel || !frase) return null;
 
   return (
     <div
@@ -156,15 +176,7 @@ export function WelcomeGreeting({
           <p className="text-[15px] leading-relaxed font-medium">{frase}</p>
 
           <div className="mt-3 flex items-center gap-2">
-            {bloqueado ? (
-              <button
-                type="button"
-                onClick={() => falar(frase)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium transition hover:bg-white/30"
-              >
-                <Volume2 className="h-3.5 w-3.5" /> Ouvir
-              </button>
-            ) : falando ? (
+            {falando ? (
               <button
                 type="button"
                 onClick={() => {
@@ -179,9 +191,9 @@ export function WelcomeGreeting({
               <button
                 type="button"
                 onClick={() => falar(frase)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-medium transition hover:bg-white/30"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium transition hover:bg-white/30"
               >
-                <Volume2 className="h-3.5 w-3.5" /> Repetir
+                <Volume2 className="h-3.5 w-3.5" /> {bloqueado ? 'Ouvir' : 'Repetir'}
               </button>
             )}
           </div>
