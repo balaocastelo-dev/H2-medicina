@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavIcon } from './icon';
+import type { Contadores } from './contadores';
 import type { NavGroup, NavItem } from './nav-config';
 
 export function Sidebar({
@@ -14,12 +15,15 @@ export function Sidebar({
   systemName,
   logoUrl,
   footerText,
+  contadores = {},
 }: {
   groups: NavGroup[];
   fullscreenLinks: NavItem[];
   systemName: string;
   logoUrl: string | null;
   footerText: string | null;
+  /** Quantas operações aguardam em cada etapa. */
+  contadores?: Contadores;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -66,7 +70,8 @@ export function Sidebar({
                     )}
                   >
                     <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
-                    <span className="truncate">{item.label}</span>
+                    <span className="flex-1 truncate">{item.label}</span>
+                    <Contador valor={item.badge ? contadores[item.badge] : undefined} />
                   </Link>
                 </li>
               ))}
@@ -140,5 +145,25 @@ export function Sidebar({
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Bolinha com o número de pendências.
+ *
+ * Só aparece quando há algo a fazer: um zero permanente vira ruído e a pessoa
+ * para de olhar. O `aria-label` diz o que o número significa, porque sozinho
+ * ele não informa nada a quem usa leitor de tela.
+ */
+function Contador({ valor }: { valor?: number }) {
+  if (!valor || valor <= 0) return null;
+  return (
+    <span
+      aria-label={`${valor} aguardando`}
+      className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white tabular-nums"
+      style={{ backgroundColor: 'var(--status-pendente, #FB923C)' }}
+    >
+      {valor > 99 ? '99+' : valor}
+    </span>
   );
 }

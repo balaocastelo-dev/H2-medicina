@@ -1,9 +1,14 @@
+/** Chaves dos contadores de pendência exibidos no menu. */
+export type ContadorChave = 'recepcao' | 'triagem' | 'filas' | 'medico' | 'crm';
+
 export interface NavItem {
   href: string;
   label: string;
   icon: string;
   permission?: string;
   module?: string;
+  /** Mostra uma bolinha com quantas operações aguardam nesta tela. */
+  badge?: ContadorChave;
 }
 
 export interface NavGroup {
