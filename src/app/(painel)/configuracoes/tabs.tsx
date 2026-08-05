@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from 'react';
 import { Alert, Button, Card, CardBody, CardHeader, Field, Input, Textarea } from '@/components/ui';
 import { saveBranding, saveTenantSettings, toggleModule } from '@/modules/settings/actions';
+import { GreetingSettings } from '@/modules/greeting/greeting-settings';
 import type { ActionResult } from '@/lib/action-result';
 import type { TenantBranding } from '@/types/entities';
 
@@ -94,12 +95,6 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
       { name: 'modelo', label: 'Modelo' },
     ],
     scraper: [{ name: 'modo_padrao', label: 'Modo padrao (teste/homologacao/producao)' }],
-  saudacao: [
-    { name: 'tratamento_padrao', label: 'Tratamento padrao (ex.: Dra.)' },
-    { name: 'ativa', label: 'Ativa? (sim / nao)' },
-    { name: 'voz', label: 'Voz preferida (trecho do nome, ex.: Francisca)' },
-    { name: 'velocidade', label: 'Velocidade da fala (0.8 a 1.2)' },
-  ],
     institucional: [
       { name: 'sobre', label: 'Sobre a empresa', textarea: true },
       { name: 'politica_privacidade', label: 'Politica de privacidade', textarea: true },
@@ -144,6 +139,9 @@ export function SettingsTabs({
       <div className="lg:col-span-3">
         {tab === 'marca' && <BrandingForm branding={branding} tenantName={tenantName} />}
         {tab === 'modulos' && <ModulesPanel modules={modules} allModules={allModules} />}
+        {tab === 'saudacao' && (
+          <GreetingSettings valores={settings.saudacao ?? {}} nomeExemplo={tenantName} />
+        )}
         {FIELDS[tab] && (
           <GroupForm
             key={tab}

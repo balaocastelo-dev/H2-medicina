@@ -2,6 +2,7 @@ import { requireSession } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { NAV_GROUPS, FULLSCREEN_LINKS } from '@/components/layout/nav-config';
+import { AssistantWidget } from '@/modules/assistant/assistant-widget';
 
 export default async function PainelLayout({ children }: { children: React.ReactNode }) {
   const ctx = await requireSession();
@@ -16,6 +17,14 @@ export default async function PainelLayout({ children }: { children: React.React
   })).filter((g) => g.items.length > 0);
 
   const fullscreen = FULLSCREEN_LINKS.filter((i) => allowed(i.permission, i.module));
+
+  // O assistente executa acoes reais; so aparece para quem tem alguma delas.
+  const podeUsarAssistente = [
+    'filas.operar',
+    'financeiro.registrar',
+    'usuarios.administrar',
+    'pacientes.ver',
+  ].some((p) => permissions.has(p));
 
   const themeVars = {
     ['--brand-primary' as string]: branding.color_primary,
@@ -44,6 +53,11 @@ export default async function PainelLayout({ children }: { children: React.React
         />
         <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
+
+      {/* Assistente: aparece para quem pode operar o sistema. */}
+      {podeUsarAssistente && (
+        <AssistantWidget nomeUsuario={profile.full_name || (ctx.email ?? 'Usuario')} />
+      )}
     </div>
   );
 }
