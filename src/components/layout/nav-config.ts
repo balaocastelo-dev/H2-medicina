@@ -1,5 +1,12 @@
 /** Chaves dos contadores de pendência exibidos no menu. */
-export type ContadorChave = 'recepcao' | 'triagem' | 'filas' | 'medico' | 'crm';
+export type ContadorChave =
+  | 'recepcao'
+  | 'triagem'
+  | 'filas'
+  | 'medico'
+  | 'pagamentos'
+  | 'documentos'
+  | 'crm';
 
 export interface NavItem {
   href: string;
@@ -70,6 +77,22 @@ export const NAV_GROUPS: NavGroup[] = [
         module: 'medico',
         badge: 'medico',
       },
+      {
+        href: '/pagamentos',
+        label: 'Pagamentos',
+        icon: 'Wallet',
+        permission: 'financeiro.ver',
+        module: 'financeiro',
+        badge: 'pagamentos',
+      },
+      {
+        href: '/documentos',
+        label: 'Documentos',
+        icon: 'FileText',
+        permission: 'documentos.emitir',
+        module: 'documentos',
+        badge: 'documentos',
+      },
     ],
   },
   {
@@ -94,15 +117,8 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'Documentos e financeiro',
+    title: 'Financeiro',
     items: [
-      {
-        href: '/documentos',
-        label: 'Documentos',
-        icon: 'FileText',
-        permission: 'documentos.emitir',
-        module: 'documentos',
-      },
       {
         href: '/financeiro',
         label: 'Financeiro',

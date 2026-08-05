@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Download, FileText } from 'lucide-react';
+import { CheckCircle2, Download, FileText } from 'lucide-react';
 import { Alert, Button, Card, CardBody, CardHeader, Field, Select } from '@/components/ui';
 import { generateAttendanceDocument, getDocumentUrl } from '@/modules/documents/actions';
+import { encerrarAtendimento } from '@/modules/finance/attendance-actions';
 import { formatDateTime } from '@/lib/format';
 import type { DocumentKind } from '@/types/entities';
 
@@ -55,21 +56,38 @@ export function GenerateDocumentCard({
             </Select>
           </Field>
         </div>
-        <Button
-          loading={pending}
-          disabled={!attendanceId}
-          onClick={() =>
-            startTransition(async () => {
-              const result = await generateAttendanceDocument(attendanceId, kind);
-              setMessage({
-                ok: result.ok,
-                text: result.ok ? (result.message ?? 'Gerado.') : result.error,
+        <div className="flex flex-wrap gap-2">
+          <Button
+            loading={pending}
+            disabled={!attendanceId}
+            onClick={() =>
+              startTransition(async () => {
+                const result = await generateAttendanceDocument(attendanceId, kind);
+                setMessage({
+                  ok: result.ok,
+                  text: result.ok ? (result.message ?? 'Gerado.') : result.error,
+                });
+              })
+            }
+          >
+            <FileText className="h-4 w-4" /> Gerar documento
+          </Button>
+
+          <Button
+            variant="success"
+            loading={pending}
+            disabled={!attendanceId}
+            onClick={() => {
+              if (!window.confirm('Encerrar o atendimento deste paciente?')) return;
+              startTransition(async () => {
+                const r = await encerrarAtendimento(attendanceId);
+                setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Encerrado.') : r.error });
               });
-            })
-          }
-        >
-          <FileText className="h-4 w-4" /> Gerar documento
-        </Button>
+            }}
+          >
+            <CheckCircle2 className="h-4 w-4" /> Encerrar atendimento
+          </Button>
+        </div>
       </CardBody>
     </Card>
   );

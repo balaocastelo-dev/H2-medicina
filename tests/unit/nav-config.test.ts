@@ -11,12 +11,24 @@ describe('menu do painel', () => {
       '/triagem': 'triagem',
       '/filas': 'filas',
       '/medico': 'medico',
+      '/pagamentos': 'pagamentos',
+      '/documentos': 'documentos',
     };
     for (const [href, chave] of Object.entries(esperado)) {
       const item = itens.find((i) => i.href === href);
       expect(item, `item ${href} deveria existir`).toBeDefined();
       expect(item?.badge, `item ${href} deveria ter badge`).toBe(chave);
     }
+  });
+
+  it('mantém a ordem da esteira: filas, médico, pagamentos, documentos', () => {
+    const operacao = NAV_GROUPS.find((g) => g.title === 'Operação');
+    expect(operacao).toBeDefined();
+    const rotas = operacao!.items.map((i) => i.href);
+    const pos = (h: string) => rotas.indexOf(h);
+    expect(pos('/filas')).toBeLessThan(pos('/medico'));
+    expect(pos('/medico')).toBeLessThan(pos('/pagamentos'));
+    expect(pos('/pagamentos')).toBeLessThan(pos('/documentos'));
   });
 
   it('não põe contador onde não há fila para acompanhar', () => {

@@ -136,6 +136,24 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
     if (error) return fail(toFriendlyError(error));
 
+    // O gatilho do banco so avanca a etapa no UPDATE. Quando a consulta e
+    // criada e finalizada no mesmo salvamento, roda apenas o gatilho de
+    // INSERT — que marca 'em consulta' — e o paciente ficava travado ali.
+    // Por isso a etapa e definida aqui, explicitamente.
+    if (finish) {
+      await supabase
+        .from('attendances')
+        .update({
+          stage_code: 'aguardando_pagamento',
+          consultation_finished_at: new Date().toISOString(),
+          in_service: false,
+          current_room_id: null,
+          updated_by: ctx.userId,
+        })
+        .eq('id', parsed.data.attendance_id)
+        .eq('tenant_id', ctx.tenant.id);
+    }
+
     await auditClinicalAccess(ctx, attendance.patient_id, 'consulta', existing?.id);
     await audit(ctx, {
       action: existing ? 'update' : 'create',
@@ -148,8 +166,12 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     });
 
     revalidatePath('/medico');
+    revalidatePath('/pagamentos');
     revalidatePath('/crm');
-    return ok(undefined, finish ? 'Consulta finalizada.' : 'Consulta salva.');
+    return ok(
+      undefined,
+      finish ? 'Consulta finalizada. O paciente seguiu para o pagamento.' : 'Consulta salva.',
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }

@@ -33,6 +33,9 @@ export default async function DocumentosPage() {
       .from('attendances')
       .select('id, checkin_at, patients(full_name)')
       .eq('tenant_id', ctx.tenant.id)
+      // Somente quem passou pelo pagamento: a esteira e recepcao -> ... ->
+      // medico -> pagamento -> documentos.
+      .in('stage_code', ['aguardando_documentos', 'finalizado'])
       .gte('checkin_at', sinceISO(7))
       .is('deleted_at', null)
       .order('checkin_at', { ascending: false })

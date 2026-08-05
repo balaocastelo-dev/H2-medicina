@@ -24,15 +24,17 @@ export async function carregarContadores(tenantId: string): Promise<Contadores> 
         .is('finished_at', null)
         .is('deleted_at', null);
 
-    const [recepcao, triagem, filas, medico, crm] = await Promise.all([
+    const [recepcao, triagem, filas, medico, pagamentos, documentos, crm] = await Promise.all([
       abertos(['aguardando_recepcao', 'na_recepcao']),
       abertos(['aguardando_triagem', 'em_triagem']),
       abertos(['aguardando_exames', 'em_exames']),
       abertos(['aguardando_medico']),
+      abertos(['aguardando_pagamento']),
+      abertos(['aguardando_documentos']),
       abertos([
         'aguardando_recepcao', 'na_recepcao', 'aguardando_triagem', 'em_triagem',
         'aguardando_exames', 'em_exames', 'aguardando_medico', 'em_consulta',
-        'aguardando_documentos',
+        'aguardando_pagamento', 'aguardando_documentos',
       ]),
     ]);
 
@@ -41,6 +43,8 @@ export async function carregarContadores(tenantId: string): Promise<Contadores> 
       triagem: triagem.count ?? 0,
       filas: filas.count ?? 0,
       medico: medico.count ?? 0,
+      pagamentos: pagamentos.count ?? 0,
+      documentos: documentos.count ?? 0,
       crm: crm.count ?? 0,
     };
   } catch (error) {
