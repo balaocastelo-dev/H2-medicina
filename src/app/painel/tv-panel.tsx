@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatTime } from '@/lib/format';
+import { escolherVoz, prepararParaFala } from '@/modules/greeting/voice';
 
 interface CallRow {
   id: string;
@@ -37,6 +38,10 @@ export function TvPanel({
   showName: boolean;
 }) {
   const [calls, setCalls] = useState<CallRow[]>(initialCalls);
+  // Navegadores bloqueiam audio ate haver um gesto do usuario. Numa TV isso
+  // significa silencio para sempre — por isso a tela pede um clique inicial.
+  const [somLiberado, setSomLiberado] = useState(false);
+  const audioRef = useRef<AudioContext | null>(null);
   const [clock, setClock] = useState(() => new Date());
   const lastAnnounced = useRef<string | null>(initialCalls[0]?.id ?? null);
   const signatureRef = useRef(initialCalls.map((call) => call.id).join('|'));
@@ -93,32 +98,109 @@ export function TvPanel({
     };
   }, [syncCalls, tenantId]);
 
-  // Aviso sonoro + voz
-  useEffect(() => {
-    const current = calls[0];
-    if (!current || current.id === lastAnnounced.current) return;
-    lastAnnounced.current = current.id;
-    if (!sound || typeof window === 'undefined' || !window.speechSynthesis) return;
+  /** Gongo curto antes da chamada, sintetizado na hora (sem arquivo). */
+  const tocarGongo = useCallback(() => {
+    try {
+      const ctxAudio =
+        audioRef.current ??
+        new (window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      audioRef.current = ctxAudio;
+      if (ctxAudio.state === 'suspended') void ctxAudio.resume();
 
-    const spoken = `Senha ${current.ticket_code.split('').join(' ')}${
-      current.room_name ? `, ${current.room_name}` : ''
-    }`;
-    const utterance = new SpeechSynthesisUtterance(spoken);
-    utterance.lang = 'pt-BR';
-    utterance.volume = Math.min(Math.max(volume, 0), 1);
-    utterance.rate = 0.9;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-  }, [calls, sound, volume]);
+      const agora = ctxAudio.currentTime;
+      [880, 1320].forEach((frequencia, i) => {
+        const osc = ctxAudio.createOscillator();
+        const ganho = ctxAudio.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequencia;
+        const inicio = agora + i * 0.18;
+        ganho.gain.setValueAtTime(0, inicio);
+        ganho.gain.linearRampToValueAtTime(volume * 0.5, inicio + 0.02);
+        ganho.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.45);
+        osc.connect(ganho).connect(ctxAudio.destination);
+        osc.start(inicio);
+        osc.stop(inicio + 0.5);
+      });
+    } catch {
+      /* sem audio disponivel: a chamada continua visivel na tela */
+    }
+  }, [volume]);
+
+  /** Anuncia senha, nome e sala. */
+  const anunciar = useCallback(
+    (chamada: CallRow) => {
+      if (!sound || typeof window === 'undefined') return;
+      tocarGongo();
+
+      const sintese = window.speechSynthesis;
+      if (!sintese) return;
+
+      const partes = [
+        `Senha ${chamada.ticket_code.split('').join(' ')}.`,
+        showName && chamada.patient_label ? `${chamada.patient_label}.` : '',
+        chamada.room_name ? `Compareça à ${chamada.room_name}.` : '',
+      ].filter(Boolean);
+
+      const escolhida = escolherVoz(sintese.getVoices(), null);
+      sintese.cancel();
+
+      // A fala comeca depois do gongo.
+      window.setTimeout(() => {
+        for (const parte of partes) {
+          const fala = new SpeechSynthesisUtterance(prepararParaFala(parte));
+          if (escolhida) fala.voice = escolhida;
+          fala.lang = escolhida?.lang ?? 'pt-BR';
+          fala.rate = 0.92;
+          fala.pitch = 1;
+          fala.volume = Math.min(Math.max(volume, 0), 1);
+          sintese.speak(fala);
+        }
+      }, 700);
+    },
+    [sound, showName, volume, tocarGongo],
+  );
+
+  useEffect(() => {
+    const atual = calls[0];
+    if (!atual || atual.id === lastAnnounced.current) return;
+    lastAnnounced.current = atual.id;
+    if (somLiberado) anunciar(atual);
+  }, [calls, somLiberado, anunciar]);
 
   const current = calls[0];
   const history = calls.slice(1, historySize + 1);
 
   return (
     <main
-      className="kiosk flex min-h-screen flex-col bg-slate-950 text-white"
+      className="kiosk relative flex min-h-screen flex-col bg-slate-950 text-white"
       style={{ ['--brand-primary' as string]: primaryColor }}
     >
+      {!somLiberado && sound && (
+        <button
+          type="button"
+          onClick={() => {
+            setSomLiberado(true);
+            tocarGongo();
+            const atual = calls[0];
+            if (atual) {
+              lastAnnounced.current = atual.id;
+              anunciar(atual);
+            }
+          }}
+          className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-slate-950/95 text-white"
+        >
+          <span className="flex h-24 w-24 items-center justify-center rounded-full bg-white/10 text-5xl">
+            🔊
+          </span>
+          <span className="text-3xl font-semibold">Toque para ativar o som</span>
+          <span className="max-w-md text-center text-slate-400">
+            O navegador exige um clique antes de liberar o audio. Depois disso o painel anuncia
+            sozinho cada chamada.
+          </span>
+        </button>
+      )}
+
       <header className="flex items-center justify-between border-b border-white/10 px-8 py-4">
         <div className="flex items-center gap-4">
           {logoUrl ? (
@@ -174,7 +256,18 @@ export function TvPanel({
       </section>
 
       <footer className="border-t border-white/10 px-8 py-5">
-        <p className="mb-3 text-sm tracking-widest text-slate-400 uppercase">Ultimas chamadas</p>
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm tracking-widest text-slate-400 uppercase">Ultimas chamadas</p>
+          {somLiberado && current && (
+            <button
+              type="button"
+              onClick={() => anunciar(current)}
+              className="rounded-lg bg-white/10 px-3 py-1.5 text-sm text-slate-200 hover:bg-white/20"
+            >
+              🔊 Repetir chamada
+            </button>
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {history.length === 0 && <p className="text-slate-600">—</p>}
           {history.map((c) => (

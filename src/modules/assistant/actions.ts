@@ -122,6 +122,31 @@ async function chamarProximo(
     return { ok: false, mensagem: `Nao ha ninguem elegivel na fila de ${intencao.salaNome}.` };
   }
 
+  // Completa o rotulo do painel com o nome do paciente chamado.
+  const { data: sala } = await supabase
+    .from('rooms')
+    .select('current_attendance_id')
+    .eq('id', intencao.salaId)
+    .maybeSingle<{ current_attendance_id: string | null }>();
+  if (sala?.current_attendance_id) {
+    const { data: atendimento } = await supabase
+      .from('attendances')
+      .select('patients(full_name, social_name)')
+      .eq('id', sala.current_attendance_id)
+      .maybeSingle<{ patients: { full_name: string; social_name: string | null } | null }>();
+    const nome = atendimento?.patients?.social_name ?? atendimento?.patients?.full_name;
+    if (nome) {
+      const { data: chamada } = await supabase
+        .from('tv_calls')
+        .select('id')
+        .eq('tenant_id', ctx.tenant.id)
+        .order('called_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+      if (chamada) await supabase.from('tv_calls').update({ patient_label: nome }).eq('id', chamada.id);
+    }
+  }
+
   await audit(ctx, {
     action: 'update',
     entity: 'rooms',

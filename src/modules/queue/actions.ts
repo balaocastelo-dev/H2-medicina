@@ -174,6 +174,10 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
     const payload = data as { found: boolean };
     if (!payload.found) return ok({ found: false }, 'Nenhum paciente elegivel na fila desta sala.');
 
+    // A RPC grava a chamada com o primeiro nome. O painel anuncia o nome
+    // completo, entao o rotulo e completado aqui, logo apos a chamada.
+    await ajustarRotuloDaChamada(ctx.tenant.id, roomId);
+
     await audit(ctx, {
       action: 'update',
       entity: 'rooms',
@@ -181,9 +185,51 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
       description: 'Chamada do proximo paciente',
     });
     revalidatePath('/filas');
+    revalidatePath('/painel');
     return ok({ found: true }, 'Paciente chamado.');
   } catch (error) {
     return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Completa o rotulo da ultima chamada com o nome do paciente.
+ *
+ * Fica fora da RPC porque o texto anunciado e decisao de apresentacao, nao de
+ * regra de negocio — e assim muda sem exigir migration no banco.
+ */
+async function ajustarRotuloDaChamada(tenantId: string, roomId: string): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const { data: sala } = await supabase
+      .from('rooms')
+      .select('current_attendance_id')
+      .eq('id', roomId)
+      .maybeSingle<{ current_attendance_id: string | null }>();
+    if (!sala?.current_attendance_id) return;
+
+    const { data: atendimento } = await supabase
+      .from('attendances')
+      .select('patients(full_name, social_name)')
+      .eq('id', sala.current_attendance_id)
+      .maybeSingle<{ patients: { full_name: string; social_name: string | null } | null }>();
+
+    const nome = atendimento?.patients?.social_name ?? atendimento?.patients?.full_name;
+    if (!nome) return;
+
+    const { data: chamada } = await supabase
+      .from('tv_calls')
+      .select('id')
+      .eq('tenant_id', tenantId)
+      .order('called_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    if (!chamada) return;
+
+    await supabase.from('tv_calls').update({ patient_label: nome }).eq('id', chamada.id);
+  } catch (error) {
+    // Rotulo e cosmetico: se falhar, a chamada ja aconteceu.
+    console.error('[fila] nao consegui completar o rotulo da chamada:', error);
   }
 }
 
@@ -217,9 +263,16 @@ export async function recallTicket(attendanceId: string, roomId: string): Promis
       is_manual: true,
     });
 
+    const { data: paciente } = await supabase
+      .from('patients')
+      .select('full_name, social_name')
+      .eq('id', attendance?.patient_id ?? '')
+      .maybeSingle<{ full_name: string; social_name: string | null }>();
+
     await supabase.from('tv_calls').insert({
       tenant_id: ctx.tenant.id,
       ticket_code: ticket?.code ?? '---',
+      patient_label: paciente?.social_name ?? paciente?.full_name ?? null,
       room_name: room?.name ?? null,
       destination: 'sala',
       priority: attendance?.priority ?? 'normal',
