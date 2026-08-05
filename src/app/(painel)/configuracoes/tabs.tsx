@@ -20,10 +20,10 @@ const TABS = [
   { key: 'pagamento', label: 'Pagamento e Pix' },
   { key: 'email', label: 'E-mail' },
   { key: 'ia', label: 'Inteligencia artificial' },
-  { key: 'scraper', label: 'Importacao' },
+  { key: 'scraper', label: 'Importação' },
   { key: 'saudacao', label: 'Saudação de boas-vindas' },
   { key: 'institucional', label: 'Textos institucionais' },
-  { key: 'modulos', label: 'Modulos' },
+  { key: 'modulos', label: 'Módulos' },
 ];
 
 const FIELDS: Record<string, { name: string; label: string; type?: string; textarea?: boolean }[]> =

@@ -22,7 +22,7 @@ export interface NavGroup {
  */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    title: 'Operacao',
+    title: 'Operação',
     items: [
       {
         href: '/dashboard',
@@ -36,13 +36,15 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'KanbanSquare',
         permission: 'agenda.ver',
         module: 'crm',
+        badge: 'crm',
       },
       {
         href: '/recepcao',
-        label: 'Recepcao',
+        label: 'Recepção',
         icon: 'ClipboardCheck',
         permission: 'recepcao.operar',
         module: 'recepcao',
+        badge: 'recepcao',
       },
       {
         href: '/triagem',
@@ -50,6 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'HeartPulse',
         permission: 'triagem.preencher',
         module: 'triagem',
+        badge: 'triagem',
       },
       {
         href: '/filas',
@@ -57,6 +60,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'ListOrdered',
         permission: 'filas.operar',
         module: 'filas',
+        badge: 'filas',
       },
       {
         href: '/medico',
@@ -64,6 +68,7 @@ export const NAV_GROUPS: NavGroup[] = [
         icon: 'Stethoscope',
         permission: 'medico.atender',
         module: 'medico',
+        badge: 'medico',
       },
     ],
   },
@@ -137,7 +142,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'Automacao',
+    title: 'Automação',
     items: [
       {
         href: '/importacao/conectores',
@@ -148,7 +153,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/importacao/execucoes',
-        label: 'Execucoes',
+        label: 'Execuções',
         icon: 'RefreshCw',
         permission: 'importacoes.executar',
         module: 'scraper',
@@ -170,11 +175,11 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    title: 'Administracao',
+    title: 'Administração',
     items: [
       {
         href: '/relatorios',
-        label: 'Relatorios',
+        label: 'Relatórios',
         icon: 'BarChart3',
         permission: 'relatorios.ver',
         module: 'relatorios',

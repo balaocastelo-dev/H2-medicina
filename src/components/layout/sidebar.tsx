@@ -151,19 +151,20 @@ export function Sidebar({
 /**
  * Bolinha com o número de pendências.
  *
- * Só aparece quando há algo a fazer: um zero permanente vira ruído e a pessoa
- * para de olhar. O `aria-label` diz o que o número significa, porque sozinho
- * ele não informa nada a quem usa leitor de tela.
+ * Vermelho e circular, como notificação de aplicativo: é o padrão que as
+ * pessoas já leem sem precisar aprender. O anel escuro separa a bolinha do
+ * fundo do menu. Só aparece quando há algo a fazer — um zero permanente vira
+ * ruído e a pessoa para de olhar.
  */
 function Contador({ valor }: { valor?: number }) {
   if (!valor || valor <= 0) return null;
+  const texto = valor > 99 ? '99+' : String(valor);
   return (
     <span
-      aria-label={`${valor} aguardando`}
-      className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-white tabular-nums"
-      style={{ backgroundColor: 'var(--status-pendente, #FB923C)' }}
+      aria-label={`${texto} aguardando`}
+      className="ml-auto flex h-5 min-w-[20px] shrink-0 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] leading-none font-bold text-white tabular-nums ring-2 ring-[color:var(--brand-sidebar)]"
     >
-      {valor > 99 ? '99+' : valor}
+      {texto}
     </span>
   );
 }

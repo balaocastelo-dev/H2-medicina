@@ -8,10 +8,10 @@ import { formatCPF, formatDateTime } from '@/lib/format';
 const STEPS = [
   { code: 'agendado', label: 'Agendamento' },
   { code: 'aguardando_recepcao', label: 'Totem' },
-  { code: 'na_recepcao', label: 'Recepcao' },
+  { code: 'na_recepcao', label: 'Recepção' },
   { code: 'em_triagem', label: 'Triagem' },
   { code: 'em_exames', label: 'Exames' },
-  { code: 'em_consulta', label: 'Medico' },
+  { code: 'em_consulta', label: 'Médico' },
   { code: 'aguardando_documentos', label: 'Documentos' },
   { code: 'finalizado', label: 'Finalizado' },
 ];
