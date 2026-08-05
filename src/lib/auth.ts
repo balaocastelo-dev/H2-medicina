@@ -146,6 +146,32 @@ export async function requirePermission(permission: string): Promise<SessionCont
   return ctx;
 }
 
+/**
+ * Exige que o modulo esteja habilitado para o tenant.
+ *
+ * O menu ja esconde o que esta desligado; isto bloqueia tambem o acesso por URL
+ * direta, para que "modulo desabilitado" signifique de fato indisponivel.
+ */
+export async function requireModule(moduleKey: string): Promise<SessionContext> {
+  const ctx = await requireSession();
+  if (!ctx.modules.has(moduleKey)) {
+    redirect(`/modulo-indisponivel?m=${encodeURIComponent(moduleKey)}`);
+  }
+  return ctx;
+}
+
+/** Exige modulo habilitado E permissao. */
+export async function requireModulePermission(
+  moduleKey: string,
+  permission: string,
+): Promise<SessionContext> {
+  const ctx = await requireModule(moduleKey);
+  if (!ctx.permissions.has(permission)) {
+    redirect(`/sem-permissao?p=${encodeURIComponent(permission)}`);
+  }
+  return ctx;
+}
+
 export function can(ctx: SessionContext | null, permission: string): boolean {
   return !!ctx?.permissions.has(permission);
 }

@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Alert, Badge, Card, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
@@ -18,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default async function CampanhasPage() {
-  const ctx = await requirePermission('campanhas.administrar');
+  const ctx = await requireModulePermission('campanhas', 'campanhas.administrar');
   const supabase = await createClient();
 
   const [campaignsRes, eligibleRes, unsubRes] = await Promise.all([

@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Alert, Badge, Card, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
@@ -21,7 +21,7 @@ interface ReviewRow {
 }
 
 export default async function RevisaoPage() {
-  const ctx = await requirePermission('importacoes.aprovar');
+  const ctx = await requireModulePermission('scraper', 'importacoes.aprovar');
   const supabase = await createClient();
 
   const { data } = await supabase

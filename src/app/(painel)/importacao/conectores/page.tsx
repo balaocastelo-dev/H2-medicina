@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Alert, Badge, Card, CardHeader, EmptyState, Table, Td, Th } from '@/components/ui';
@@ -8,7 +8,7 @@ import type { ScraperConnectorSafe } from '@/types/entities';
 export const dynamic = 'force-dynamic';
 
 export default async function ConectoresPage() {
-  const ctx = await requirePermission('scraper.administrar');
+  const ctx = await requireModulePermission('scraper', 'scraper.administrar');
   const supabase = await createClient();
 
   // View segura: nunca expoe a senha do portal externo

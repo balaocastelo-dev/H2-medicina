@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
@@ -17,7 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default async function ExecucoesPage() {
-  const ctx = await requirePermission('importacoes.executar');
+  const ctx = await requireModulePermission('scraper', 'importacoes.executar');
   const supabase = await createClient();
 
   const { data } = await supabase

@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
@@ -26,7 +26,7 @@ export default async function PedidosPage({
 }: {
   searchParams: Promise<{ status?: string }>;
 }) {
-  const ctx = await requirePermission('pedidos.administrar');
+  const ctx = await requireModulePermission('ecommerce', 'pedidos.administrar');
   const sp = await searchParams;
   const supabase = await createClient();
 

@@ -96,10 +96,20 @@ begin
   on conflict (tenant_id, group_key) do nothing;
 
   -- ---------------- MODULOS ----------------
+  -- Nucleo clinico + financeiro ligado desde o inicio.
   insert into public.tenant_modules (tenant_id, module_key, is_enabled)
   select v_tenant, m, true from unnest(array[
     'agenda','totem','painel_tv','recepcao','triagem','exames','filas','crm','medico',
-    'documentos','financeiro','ecommerce','scraper','campanhas','relatorios','pwa','lgpd'
+    'documentos','financeiro','relatorios','pwa','lgpd'
+  ]) as m
+  on conflict (tenant_id, module_key) do nothing;
+
+  -- Loja, importacao automatizada e campanhas ficam desligadas por padrao.
+  -- O modelo de dados e as telas existem; basta ligar em
+  -- Configuracoes da empresa -> Modulos quando o cliente quiser usar.
+  insert into public.tenant_modules (tenant_id, module_key, is_enabled)
+  select v_tenant, m, false from unnest(array[
+    'ecommerce','scraper','campanhas'
   ]) as m
   on conflict (tenant_id, module_key) do nothing;
 

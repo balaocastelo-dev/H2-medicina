@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+import { requireModulePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, EmptyState, Table, Td, Th } from '@/components/ui';
@@ -13,7 +13,7 @@ export default async function ProdutosPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const ctx = await requirePermission('produtos.administrar');
+  const ctx = await requireModulePermission('ecommerce', 'produtos.administrar');
   const { q } = await searchParams;
   const supabase = await createClient();
 

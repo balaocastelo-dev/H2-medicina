@@ -102,6 +102,9 @@ export const NAV_GROUPS: NavGroup[] = [
       },
     ],
   },
+  // Grupos abaixo aparecem somente quando o modulo correspondente esta
+  // habilitado para o tenant (Configuracoes da empresa -> Modulos).
+  // Hoje ecommerce, scraper e campanhas vem desligados por padrao.
   {
     title: 'Loja',
     items: [
