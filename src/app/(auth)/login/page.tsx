@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { publicEnv } from '@/lib/env';
 import { LoginForm } from './login-form';
+import { FactoryScene } from '@/components/scene/factory-scene';
 import type { TenantBranding, Tenant } from '@/types/entities';
 
 /** O login e white label: busca a marca do tenant pelo dominio ou pelo slug padrao. */
@@ -34,8 +35,15 @@ export default async function LoginPage({
   const { tenant, branding } = await loadBranding();
   const systemName = branding?.system_name ?? tenant?.trade_name ?? 'Plataforma Clínica';
 
+  const cor = branding?.color_primary ?? '#0F766E';
+
   return (
     <div className="w-full max-w-md">
+      {/* Cena de abertura: dá contexto ao sistema antes de pedir a senha. */}
+      <div className="mb-5 shadow-lg">
+        <FactoryScene cor={cor} />
+      </div>
+
       <div className="mb-6 text-center">
         {branding?.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -43,7 +51,7 @@ export default async function LoginPage({
         ) : (
           <div
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
-            style={{ backgroundColor: branding?.color_primary ?? '#0F766E' }}
+            style={{ backgroundColor: cor }}
           >
             {systemName.slice(0, 2).toUpperCase()}
           </div>
@@ -52,7 +60,7 @@ export default async function LoginPage({
         <p className="text-sm text-slate-500">Acesse com suas credenciais</p>
       </div>
 
-      <LoginForm next={proximo} primaryColor={branding?.color_primary ?? '#0F766E'} />
+      <LoginForm next={proximo} primaryColor={cor} />
 
       <div className="mt-4 text-center text-sm">
         <Link href="/esqueci-senha" className="text-slate-600 underline-offset-2 hover:underline">
