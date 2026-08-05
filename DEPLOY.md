@@ -126,6 +126,30 @@ Sem isso o link de redefinição de senha não funciona.
 
 ---
 
+## Atenção: `www.` não funciona no domínio da Vercel
+
+Acessar **`www.`h2-medicina.vercel.app** dá erro de certificado
+(`NET::ERR_CERT_COMMON_NAME_INVALID`), e não há nada a corrigir no código.
+
+O certificado da Vercel é `*.vercel.app` — um curinga que cobre **um único
+rótulo**. `h2-medicina.vercel.app` casa; `www.h2-medicina.vercel.app` tem dois
+rótulos antes de `vercel.app` e não casa. A falha acontece no handshake TLS,
+antes de qualquer requisição chegar à aplicação: nenhum redirecionamento,
+middleware ou cabeçalho pode interceptar.
+
+O endereço correto é, sem `www`:
+
+```
+https://h2-medicina.vercel.app
+```
+
+Se o navegador insiste em completar com `www`, apague a sugestão da barra de
+endereços (digite o endereço, selecione a sugestão errada e pressione Shift+Delete)
+ou acesse uma vez em aba anônima.
+
+A solução definitiva é um domínio próprio — aí `www` e domínio raiz funcionam,
+com certificado emitido para ambos.
+
 ## Domínio próprio
 
 **Settings → Domains** → adicione o domínio e configure o DNS conforme a Vercel
