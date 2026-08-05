@@ -78,14 +78,42 @@ export function escolherVoz<T extends VozCandidata>(vozes: T[], preferida?: stri
 }
 
 /**
+ * Prepara o texto para a fala.
+ *
+ * Abreviacoes com ponto ("Sr.", "Dra.") sao lidas pelo sintetizador como fim
+ * de frase: ele faz uma pausa longa no meio do cumprimento. Escrever a palavra
+ * por extenso resolve a pausa e ainda soa mais natural.
+ *
+ * O texto exibido na tela continua abreviado; so a fala muda.
+ */
+const ABREVIACOES: [RegExp, string][] = [
+  [/\bDra\.?\s+/gi, 'Doutora '],
+  [/\bDr\.?\s+/gi, 'Doutor '],
+  [/\bSra\.?\s+/gi, 'Senhora '],
+  [/\bSrta\.?\s+/gi, 'Senhorita '],
+  [/\bSr\.?\s+/gi, 'Senhor '],
+  [/\bProf\.?\s+/gi, 'Professor '],
+];
+
+export function prepararParaFala(texto: string): string {
+  let saida = texto;
+  for (const [de, para] of ABREVIACOES) saida = saida.replace(de, para);
+  // Qualquer ponto restante entre iniciais ainda causaria pausa.
+  saida = saida.replace(/\b([A-Z])\.\s*/g, '$1 ');
+  return saida.replace(/\s{2,}/g, ' ').trim();
+}
+
+/**
  * Quebra a frase em trechos curtos.
  *
  * Falar tudo de uma vez deixa a entonacao plana; enviar frase a frase faz o
- * sintetizador respirar entre elas, o que soa bem mais natural.
+ * sintetizador respirar entre elas, o que soa bem mais natural. A quebra so
+ * acontece depois de pontuacao seguida de letra maiuscula, para nunca cortar
+ * no meio de uma abreviacao.
  */
 export function dividirEmTrechos(texto: string): string[] {
-  return texto
-    .split(/(?<=[.!?])\s+/)
+  return prepararParaFala(texto)
+    .split(/(?<=[.!?])\s+(?=[A-ZÀ-Ú])/)
     .map((t) => t.trim())
     .filter(Boolean);
 }

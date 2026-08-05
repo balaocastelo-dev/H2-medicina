@@ -58,3 +58,23 @@ describe('divisao em trechos', () => {
     expect(dividirEmTrechos('   ')).toHaveLength(0);
   });
 });
+
+describe('preparacao do texto falado', () => {
+  it('escreve abreviacoes por extenso para nao virar pausa', async () => {
+    const { prepararParaFala } = await import('@/modules/greeting/voice');
+    expect(prepararParaFala('Olá, bom dia, Sr. Herrera!')).toBe('Olá, bom dia, Senhor Herrera!');
+    expect(prepararParaFala('Olá, boa tarde, Dra. Wania!')).toBe('Olá, boa tarde, Doutora Wania!');
+    expect(prepararParaFala('Sra. Ana e Dr. Miguel')).toBe('Senhora Ana e Doutor Miguel');
+  });
+
+  it('nao quebra a fala dentro da abreviacao', () => {
+    const trechos = dividirEmTrechos('Olá, bom dia, Sr. Herrera! Hoje é um lindo dia.');
+    expect(trechos[0]).toBe('Olá, bom dia, Senhor Herrera!');
+    expect(trechos).toHaveLength(2);
+  });
+
+  it('mantem a quebra entre frases de verdade', () => {
+    const trechos = dividirEmTrechos('Primeira frase. Segunda frase. Terceira!');
+    expect(trechos).toHaveLength(3);
+  });
+});

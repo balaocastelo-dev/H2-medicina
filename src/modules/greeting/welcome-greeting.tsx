@@ -114,7 +114,7 @@ export function WelcomeGreeting({
     const reserva = window.setTimeout(falarUmaVezSo, 1200);
 
     if (sintese?.getVoices().length) {
-      window.setTimeout(falarUmaVezSo, 300);
+      window.setTimeout(falarUmaVezSo, 150);
     } else {
       sintese?.addEventListener('voiceschanged', falarUmaVezSo, { once: true });
     }
