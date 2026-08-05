@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
 import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { onlyDigits } from '@/lib/format';
+import { onlyDigits, startOfTodayISO, todayISO } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Priority, QueueTicket } from '@/types/entities';
 
@@ -26,7 +26,7 @@ export async function lookupForCheckin(cpfRaw: string): Promise<ActionResult<Tot
     if (cpf.length !== 11) return fail('Informe os 11 digitos do CPF.');
 
     const supabase = await createClient();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayISO();
 
     const { data: patients } = await supabase
       .from('patients')
@@ -121,6 +121,34 @@ export async function performCheckin(input: {
       totemId = data?.id ?? null;
     }
 
+    // A RPC reaproveita atendimento aberto do dia. Um paciente marcado como
+    // ausente, ou que ja passou da recepcao, tem atendimento "aberto" e
+    // receberia de volta a senha antiga, sem entrar na fila de novo.
+    // Encerramos esse atendimento antes, para o check-in comecar limpo.
+    const { data: pendura } = await supabase
+      .from('attendances')
+      .select('id, stage_code, absent_at')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('patient_id', input.patientId)
+      .is('finished_at', null)
+      .is('cancelled_at', null)
+      .is('deleted_at', null)
+      .gte('checkin_at', startOfTodayISO())
+      .order('checkin_at', { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string; stage_code: string; absent_at: string | null }>();
+
+    if (pendura && (pendura.absent_at || pendura.stage_code === 'ausente')) {
+      await supabase
+        .from('attendances')
+        .update({
+          finished_at: new Date().toISOString(),
+          stage_code: 'ausente',
+          notes: 'Encerrado automaticamente: paciente retornou ao totem',
+        })
+        .eq('id', pendura.id);
+    }
+
     const { data, error } = await supabase.rpc('checkin_patient', {
       p_tenant: ctx.tenant.id,
       p_appointment: input.appointmentId,
@@ -166,6 +194,22 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
   try {
     const ctx = await assertPermission('filas.operar');
     const supabase = await createClient();
+
+    // Guarda contra dois operadores clicando junto: se a sala ja tem alguem
+    // chamado ou em atendimento, nao chama outro por cima.
+    const { data: ocupada } = await supabase
+      .from('patient_exams')
+      .select('id')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('room_id', roomId)
+      .in('status', ['chamado', 'em_andamento'])
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+
+    if (ocupada) {
+      return ok({ found: false }, 'Esta sala já está com um paciente. Conclua antes de chamar o próximo.');
+    }
+
     const { data, error } = await supabase.rpc('call_next_for_room', {
       p_tenant: ctx.tenant.id,
       p_room: roomId,
@@ -189,6 +233,89 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
     return ok({ found: true }, 'Paciente chamado.');
   } catch (error) {
     return fail(toFriendlyError(error));
+  }
+}
+
+/** Etapas que encerram o atendimento. */
+const ETAPAS_TERMINAIS = new Set(['finalizado', 'cancelado', 'ausente']);
+
+/** Etapas em que o paciente esta efetivamente dentro de uma sala. */
+const ETAPAS_EM_SERVICO = new Set(['na_recepcao', 'em_triagem', 'em_exames', 'em_consulta']);
+
+/**
+ * Desfaz as marcas de encerramento ao trazer o paciente de volta.
+ *
+ * Mover para 'finalizado', 'cancelado' ou 'ausente' grava a data
+ * correspondente. Voltar o cartao mudava so a etapa e deixava a data para
+ * tras: o atendimento ficava, por exemplo, em 'aguardando recepcao' com
+ * finished_at preenchido — e sumia de todas as telas, que filtram por
+ * atendimento em aberto.
+ */
+async function limparEstadoTerminal(
+  tenantId: string,
+  attendanceId: string,
+  stage: string,
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const patch: Record<string, unknown> = {};
+
+    if (!ETAPAS_TERMINAIS.has(stage)) {
+      patch.finished_at = null;
+      patch.cancelled_at = null;
+      patch.absent_at = null;
+      patch.cancel_reason = null;
+    }
+
+    // Fora de sala, o paciente nao pode continuar marcado como em atendimento,
+    // senao a fila o considera ocupado e nunca o chama.
+    if (!ETAPAS_EM_SERVICO.has(stage)) {
+      patch.in_service = false;
+      patch.current_room_id = null;
+    }
+
+    // Exame que ficou 'chamado' apos o cartao sair da etapa de exames trava o
+    // paciente: a fila nunca mais o chama e ele nao aparece em tela nenhuma.
+    if (!ETAPAS_EM_SERVICO.has(stage)) {
+      const { data: presos } = await supabase
+        .from('patient_exams')
+        .select('id, room_id')
+        .eq('tenant_id', tenantId)
+        .eq('attendance_id', attendanceId)
+        .in('status', ['chamado', 'em_andamento'])
+        .returns<{ id: string; room_id: string | null }[]>();
+
+      for (const exame of presos ?? []) {
+        await supabase
+          .from('patient_exams')
+          .update({ status: 'pendente', called_at: null, started_at: null, room_id: null })
+          .eq('id', exame.id);
+        if (exame.room_id) {
+          await supabase
+            .from('rooms')
+            .update({ status: 'disponivel', current_attendance_id: null })
+            .eq('id', exame.room_id)
+            .eq('tenant_id', tenantId);
+        }
+      }
+
+      // Sala que ainda aponte para este atendimento tambem e liberada.
+      await supabase
+        .from('rooms')
+        .update({ status: 'disponivel', current_attendance_id: null })
+        .eq('tenant_id', tenantId)
+        .eq('current_attendance_id', attendanceId);
+    }
+
+    if (Object.keys(patch).length === 0) return;
+
+    await supabase
+      .from('attendances')
+      .update(patch)
+      .eq('id', attendanceId)
+      .eq('tenant_id', tenantId);
+  } catch (error) {
+    console.error('[crm] falha ao normalizar o atendimento apos mover:', error);
   }
 }
 
@@ -288,13 +415,23 @@ async function ajustarRotuloDaChamada(tenantId: string, roomId: string): Promise
     const nome = atendimento?.patients?.social_name ?? atendimento?.patients?.full_name;
     if (!nome) return;
 
-    const { data: chamada } = await supabase
+    // Buscar "a chamada mais recente do tenant" anunciava o nome errado quando
+    // duas salas chamavam quase junto. A senha identifica a chamada certa.
+    const { data: senha } = await supabase
+      .from('queue_tickets')
+      .select('code')
+      .eq('attendance_id', sala.current_attendance_id)
+      .maybeSingle<{ code: string }>();
+
+    let consulta = supabase
       .from('tv_calls')
       .select('id')
       .eq('tenant_id', tenantId)
       .order('called_at', { ascending: false })
-      .limit(1)
-      .maybeSingle<{ id: string }>();
+      .limit(1);
+    if (senha?.code) consulta = consulta.eq('ticket_code', senha.code);
+
+    const { data: chamada } = await consulta.maybeSingle<{ id: string }>();
     if (!chamada) return;
 
     await supabase.from('tv_calls').update({ patient_label: nome }).eq('id', chamada.id);
@@ -373,6 +510,15 @@ export async function updateExamStatus(
     const ctx = await assertPermission(status === 'concluido' ? 'exames.concluir' : 'filas.operar');
     const supabase = await createClient();
 
+    // A sala precisa ser lida ANTES do update: devolver a fila zera room_id,
+    // e sem isso nao havia como saber qual sala liberar.
+    const { data: antes } = await supabase
+      .from('patient_exams')
+      .select('room_id')
+      .eq('id', examId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{ room_id: string | null }>();
+
     const patch: Record<string, unknown> = { status, updated_by: ctx.userId };
     if (status === 'em_andamento') patch.started_at = new Date().toISOString();
     if (status === 'concluido' || status === 'nao_realizado') {
@@ -395,11 +541,14 @@ export async function updateExamStatus(
 
     if (error) return fail(toFriendlyError(error));
 
-    if (data.room_id && (status === 'concluido' || status === 'nao_realizado')) {
+    // Sai de atendimento por qualquer motivo -> a sala volta a ficar livre.
+    const salaParaLiberar = antes?.room_id ?? data.room_id;
+    if (salaParaLiberar && status !== 'em_andamento') {
       await supabase
         .from('rooms')
         .update({ status: 'disponivel', current_attendance_id: null })
-        .eq('id', data.room_id);
+        .eq('id', salaParaLiberar)
+        .eq('tenant_id', ctx.tenant.id);
     }
 
     await supabase.from('queue_events').insert({
@@ -444,6 +593,8 @@ export async function moveAttendanceStage(
       p_reason: reason ?? null,
     });
     if (error) return fail(toFriendlyError(error));
+
+    await limparEstadoTerminal(ctx.tenant.id, attendanceId, stage);
 
     await audit(ctx, {
       action: 'update',

@@ -106,16 +106,33 @@ export async function finishReception(input: {
         );
     }
 
+    // Atualiza a prioridade sem mexer em quem ja tinha posicao na fila.
     await supabase
       .from('patient_exams')
-      .update({ priority: input.priority, queued_at: new Date().toISOString() })
+      .update({ priority: input.priority })
       .eq('attendance_id', input.attendanceId)
       .eq('status', 'pendente');
+
+    await supabase
+      .from('patient_exams')
+      .update({ queued_at: new Date().toISOString() })
+      .eq('attendance_id', input.attendanceId)
+      .eq('status', 'pendente')
+      .is('queued_at', null);
+
+    // Sem exame nenhum, mandar para a fila deixaria o paciente parado: nao ha
+    // exame para concluir e nada dispara a etapa seguinte. Vai direto ao medico.
+    const semExames = input.examTypeIds.length === 0;
+    const proximaEtapa = input.needsTriage
+      ? 'aguardando_triagem'
+      : semExames
+        ? 'aguardando_medico'
+        : 'aguardando_exames';
 
     const { error } = await supabase
       .from('attendances')
       .update({
-        stage_code: input.needsTriage ? 'aguardando_triagem' : 'aguardando_exames',
+        stage_code: proximaEtapa,
         needs_triage: input.needsTriage,
         priority: input.priority,
         reception_finished_at: new Date().toISOString(),

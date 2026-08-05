@@ -46,7 +46,7 @@ export default async function FilasPage() {
     .from('patient_exams')
     .select('id, attendance_id, exam_types(name), attendances!inner(stage_code), patients(full_name)')
     .eq('tenant_id', ctx.tenant.id)
-    .in('status', ['pendente', 'em_fila'])
+    .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
     .not('attendances.stage_code', 'in', '("aguardando_exames","em_exames")')
     .not('attendances.stage_code', 'in', '("finalizado","cancelado","ausente")')
     .returns<

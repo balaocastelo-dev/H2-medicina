@@ -2,6 +2,7 @@ import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
+import { startOfTodayISO } from '@/lib/format';
 import { ReceptionBoard } from './board';
 import { ReceptionLiveRefresh } from './live-refresh';
 
@@ -23,6 +24,9 @@ export default async function RecepcaoPage() {
       .in('stage_code', ['aguardando_recepcao', 'na_recepcao'])
       .is('finished_at', null)
       .is('deleted_at', null)
+      // Sem recorte de data, atendimento esquecido em aberto ficava para
+      // sempre na fila da recepcao.
+      .gte('checkin_at', startOfTodayISO())
       .order('checkin_at')
       .returns<ReceptionRow[]>(),
     supabase

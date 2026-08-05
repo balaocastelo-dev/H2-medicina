@@ -160,12 +160,24 @@ export function TvPanel({
     [sound, showName, volume, tocarGongo],
   );
 
+  // Guarda o que ja foi anunciado. Comparar so com a ultima chamada fazia o
+  // painel pular a do meio quando duas salas chamavam quase juntas.
+  const anunciadas = useRef<Set<string>>(new Set(initialCalls.map((c) => c.id)));
+
   useEffect(() => {
+    if (!somLiberado) return;
     const atual = calls[0];
-    if (!atual || atual.id === lastAnnounced.current) return;
+    if (!atual || anunciadas.current.has(atual.id)) return;
+
+    // Rotulo ainda vazio: o nome chega no UPDATE, em instantes.
+    if (showName && !atual.patient_label && Date.now() - new Date(atual.called_at).getTime() < 2500) {
+      return;
+    }
+
+    anunciadas.current.add(atual.id);
     lastAnnounced.current = atual.id;
-    if (somLiberado) anunciar(atual);
-  }, [calls, somLiberado, anunciar]);
+    anunciar(atual);
+  }, [calls, somLiberado, anunciar, showName]);
 
   const current = calls[0];
   const history = calls.slice(1, historySize + 1);

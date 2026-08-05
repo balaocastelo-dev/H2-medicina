@@ -127,14 +127,23 @@ export function slugify(value: string): string {
  * a renderizacao e sinalizado como impuro pelo lint do React. Aqui a leitura do
  * relogio fica isolada e explicita.
  */
+const FUSO = 'America/Sao_Paulo';
+
+/**
+ * Data de hoje no fuso da clinica, em AAAA-MM-DD.
+ *
+ * Nao use toISOString aqui: ele devolve UTC. Depois das 21h no horario de
+ * Brasilia o dia UTC ja virou, e o sistema passaria a procurar a agenda do dia
+ * seguinte — o paciente sumiria do totem.
+ */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: FUSO }).format(new Date());
 }
 
 export function daysAgoISO(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: FUSO }).format(d);
 }
 
 export function daysAheadISO(days: number): string {
@@ -148,9 +157,17 @@ export function sinceISO(days: number): string {
   return d.toISOString();
 }
 
-/** Inicio do dia atual em ISO. */
+/**
+ * Instante em que o dia comecou no fuso da clinica, em ISO/UTC.
+ * Usado para filtrar "o que aconteceu hoje" sem depender do fuso do servidor.
+ */
 export function startOfTodayISO(): string {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: FUSO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+  // -03:00 e o offset de Brasilia (sem horario de verao desde 2019).
+  return new Date(`${partes}T00:00:00-03:00`).toISOString();
 }

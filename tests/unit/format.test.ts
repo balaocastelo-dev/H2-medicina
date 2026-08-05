@@ -33,3 +33,28 @@ describe('formatadores', () => {
     expect(slugify('Pacote Admissional Completo')).toBe('pacote-admissional-completo');
   });
 });
+
+describe('datas no fuso da clínica', () => {
+  it('usa o fuso de São Paulo, não UTC', async () => {
+    const { todayISO, startOfTodayISO } = await import('@/lib/format');
+    const hoje = todayISO();
+    expect(/^\d{4}-\d{2}-\d{2}$/.test(hoje)).toBe(true);
+
+    const esperado = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    }).format(new Date());
+    expect(hoje).toBe(esperado);
+
+    // O início do dia da clínica precisa cair antes de agora.
+    expect(new Date(startOfTodayISO()).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('início do dia corresponde à meia-noite de Brasília', async () => {
+    const { startOfTodayISO, todayISO } = await import('@/lib/format');
+    const inicio = new Date(startOfTodayISO());
+    const diaLocal = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Sao_Paulo',
+    }).format(inicio);
+    expect(diaLocal).toBe(todayISO());
+  });
+});
