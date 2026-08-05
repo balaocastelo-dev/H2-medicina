@@ -7,6 +7,7 @@ import { Badge, Button, Card, EmptyState, StatCard, Table, Td, Th } from '@/comp
 import { FilterSelect } from '@/components/ui/data-controls';
 import { formatDate, formatTime, todayISO } from '@/lib/format';
 import { AgendaDatePicker } from './date-picker';
+import { Calendario, type DiaDoCalendario } from './calendario';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,12 +66,21 @@ function etapaCor(atendimento: { stage_code: string; finished_at: string | null 
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ data?: string; status?: string; empresa?: string }>;
+  searchParams: Promise<{ data?: string; status?: string; empresa?: string; inicio?: string }>;
 }) {
   const ctx = await requirePermission('agenda.ver');
   const sp = await searchParams;
   const date = sp.data ?? todayISO();
+  const inicio = sp.inicio ?? todayISO();
   const supabase = await createClient();
+
+  // Janela de 30 dias do calendario.
+  const dias: string[] = Array.from({ length: 30 }, (_, i) => {
+    const d = new Date(`${inicio}T12:00:00-03:00`);
+    d.setDate(d.getDate() + i);
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+  });
+  const ultimoDia = dias[dias.length - 1] ?? inicio;
 
   let query = supabase
     .from('appointments')
@@ -84,7 +94,7 @@ export default async function AgendaPage({
   if (sp.status) query = query.eq('status', sp.status);
   if (sp.empresa) query = query.eq('company_id', sp.empresa);
 
-  const [rowsRes, companiesRes] = await Promise.all([
+  const [rowsRes, companiesRes, mesRes] = await Promise.all([
     query.order('scheduled_at').returns<Row[]>(),
     supabase
       .from('companies')
@@ -93,7 +103,29 @@ export default async function AgendaPage({
       .is('deleted_at', null)
       .order('legal_name')
       .returns<{ id: string; legal_name: string; trade_name: string | null }[]>(),
+    supabase
+      .from('appointments')
+      .select('scheduled_date, status')
+      .eq('tenant_id', ctx.tenant.id)
+      .gte('scheduled_date', inicio)
+      .lte('scheduled_date', ultimoDia)
+      .is('deleted_at', null)
+      .returns<{ scheduled_date: string; status: string }[]>(),
   ]);
+
+  const porDia = new Map<string, DiaDoCalendario>();
+  for (const iso of dias) {
+    porDia.set(iso, { iso, total: 0, realizados: 0, ausentes: 0 });
+  }
+  for (const a of mesRes.data ?? []) {
+    const dia = porDia.get(a.scheduled_date);
+    if (!dia) continue;
+    if (a.status === 'cancelado' || a.status === 'remarcado') continue;
+    dia.total += 1;
+    if (a.status === 'realizado') dia.realizados += 1;
+    if (a.status === 'ausente') dia.ausentes += 1;
+  }
+  const calendario = Array.from(porDia.values());
 
   const rows = rowsRes.data ?? [];
   const total = rows.length;
@@ -122,6 +154,10 @@ export default async function AgendaPage({
         <StatCard label="Confirmados" value={confirmed} color="#0EA5E9" />
         <StatCard label="Realizados" value={done} color="#22C55E" />
         <StatCard label="Ausentes" value={absent} color="#EF4444" />
+      </div>
+
+      <div className="mb-4">
+        <Calendario dias={calendario} selecionado={date} inicio={inicio} />
       </div>
 
       <Card>
