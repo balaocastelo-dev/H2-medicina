@@ -35,12 +35,12 @@ export function isValidCNPJ(value: string | null | undefined): boolean {
 export const cpfSchema = z
   .string()
   .transform(onlyDigits)
-  .refine((v) => v === '' || isValidCPF(v), 'CPF invalido');
+  .refine((v) => v === '' || isValidCPF(v), 'CPF inválido');
 
 export const cnpjSchema = z
   .string()
   .transform(onlyDigits)
-  .refine((v) => v === '' || isValidCNPJ(v), 'CNPJ invalido');
+  .refine((v) => v === '' || isValidCNPJ(v), 'CNPJ inválido');
 
 export const optionalText = z
   .string()
@@ -52,7 +52,7 @@ export const optionalText = z
 export const emailSchema = z
   .string()
   .trim()
-  .email('E-mail invalido')
+  .email('E-mail inválido')
   .or(z.literal(''))
   .transform((v) => (v === '' ? null : v.toLowerCase()));
 
@@ -60,7 +60,7 @@ export const ufSchema = z
   .string()
   .trim()
   .toUpperCase()
-  .regex(/^[A-Z]{2}$/, 'UF invalida')
+  .regex(/^[A-Z]{2}$/, 'UF inválida')
   .or(z.literal(''))
   .transform((v) => (v === '' ? null : v));
 

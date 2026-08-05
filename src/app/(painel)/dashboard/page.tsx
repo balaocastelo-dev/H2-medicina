@@ -238,7 +238,7 @@ export default async function DashboardPage() {
       <div className="mt-4">
         <Card>
           <CardHeader
-            title="Pacientes na clinica agora"
+            title="Pacientes na clínica agora"
             description={`${abertos.length} em jornada aberta`}
             action={
               <Link href="/crm" className="text-sm font-medium hover:underline" style={{ color: cor }}>

@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Plataforma Clinica',
-  description: 'Gestao de medicina ocupacional, atendimento e loja',
+  title: 'Plataforma Clínica',
+  description: 'Gestão de medicina ocupacional, atendimento e loja',
   manifest: '/manifest.webmanifest',
   icons: {
     icon: [

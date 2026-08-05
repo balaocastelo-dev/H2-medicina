@@ -34,12 +34,12 @@ export default async function ExecucoesPage() {
   return (
     <div>
       <PageHeader
-        title="Execucoes de importacao"
-        description="Historico, contadores e erros por execucao"
+        title="Execuções de importação"
+        description="Histórico, contadores e erros por execução"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Ultima execucao" value={formatDateTime(last?.created_at)} />
+        <StatCard label="Última execução" value={formatDateTime(last?.created_at)} />
         <StatCard label="Registros coletados" value={last?.collected_count ?? 0} />
         <StatCard label="Duplicidades" value={last?.duplicates_count ?? 0} color="#FB923C" />
         <StatCard label="Erros" value={last?.error_count ?? 0} color="#EF4444" />
@@ -48,16 +48,16 @@ export default async function ExecucoesPage() {
       <Card>
         {rows.length === 0 ? (
           <EmptyState
-            title="Nenhuma execucao registrada"
+            title="Nenhuma execução registrada"
             description="Configure um conector e dispare a primeira coleta em modo de teste."
           />
         ) : (
           <Table>
             <thead>
               <tr>
-                <Th>Inicio</Th>
+                <Th>Início</Th>
                 <Th>Gatilho</Th>
-                <Th>Referencia</Th>
+                <Th>Referência</Th>
                 <Th>Coletados</Th>
                 <Th>Novos / Atualizados</Th>
                 <Th>Erros</Th>

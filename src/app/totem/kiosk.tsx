@@ -86,7 +86,7 @@ export function TotemKiosk({
       setTicket(result.data?.ticket ?? null);
       setMessage(
         result.data?.alreadyCheckedIn
-          ? 'Voce ja havia realizado o check-in hoje. Esta e a sua senha.'
+          ? 'Você já havia realizado o check-in hoje. Esta e a sua senha.'
           : null,
       );
       setStep('senha');
@@ -224,7 +224,7 @@ export function TotemKiosk({
 
       {step === 'prioridade' && (
         <section className="w-full max-w-lg text-center">
-          <h2 className="mb-2 text-2xl font-semibold">Atendimento prioritario?</h2>
+          <h2 className="mb-2 text-2xl font-semibold">Atendimento prioritário?</h2>
           <p className="mb-6 text-slate-300">
             Idosos, gestantes, lactantes, pessoas com deficiencia ou com crianca de colo.
           </p>
@@ -265,7 +265,7 @@ export function TotemKiosk({
             <p className="mt-2 text-xs text-slate-500">
               {formatDate(new Date())} · {formatTime(new Date())}
             </p>
-            <p className="mt-3 text-xs text-slate-600">Aguarde ser chamado na recepcao.</p>
+            <p className="mt-3 text-xs text-slate-600">Aguarde ser chamado na recepção.</p>
           </div>
 
           <div className="no-print mt-6 grid grid-cols-2 gap-3">

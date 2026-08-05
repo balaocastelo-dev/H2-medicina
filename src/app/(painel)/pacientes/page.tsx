@@ -59,7 +59,7 @@ export default async function PacientesPage({
     <div>
       <PageHeader
         title="Pacientes"
-        description="Cadastro unico com deteccao de duplicidade"
+        description="Cadastro único com deteccao de duplicidade"
         actions={
           ctx.permissions.has('pacientes.criar') && (
             <Link href="/pacientes/novo">
@@ -82,7 +82,7 @@ export default async function PacientesPage({
             description={
               q
                 ? 'Ajuste os termos da busca ou cadastre um novo paciente.'
-                : 'Cadastre manualmente, importe uma planilha ou use um conector de importacao.'
+                : 'Cadastre manualmente, importe uma planilha ou use um conector de importação.'
             }
             action={
               ctx.permissions.has('pacientes.criar') && (

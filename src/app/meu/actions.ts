@@ -27,7 +27,7 @@ export async function lookupPatientJourney(
   birthDate: string,
 ): Promise<ActionResult<PatientJourney>> {
   const cpf = onlyDigits(cpfRaw);
-  if (cpf.length !== 11) return fail('Informe um CPF valido.');
+  if (cpf.length !== 11) return fail('Informe um CPF válido.');
   if (!birthDate) return fail('Informe a data de nascimento.');
 
   const anon = await createClient();
@@ -36,7 +36,7 @@ export async function lookupPatientJourney(
     .select('id')
     .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
     .maybeSingle<{ id: string }>();
-  if (!tenant) return fail('Unidade nao configurada.');
+  if (!tenant) return fail('Unidade não configurada.');
 
   // Consulta restrita executada no servidor com filtro duplo (CPF + nascimento).
   const admin = createAdminClient();
@@ -50,7 +50,7 @@ export async function lookupPatientJourney(
     .is('deleted_at', null)
     .maybeSingle<{ id: string; full_name: string }>();
 
-  if (!patient) return fail('Nao localizamos seu cadastro com esses dados.');
+  if (!patient) return fail('Não localizamos seu cadastro com esses dados.');
 
   const { data: attendance } = await admin
     .from('attendances')
@@ -73,7 +73,7 @@ export async function lookupPatientJourney(
     }>();
 
   if (!attendance) {
-    return fail('Nenhum atendimento em andamento. Procure a recepcao.');
+    return fail('Nenhum atendimento em andamento. Procure a recepção.');
   }
 
   return ok({

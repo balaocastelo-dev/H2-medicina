@@ -67,7 +67,7 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
       <PageHeader
         title={patient.full_name}
         description={`Cadastrado em ${formatDate(patient.created_at)} · origem: ${patient.origin}`}
-        actions={patient.needs_review ? <Badge color="#F59E0B">Necessita revisao</Badge> : null}
+        actions={patient.needs_review ? <Badge color="#F59E0B">Necessita revisão</Badge> : null}
       />
 
       <div className="grid gap-4 xl:grid-cols-3">
@@ -76,11 +76,11 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
         </div>
 
         <Card className="h-fit">
-          <CardHeader title="Historico de atendimentos" />
+          <CardHeader title="Histórico de atendimentos" />
           {history.length === 0 ? (
             <EmptyState
               title="Sem atendimentos"
-              description="Este paciente ainda nao passou pela clinica."
+              description="Este paciente ainda não passou pela clínica."
             />
           ) : (
             <CardBody className="space-y-3">

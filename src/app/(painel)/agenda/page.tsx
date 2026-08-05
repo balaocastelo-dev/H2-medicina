@@ -115,7 +115,7 @@ export default async function AgendaPage({
         {rows.length === 0 ? (
           <EmptyState
             title="Nenhum agendamento nesta data"
-            description="Crie manualmente, importe uma planilha ou aguarde a sincronizacao automatica."
+            description="Crie manualmente, importe uma planilha ou aguarde a sincronização automática."
           />
         ) : (
           <Table>

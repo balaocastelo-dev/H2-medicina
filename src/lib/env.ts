@@ -9,7 +9,7 @@ import { z } from 'zod';
  * clara — quando algo de fato tenta falar com o Supabase.
  */
 const publicSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url('NEXT_PUBLIC_SUPABASE_URL ausente ou invalida'),
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url('NEXT_PUBLIC_SUPABASE_URL ausente ou inválida'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(20, 'NEXT_PUBLIC_SUPABASE_ANON_KEY ausente'),
   NEXT_PUBLIC_APP_URL: z.string().url(),
   NEXT_PUBLIC_DEFAULT_TENANT_SLUG: z.string().min(1),
@@ -68,7 +68,7 @@ export function isSupabaseConfigured(): boolean {
  */
 export function serverEnv() {
   if (typeof window !== 'undefined') {
-    throw new Error('serverEnv() nao pode ser usado no navegador.');
+    throw new Error('serverEnv() não pode ser usado no navegador.');
   }
   return {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',

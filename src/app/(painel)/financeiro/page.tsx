@@ -42,7 +42,7 @@ export default async function FinanceiroPage({
     <div>
       <PageHeader
         title="Financeiro"
-        description="Cobrancas, Pix com confirmacao manual, estornos e recibos"
+        description="Cobranças, Pix com confirmação manual, estornos e recibos"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -75,12 +75,12 @@ export default async function FinanceiroPage({
         </div>
 
         {rows.length === 0 ? (
-          <EmptyState title="Nenhum lancamento" description="Crie a primeira cobranca acima." />
+          <EmptyState title="Nenhum lancamento" description="Crie a primeira cobrança acima." />
         ) : (
           <Table>
             <thead>
               <tr>
-                <Th>Descricao</Th>
+                <Th>Descrição</Th>
                 <Th>Cliente</Th>
                 <Th>Metodo</Th>
                 <Th>Valor</Th>

@@ -120,7 +120,7 @@ export async function addCompanyContact(
     const schema = z.object({
       name: z.string().trim().min(2, 'Informe o nome'),
       role: z.string().trim().optional(),
-      email: z.string().trim().email('E-mail invalido').or(z.literal('')),
+      email: z.string().trim().email('E-mail inválido').or(z.literal('')),
       phone: z.string().trim().optional(),
       allow_marketing: z.boolean().default(false),
     });

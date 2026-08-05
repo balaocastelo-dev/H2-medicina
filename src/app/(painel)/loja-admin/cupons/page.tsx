@@ -46,12 +46,12 @@ export default async function CuponsPage() {
           <Table>
             <thead>
               <tr>
-                <Th>Codigo</Th>
+                <Th>Código</Th>
                 <Th>Desconto</Th>
-                <Th>Minimo</Th>
+                <Th>Mínimo</Th>
                 <Th>Vigencia</Th>
                 <Th>Uso</Th>
-                <Th>Situacao</Th>
+                <Th>Situação</Th>
               </tr>
             </thead>
             <tbody>

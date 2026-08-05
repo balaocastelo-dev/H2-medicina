@@ -72,7 +72,7 @@ export function PatientForm({
           </Field>
           <Field label="Sexo" error={errors?.gender}>
             <Select name="gender" defaultValue={patient?.gender ?? 'nao_informado'}>
-              <option value="nao_informado">Nao informado</option>
+              <option value="nao_informado">Não informado</option>
               <option value="masculino">Masculino</option>
               <option value="feminino">Feminino</option>
               <option value="outro">Outro</option>

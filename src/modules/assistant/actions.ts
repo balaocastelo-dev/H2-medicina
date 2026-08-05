@@ -37,14 +37,14 @@ async function carregarSalas(ctx: SessionContext): Promise<SalaContexto[]> {
 /** Primeira etapa: entende o pedido e devolve o que sera feito. */
 export async function interpretarComando(texto: string): Promise<RespostaAssistente> {
   const ctx = await getSessionContext();
-  if (!ctx) return { ok: false, mensagem: 'Sessao expirada. Entre novamente.' };
+  if (!ctx) return { ok: false, mensagem: 'Sessão expirada. Entre novamente.' };
 
   const leitura = interpretar(texto, { salas: await carregarSalas(ctx) });
 
   if (leitura.intencao.tipo === 'ajuda') {
     return {
       ok: true,
-      mensagem: 'Posso executar estas tarefas para voce:',
+      mensagem: 'Posso executar estas tarefas para você:',
       sugestoes: EXEMPLOS,
     };
   }
@@ -76,7 +76,7 @@ export async function interpretarComando(texto: string): Promise<RespostaAssiste
 export async function executarComando(texto: string): Promise<RespostaAssistente> {
   try {
     const ctx = await getSessionContext();
-    if (!ctx) return { ok: false, mensagem: 'Sessao expirada. Entre novamente.' };
+    if (!ctx) return { ok: false, mensagem: 'Sessão expirada. Entre novamente.' };
 
     const leitura = interpretar(texto, { salas: await carregarSalas(ctx) });
     const { intencao } = leitura;
@@ -181,7 +181,7 @@ async function criarCobranca(
     return {
       ok: false,
       mensagem: `Nao encontrei paciente com o CPF ${formatCPF(intencao.cpf)}.`,
-      sugestoes: ['Cadastre o paciente antes de gerar a cobranca.'],
+      sugestoes: ['Cadastre o paciente antes de gerar a cobrança.'],
     };
   }
 
@@ -240,7 +240,7 @@ async function criarCobranca(
       const payload = buildPixPayload({
         key: conf.chave_pix,
         merchantName: conf.beneficiario ?? ctx.tenant.trade_name,
-        merchantCity: conf.cidade ?? 'SAO PAULO',
+        merchantCity: conf.cidade ?? 'São PAULO',
         amount: Number(pagamento.net_amount),
         txid,
         description: intencao.descricao,
@@ -251,15 +251,15 @@ async function criarCobranca(
         pix_key: conf.chave_pix,
         key_kind: conf.tipo_chave ?? 'aleatoria',
         merchant_name: conf.beneficiario ?? ctx.tenant.trade_name,
-        merchant_city: conf.cidade ?? 'SAO PAULO',
+        merchant_city: conf.cidade ?? 'São PAULO',
         txid,
         amount: pagamento.net_amount,
         payload,
         confirmation_mode: 'manual',
       });
-      detalhes.push('QR Code Pix gerado — disponivel no Financeiro.');
+      detalhes.push('QR Code Pix gerado — disponível no Financeiro.');
     } else {
-      detalhes.push('Chave Pix nao configurada: a cobranca ficou sem QR Code.');
+      detalhes.push('Chave Pix não configurada: a cobrança ficou sem QR Code.');
     }
   }
 
@@ -292,7 +292,7 @@ async function criarProfissional(
     .eq('tenant_id', ctx.tenant.id)
     .eq('code', intencao.papel)
     .maybeSingle<{ id: string; name: string }>();
-  if (!papel) return { ok: false, mensagem: 'Papel nao encontrado nesta empresa.' };
+  if (!papel) return { ok: false, mensagem: 'Papel não encontrado nesta empresa.' };
 
   const email =
     intencao.email ?? `${slugify(intencao.nome).split('-')[0]}@${ctx.tenant.slug}.com`;
@@ -355,7 +355,7 @@ async function criarProfissional(
     detalhes: [
       `E-mail de acesso: ${email}`,
       `Senha provisoria: ${senha}`,
-      'A troca de senha sera exigida no primeiro acesso.',
+      'A troca de senha será exigida no primeiro acesso.',
       ...(intencao.conselhoNumero
         ? [`Registro: ${intencao.conselhoTipo} ${intencao.conselhoNumero}${intencao.conselhoUf ? '/' + intencao.conselhoUf : ''}`]
         : []),

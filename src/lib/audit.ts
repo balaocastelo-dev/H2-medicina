@@ -84,6 +84,6 @@ export async function auditClinicalAccess(
       user_agent: h.get('user-agent'),
     });
   } catch (error) {
-    console.error('[audit] falha no log clinico:', error);
+    console.error('[audit] falha no log clínico:', error);
   }
 }

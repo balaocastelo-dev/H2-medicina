@@ -66,7 +66,7 @@ export function GreetingSettings({
   return (
     <Card>
       <CardHeader
-        title="Saudacao de boas-vindas"
+        title="Saudação de boas-vindas"
         description="Frase falada quando a pessoa entra no sistema"
       />
       <CardBody>
@@ -78,12 +78,12 @@ export function GreetingSettings({
             <Field label="Ativa?">
               <Select name="ativa" defaultValue={String(valores.ativa ?? 'sim')}>
                 <option value="sim">Sim</option>
-                <option value="nao">Nao</option>
+                <option value="nao">Não</option>
               </Select>
             </Field>
             <Field
               label="Tratamento padrao"
-              hint="Usado quando a pessoa nao tem tratamento proprio"
+              hint="Usado quando a pessoa não tem tratamento proprio"
             >
               <Select
                 name="tratamento_padrao"
@@ -175,7 +175,7 @@ export function GreetingSettings({
           </Field>
 
           <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-600">
-            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">Previa</span>
+            <span className="text-xs font-medium tracking-wide text-slate-400 uppercase">Prévia</span>
             <p className="mt-1">{frase}</p>
           </div>
 

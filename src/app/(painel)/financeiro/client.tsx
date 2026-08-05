@@ -33,7 +33,7 @@ export function NewChargeCard({ hasPixKey }: { hasPixKey: boolean }) {
   return (
     <Card>
       <CardHeader
-        title="Nova cobranca"
+        title="Nova cobrança"
         description="Pix, cartao, dinheiro, faturamento ou cortesia"
       />
       <CardBody>
@@ -125,7 +125,7 @@ export function PaymentActions({
           variant="ghost"
           loading={pending}
           onClick={() => {
-            if (window.confirm('Cancelar esta cobranca?')) {
+            if (window.confirm('Cancelar esta cobrança?')) {
               startTransition(() => void cancelPayment(payment.id));
             }
           }}

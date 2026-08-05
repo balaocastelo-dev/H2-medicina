@@ -103,7 +103,7 @@ export function AppointmentForm({
           >
             <Input type="datetime-local" name="scheduled_at" required />
           </Field>
-          <Field label="Duracao (min)" error={errors?.duration_minutes}>
+          <Field label="Duração (min)" error={errors?.duration_minutes}>
             <Input
               type="number"
               name="duration_minutes"
@@ -116,7 +116,7 @@ export function AppointmentForm({
           <Field label="Prioridade" error={errors?.priority}>
             <Select name="priority" defaultValue="normal">
               <option value="normal">Normal</option>
-              <option value="prioritario">Prioritario</option>
+              <option value="prioritario">Prioritário</option>
               <option value="encaixe">Encaixe</option>
             </Select>
           </Field>
@@ -129,7 +129,7 @@ export function AppointmentForm({
               <option value="admissional">Admissional</option>
               <option value="periodico">Periodico</option>
               <option value="demissional">Demissional</option>
-              <option value="mudanca_funcao">Mudanca de funcao</option>
+              <option value="mudanca_funcao">Mudanca de função</option>
               <option value="retorno_trabalho">Retorno ao trabalho</option>
               <option value="consulta">Consulta</option>
               <option value="outro">Outro</option>

@@ -8,11 +8,11 @@ import { formatDateTime } from '@/lib/format';
 import type { DocumentKind } from '@/types/entities';
 
 const KINDS: { value: DocumentKind; label: string }[] = [
-  { value: 'atestado_comparecimento', label: 'Atestado de comparecimento medico' },
+  { value: 'atestado_comparecimento', label: 'Atestado de comparecimento médico' },
   { value: 'comprovante_comparecimento', label: 'Comprovante de comparecimento' },
   { value: 'resumo_atendimento', label: 'Resumo do atendimento' },
   { value: 'relacao_exames', label: 'Relacao dos exames' },
-  { value: 'ficha_clinica', label: 'Ficha clinica' },
+  { value: 'ficha_clinica', label: 'Ficha clínica' },
   { value: 'documento_final', label: 'Documento final consolidado' },
 ];
 

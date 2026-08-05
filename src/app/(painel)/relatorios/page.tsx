@@ -109,7 +109,7 @@ export default async function RelatoriosPage({
         <Card>
           <CardHeader title="Atendimentos por empresa" />
           {byCompany.size === 0 ? (
-            <EmptyState title="Sem dados no periodo" />
+            <EmptyState title="Sem dados no período" />
           ) : (
             <Table>
               <thead>
@@ -135,14 +135,14 @@ export default async function RelatoriosPage({
         <Card>
           <CardHeader title="Produtividade por exame" />
           {byExam.size === 0 ? (
-            <EmptyState title="Sem exames no periodo" />
+            <EmptyState title="Sem exames no período" />
           ) : (
             <Table>
               <thead>
                 <tr>
                   <Th>Exame</Th>
                   <Th>Total</Th>
-                  <Th>Concluidos</Th>
+                  <Th>Concluídos</Th>
                   <Th>Tempo medio</Th>
                 </tr>
               </thead>

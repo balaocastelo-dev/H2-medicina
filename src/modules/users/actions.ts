@@ -13,7 +13,7 @@ const PAPEIS = ['administrativo', 'medico_examinador', 'atendimento'] as const;
 const novoUsuarioSchema = z
   .object({
     full_name: z.string().trim().min(3, 'Informe o nome completo'),
-    email: z.string().trim().toLowerCase().email('E-mail invalido'),
+    email: z.string().trim().toLowerCase().email('E-mail inválido'),
     password: z.string().min(8, 'A senha deve ter ao menos 8 caracteres'),
     role_code: z.enum(PAPEIS),
     job_title: z.string().trim().optional(),
@@ -26,7 +26,7 @@ const novoUsuarioSchema = z
   })
   .refine(
     (d) => d.role_code !== 'medico_examinador' || !!d.council_number,
-    { message: 'Informe o numero do conselho do profissional', path: ['council_number'] },
+    { message: 'Informe o número do conselho do profissional', path: ['council_number'] },
   );
 
 /**
@@ -67,7 +67,7 @@ export async function createUser(_prev: unknown, formData: FormData): Promise<Ac
       .eq('code', dados.role_code)
       .maybeSingle<{ id: string; name: string }>();
 
-    if (!papel) return fail('Papel nao encontrado para esta empresa.');
+    if (!papel) return fail('Papel não encontrado para esta empresa.');
 
     const admin = createAdminClient();
 
@@ -82,7 +82,7 @@ export async function createUser(_prev: unknown, formData: FormData): Promise<Ac
     if (erroAuth || !criado.user) {
       const msg = erroAuth?.message ?? '';
       if (/already been registered|already exists/i.test(msg)) {
-        return fail('Ja existe uma conta com este e-mail.');
+        return fail('Já existe uma conta com este e-mail.');
       }
       return fail(`Nao foi possivel criar a conta: ${msg}`);
     }
@@ -167,7 +167,7 @@ export async function createUser(_prev: unknown, formData: FormData): Promise<Ac
 export async function changeUserRole(userId: string, roleCode: string): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('permissoes.administrar');
-    if (!PAPEIS.includes(roleCode as (typeof PAPEIS)[number])) return fail('Papel invalido.');
+    if (!PAPEIS.includes(roleCode as (typeof PAPEIS)[number])) return fail('Papel inválido.');
 
     const supabase = await createClient();
     const { data: papel } = await supabase
@@ -176,7 +176,7 @@ export async function changeUserRole(userId: string, roleCode: string): Promise<
       .eq('tenant_id', ctx.tenant.id)
       .eq('code', roleCode)
       .maybeSingle<{ id: string; name: string }>();
-    if (!papel) return fail('Papel nao encontrado.');
+    if (!papel) return fail('Papel não encontrado.');
 
     await supabase.from('user_roles').delete().eq('user_id', userId).eq('tenant_id', ctx.tenant.id);
     const { error } = await supabase
@@ -201,7 +201,7 @@ export async function changeUserRole(userId: string, roleCode: string): Promise<
 export async function toggleUserBlock(userId: string, bloquear: boolean, motivo?: string) {
   try {
     const ctx = await assertPermission('usuarios.administrar');
-    if (userId === ctx.userId) return fail('Voce nao pode bloquear o proprio acesso.');
+    if (userId === ctx.userId) return fail('Você não pode bloquear o proprio acesso.');
 
     const supabase = await createClient();
     const { error } = await supabase
@@ -242,7 +242,7 @@ export async function resetUserPassword(userId: string, novaSenha: string): Prom
       .eq('id', userId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; full_name: string }>();
-    if (!alvo) return fail('Usuario nao encontrado nesta empresa.');
+    if (!alvo) return fail('Usuário não encontrado nesta empresa.');
 
     const admin = createAdminClient();
     const { error } = await admin.auth.admin.updateUserById(userId, { password: novaSenha });

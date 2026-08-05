@@ -9,7 +9,7 @@ import { publicEnv } from '@/lib/env';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
 const loginSchema = z.object({
-  email: z.string().trim().email('Informe um e-mail valido'),
+  email: z.string().trim().email('Informe um e-mail válido'),
   password: z.string().min(6, 'A senha deve ter ao menos 6 caracteres'),
   next: z.string().optional(),
 });
@@ -109,7 +109,7 @@ export async function requestPasswordReset(
 ): Promise<ActionResult> {
   const email = String(formData.get('email') ?? '').trim();
   if (!email || !z.string().email().safeParse(email).success) {
-    return fail('Informe um e-mail valido.');
+    return fail('Informe um e-mail válido.');
   }
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -118,14 +118,14 @@ export async function requestPasswordReset(
   await logAuthEvent('password_reset_requested', email);
   if (error) return fail(toFriendlyError(error));
   // Resposta neutra: nao revela se o e-mail existe.
-  return ok(undefined, 'Se o e-mail estiver cadastrado, enviaremos as instrucoes em instantes.');
+  return ok(undefined, 'Se o e-mail estiver cadastrado, enviaremos as instruções em instantes.');
 }
 
 export async function updatePassword(_prev: unknown, formData: FormData): Promise<ActionResult> {
   const password = String(formData.get('password') ?? '');
   const confirm = String(formData.get('confirm') ?? '');
   if (password.length < 8) return fail('A senha deve ter ao menos 8 caracteres.');
-  if (password !== confirm) return fail('As senhas nao conferem.');
+  if (password !== confirm) return fail('As senhas não conferem.');
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });

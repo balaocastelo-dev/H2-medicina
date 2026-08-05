@@ -10,8 +10,8 @@ import type { TenantBranding } from '@/types/entities';
 const TABS = [
   { key: 'marca', label: 'Marca e cores' },
   { key: 'empresa', label: 'Dados da empresa' },
-  { key: 'contato', label: 'Contato e endereco' },
-  { key: 'responsavel_tecnico', label: 'Responsavel tecnico' },
+  { key: 'contato', label: 'Contato e endereço' },
+  { key: 'responsavel_tecnico', label: 'Responsável técnico' },
   { key: 'documentos', label: 'Documentos e PDFs' },
   { key: 'totem', label: 'Totem' },
   { key: 'painel_tv', label: 'Painel de TV' },
@@ -21,7 +21,7 @@ const TABS = [
   { key: 'email', label: 'E-mail' },
   { key: 'ia', label: 'Inteligencia artificial' },
   { key: 'scraper', label: 'Importacao' },
-  { key: 'saudacao', label: 'Saudacao de boas-vindas' },
+  { key: 'saudacao', label: 'Saudação de boas-vindas' },
   { key: 'institucional', label: 'Textos institucionais' },
   { key: 'modulos', label: 'Modulos' },
 ];
@@ -49,24 +49,24 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
       { name: 'estado', label: 'UF' },
     ],
     responsavel_tecnico: [
-      { name: 'nome', label: 'Nome do responsavel' },
+      { name: 'nome', label: 'Nome do responsável' },
       { name: 'conselho', label: 'Conselho (ex.: CRM)' },
-      { name: 'numero', label: 'Numero do registro' },
+      { name: 'numero', label: 'Número do registro' },
       { name: 'uf', label: 'UF do conselho' },
       { name: 'assinatura_url', label: 'URL da assinatura digitalizada' },
     ],
     documentos: [
       { name: 'cabecalho', label: 'Cabecalho dos PDFs', textarea: true },
       { name: 'rodape', label: 'Rodape dos PDFs', textarea: true },
-      { name: 'url_verificacao', label: 'URL de verificacao' },
+      { name: 'url_verificacao', label: 'URL de verificação' },
     ],
     totem: [
       { name: 'tempo_reinicio_segundos', label: 'Tempo de reinicio (s)', type: 'number' },
-      { name: 'instrucoes', label: 'Instrucoes na tela', textarea: true },
+      { name: 'instrucoes', label: 'Instruções na tela', textarea: true },
     ],
     painel_tv: [
-      { name: 'quantidade_ultimas_chamadas', label: 'Ultimas chamadas exibidas', type: 'number' },
-      { name: 'tempo_exibicao_segundos', label: 'Tempo de exibicao (s)', type: 'number' },
+      { name: 'quantidade_ultimas_chamadas', label: 'Últimas chamadas exibidas', type: 'number' },
+      { name: 'tempo_exibicao_segundos', label: 'Tempo de exibição (s)', type: 'number' },
       { name: 'volume', label: 'Volume (0 a 1)' },
       { name: 'voz', label: 'Idioma da voz' },
     ],
@@ -94,7 +94,7 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
       { name: 'provedor', label: 'Provedor de IA' },
       { name: 'modelo', label: 'Modelo' },
     ],
-    scraper: [{ name: 'modo_padrao', label: 'Modo padrao (teste/homologacao/producao)' }],
+    scraper: [{ name: 'modo_padrao', label: 'Modo padrao (teste/homologacao/produção)' }],
     institucional: [
       { name: 'sobre', label: 'Sobre a empresa', textarea: true },
       { name: 'politica_privacidade', label: 'Politica de privacidade', textarea: true },
@@ -172,7 +172,7 @@ function GroupForm({
 
   return (
     <Card>
-      <CardHeader title={title} description="Valores editaveis — nada e fixado no codigo" />
+      <CardHeader title={title} description="Valores editaveis — nada e fixado no código" />
       <CardBody>
         <form action={formAction} className="space-y-4">
           {state?.ok && <Alert variant="success">{state.message}</Alert>}
@@ -376,7 +376,7 @@ function ModulesPanel({ modules, allModules }: { modules: string[]; allModules: 
   return (
     <Card>
       <CardHeader
-        title="Modulos habilitados"
+        title="Módulos habilitados"
         description="Controla o que aparece no menu deste tenant"
       />
       <CardBody className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

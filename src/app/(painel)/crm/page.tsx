@@ -41,12 +41,12 @@ export default async function CrmPage() {
     <div>
       <PageHeader
         title="CRM do dia"
-        description="Movimentacao automatica conforme o paciente avanca na jornada"
+        description="Movimentação automática conforme o paciente avanca na jornada"
       />
       {stages.length === 0 ? (
         <Card>
           <EmptyState
-            title="Estagios nao configurados"
+            title="Estagios não configurados"
             description="Execute o seed do tenant ou cadastre os estagios do CRM."
           />
         </Card>

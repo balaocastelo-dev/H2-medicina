@@ -65,7 +65,7 @@ export function escolherVoz<T extends VozCandidata>(vozes: T[], preferida?: stri
 
   for (const voz of vozes) {
     const pontos = pontuarVoz(voz, preferida);
-    // -1 significa "nao e portugues": nunca entra na disputa.
+    // -1 significa "não e portugues": nunca entra na disputa.
     if (pontos === -1) continue;
     if (pontos > melhorPonto) {
       melhorPonto = pontos;

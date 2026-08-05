@@ -54,7 +54,7 @@ export function buildPixPayload(input: PixPayloadInput): string {
     tlv('54', input.amount.toFixed(2)) +
     tlv('58', 'BR') +
     tlv('59', sanitize(input.merchantName, 25) || 'RECEBEDOR') +
-    tlv('60', sanitize(input.merchantCity, 15) || 'SAO PAULO') +
+    tlv('60', sanitize(input.merchantCity, 15) || 'São PAULO') +
     tlv('62', tlv('05', txid)) +
     '6304';
 

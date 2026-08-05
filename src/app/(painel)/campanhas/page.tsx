@@ -47,13 +47,13 @@ export default async function CampanhasPage() {
     <div>
       <PageHeader
         title="Campanhas comerciais"
-        description="Prospeccao para empresas — nunca utiliza dados clinicos de pacientes"
+        description="Prospeccao para empresas — nunca utiliza dados clínicos de pacientes"
       />
 
       <div className="mb-4">
-        <Alert variant="info" title="Separacao clinica e comercial">
+        <Alert variant="info" title="Separacao clínica e comercial">
           A audiencia e formada apenas por empresas com autorizacao de comunicacao. Descadastros e
-          bloqueios sao sempre respeitados. O modo padrao e <strong>aprovacao humana</strong>.
+          bloqueios sao sempre respeitados. O modo padrao e <strong>aprovação humana</strong>.
         </Alert>
       </div>
 
@@ -62,7 +62,7 @@ export default async function CampanhasPage() {
         <StatCard label="Descadastros" value={unsubRes.count ?? 0} color="#EF4444" />
         <StatCard label="Campanhas" value={rows.length} />
         <StatCard
-          label="Aguardando aprovacao"
+          label="Aguardando aprovação"
           value={rows.filter((r) => r.status === 'aguardando_aprovacao').length}
           color="#FB923C"
         />

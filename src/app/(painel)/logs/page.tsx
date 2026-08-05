@@ -38,7 +38,7 @@ export default async function LogsPage({
     <div>
       <PageHeader
         title="Logs e auditoria"
-        description="Registro append-only de todas as acoes sensiveis"
+        description="Registro append-only de todas as ações sensiveis"
       />
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-4">
@@ -85,10 +85,10 @@ export default async function LogsPage({
               <thead>
                 <tr>
                   <Th>Quando</Th>
-                  <Th>Usuario</Th>
-                  <Th>Acao</Th>
+                  <Th>Usuário</Th>
+                  <Th>Ação</Th>
                   <Th>Entidade</Th>
-                  <Th>Descricao</Th>
+                  <Th>Descrição</Th>
                   <Th>Origem</Th>
                 </tr>
               </thead>

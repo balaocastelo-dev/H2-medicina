@@ -126,7 +126,7 @@ export async function rescheduleAppointment(
       .eq('id', id)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<Appointment>();
-    if (!original) return fail('Agendamento nao encontrado.');
+    if (!original) return fail('Agendamento não encontrado.');
 
     const { data: created, error } = await supabase
       .from('appointments')

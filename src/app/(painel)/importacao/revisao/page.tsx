@@ -39,19 +39,19 @@ export default async function RevisaoPage() {
   return (
     <div>
       <PageHeader
-        title="Revisao de importacao"
-        description="Aprovacao humana antes de sincronizar com pacientes, empresas e agenda"
+        title="Revisão de importação"
+        description="Aprovação humana antes de sincronizar com pacientes, empresas e agenda"
       />
 
       <div className="mb-4">
         <Alert variant="info">
-          O modo inicial de todo conector e <strong>aprovacao humana</strong>. A importacao e
-          idempotente: reexecutar a mesma coleta nao duplica registros.
+          O modo inicial de todo conector e <strong>aprovação humana</strong>. A importação e
+          idempotente: reexecutar a mesma coleta não duplica registros.
         </Alert>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Aguardando aprovacao" value={rows.length} color="#FB923C" />
+        <StatCard label="Aguardando aprovação" value={rows.length} color="#FB923C" />
         <StatCard label="Novos" value={rows.filter((r) => r.action === 'criar').length} />
         <StatCard
           label="Atualizacoes"
@@ -67,8 +67,8 @@ export default async function RevisaoPage() {
       <Card>
         {rows.length === 0 ? (
           <EmptyState
-            title="Nada aguardando aprovacao"
-            description="Quando uma coleta terminar, a previa aparece aqui para conferencia."
+            title="Nada aguardando aprovação"
+            description="Quando uma coleta terminar, a prévia aparece aqui para conferencia."
           />
         ) : (
           <Table>
@@ -77,7 +77,7 @@ export default async function RevisaoPage() {
                 <Th>Paciente</Th>
                 <Th>Empresa</Th>
                 <Th>Data</Th>
-                <Th>Acao</Th>
+                <Th>Ação</Th>
                 <Th>Regra</Th>
                 <Th>Confianca</Th>
                 <Th>Problemas</Th>

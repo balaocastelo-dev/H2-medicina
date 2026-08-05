@@ -31,7 +31,7 @@ export function ReceptionBoard({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <Card className="lg:col-span-1">
-        <CardHeader title="Fila da recepcao" description={`${rows.length} paciente(s)`} />
+        <CardHeader title="Fila da recepção" description={`${rows.length} paciente(s)`} />
         <div className="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
           {rows.map((r) => (
             <button
@@ -171,7 +171,7 @@ function ReceptionDetail({
             <span className="mb-1 block font-medium text-slate-700">Prioridade</span>
             <Select value={priority} onChange={(e) => setPriority(e.target.value)}>
               <option value="normal">Normal</option>
-              <option value="prioritario">Prioritario</option>
+              <option value="prioritario">Prioritário</option>
               <option value="encaixe">Encaixe</option>
             </Select>
           </label>
@@ -187,14 +187,14 @@ function ReceptionDetail({
         </div>
 
         <label className="block text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Observacoes</span>
+          <span className="mb-1 block font-medium text-slate-700">Observações</span>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </label>
 
         {canRegisterPayment && (
           <Alert variant="info">
-            Status financeiro: <strong>{row.payment_status}</strong>. Cobrancas sao registradas no
-            modulo Financeiro.
+            Status financeiro: <strong>{row.payment_status}</strong>. Cobranças são registradas no
+            módulo Financeiro.
           </Alert>
         )}
 

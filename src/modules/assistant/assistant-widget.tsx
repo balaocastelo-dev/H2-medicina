@@ -110,7 +110,7 @@ export function AssistantWidget({ nomeUsuario }: { nomeUsuario: string }) {
               <Bot className="h-5 w-5" />
               <div>
                 <p className="text-sm font-semibold">Assistente</p>
-                <p className="text-[11px] opacity-80">Sempre disponivel</p>
+                <p className="text-[11px] opacity-80">Sempre disponível</p>
               </div>
             </div>
             <button type="button" onClick={() => setAberto(false)} aria-label="Fechar">
@@ -131,9 +131,9 @@ export function AssistantWidget({ nomeUsuario }: { nomeUsuario: string }) {
                 </p>
                 <div className="mt-3 space-y-1.5">
                   {[
-                    'chamar o proximo da fila na sala de audiometria',
-                    'criar uma cobranca para o paciente do cpf 529.982.247-25 no valor de 200,00',
-                    'cadastrar o medico dr miguel crm 00002520',
+                    'chamar o próximo da fila na sala de audiometria',
+                    'criar uma cobrança para o paciente do cpf 529.982.247-25 no valor de 200,00',
+                    'cadastrar o médico dr miguel crm 00002520',
                     'buscar paciente maria',
                   ].map((ex) => (
                     <button
@@ -200,7 +200,7 @@ export function AssistantWidget({ nomeUsuario }: { nomeUsuario: string }) {
 
           {pendente && (
             <div className="border-t border-slate-200 bg-amber-50 px-3 py-2">
-              <p className="text-xs text-amber-900">Confirma esta operacao?</p>
+              <p className="text-xs text-amber-900">Confirma esta operação?</p>
               <div className="mt-2 flex gap-2">
                 <button
                   type="button"
@@ -217,7 +217,7 @@ export function AssistantWidget({ nomeUsuario }: { nomeUsuario: string }) {
                     setPendente(null);
                     setConversa((c) => [
                       ...c,
-                      { de: 'assistente', texto: 'Operacao cancelada.', erro: false },
+                      { de: 'assistente', texto: 'Operação cancelada.', erro: false },
                     ]);
                   }}
                   className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs"
@@ -239,7 +239,7 @@ export function AssistantWidget({ nomeUsuario }: { nomeUsuario: string }) {
               ref={entrada}
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
-              placeholder="Ex.: chamar o proximo na sala de audiometria"
+              placeholder="Ex.: chamar o próximo na sala de audiometria"
               className="h-10 flex-1 rounded-lg border border-slate-300 px-3 text-sm focus:ring-2 focus:outline-none ring-brand"
             />
             <button

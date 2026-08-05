@@ -55,7 +55,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/medico',
-        label: 'Modulo medico',
+        label: 'Módulo médico',
         icon: 'Stethoscope',
         permission: 'medico.atender',
         module: 'medico',
@@ -74,7 +74,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/agenda/proximo-dia',
-        label: 'Proximo dia',
+        label: 'Próximo dia',
         icon: 'CalendarClock',
         permission: 'agenda.ver',
         module: 'agenda',
@@ -150,7 +150,7 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/importacao/revisao',
-        label: 'Revisao de importacao',
+        label: 'Revisão de importação',
         icon: 'CheckCheck',
         permission: 'importacoes.aprovar',
         module: 'scraper',
@@ -176,13 +176,13 @@ export const NAV_GROUPS: NavGroup[] = [
       },
       {
         href: '/usuarios',
-        label: 'Usuarios e permissoes',
+        label: 'Usuários e permissões',
         icon: 'UserCog',
         permission: 'usuarios.administrar',
       },
       {
         href: '/configuracoes',
-        label: 'Configuracoes da empresa',
+        label: 'Configurações da empresa',
         icon: 'Settings',
         permission: 'whitelabel.configurar',
       },

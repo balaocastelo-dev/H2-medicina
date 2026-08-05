@@ -52,7 +52,7 @@ export async function saveTenantSettings(
 
     revalidatePath('/configuracoes');
     revalidatePath('/', 'layout');
-    return ok(undefined, 'Configuracoes salvas.');
+    return ok(undefined, 'Configurações salvas.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -124,7 +124,7 @@ export async function toggleModule(moduleKey: string, enabled: boolean): Promise
       description: `Modulo ${moduleKey} ${enabled ? 'habilitado' : 'desabilitado'}`,
     });
     revalidatePath('/', 'layout');
-    return ok(undefined, 'Modulos atualizados.');
+    return ok(undefined, 'Módulos atualizados.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }

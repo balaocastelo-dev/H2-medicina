@@ -149,7 +149,7 @@ export function WelcomeGreeting({
           window.speechSynthesis?.cancel();
           setVisivel(false);
         }}
-        aria-label="Fechar saudacao"
+        aria-label="Fechar saudação"
         className="absolute top-3 right-3 rounded-lg p-1.5 text-white/70 transition hover:bg-white/15 hover:text-white"
       >
         <X className="h-4 w-4" />

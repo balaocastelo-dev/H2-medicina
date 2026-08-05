@@ -32,7 +32,7 @@ export default async function LoginPage({
 }) {
   const { proximo } = await searchParams;
   const { tenant, branding } = await loadBranding();
-  const systemName = branding?.system_name ?? tenant?.trade_name ?? 'Plataforma Clinica';
+  const systemName = branding?.system_name ?? tenant?.trade_name ?? 'Plataforma Clínica';
 
   return (
     <div className="w-full max-w-md">

@@ -118,7 +118,7 @@ export default async function MedicoAtendimentoPage({
                   )}
                   {triage.restrictions && (
                     <p className="mt-1 rounded bg-red-50 p-2 text-red-800">
-                      <strong>Restricoes:</strong> {triage.restrictions}
+                      <strong>Restrições:</strong> {triage.restrictions}
                     </p>
                   )}
                 </>

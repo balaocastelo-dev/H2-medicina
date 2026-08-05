@@ -24,7 +24,7 @@ export default async function ConectoresPage() {
   return (
     <div>
       <PageHeader
-        title="Conectores de importacao"
+        title="Conectores de importação"
         description="Coleta autorizada de agenda em portais externos, API, CSV ou Excel"
       />
 
@@ -56,9 +56,9 @@ export default async function ConectoresPage() {
                 <Th>Tipo</Th>
                 <Th>Modo</Th>
                 <Th>Credencial</Th>
-                <Th>Autorizacao</Th>
-                <Th>Situacao</Th>
-                <Th>Ultima execucao</Th>
+                <Th>Autorização</Th>
+                <Th>Situação</Th>
+                <Th>Última execução</Th>
               </tr>
             </thead>
             <tbody>
@@ -72,7 +72,7 @@ export default async function ConectoresPage() {
                   <Td>{c.run_mode}</Td>
                   <Td>
                     <Badge color={c.has_password ? '#22C55E' : '#9CA3AF'}>
-                      {c.has_password ? 'cifrada' : 'nao definida'}
+                      {c.has_password ? 'cifrada' : 'não definida'}
                     </Badge>
                   </Td>
                   <Td>

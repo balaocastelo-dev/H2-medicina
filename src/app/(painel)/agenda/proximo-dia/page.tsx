@@ -71,7 +71,7 @@ export default async function ProximoDiaPage({
   return (
     <div>
       <PageHeader
-        title="Agenda do proximo dia"
+        title="Agenda do próximo dia"
         description={`Pacientes previstos para ${formatDate(date)}, agrupados por empresa`}
         actions={
           <div className="no-print flex gap-2">
@@ -102,7 +102,7 @@ export default async function ProximoDiaPage({
         <Card>
           <EmptyState
             title="Nenhum paciente previsto"
-            description="Assim que a lista do proximo dia for recebida ou importada, ela aparece aqui."
+            description="Assim que a lista do próximo dia for recebida ou importada, ela aparece aqui."
           />
         </Card>
       ) : (

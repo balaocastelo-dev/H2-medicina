@@ -14,7 +14,7 @@ import { serverEnv } from '@/lib/env';
 export function createAdminClient() {
   const { SUPABASE_SERVICE_ROLE_KEY } = serverEnv();
   if (!SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error('SUPABASE_SERVICE_ROLE_KEY nao configurada. Defina no ambiente do servidor.');
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY não configurada. Defina no ambiente do servidor.');
   }
   return createSupabaseClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },

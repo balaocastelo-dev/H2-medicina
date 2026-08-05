@@ -64,7 +64,7 @@ export default async function DocumentosPage() {
                 <Th>Documento</Th>
                 <Th>Paciente</Th>
                 <Th>Tipo</Th>
-                <Th>Codigo</Th>
+                <Th>Código</Th>
                 <Th>Emitido em</Th>
                 <Th />
               </tr>

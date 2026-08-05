@@ -48,7 +48,7 @@ export default async function RecepcaoPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard label="Aguardando recepcao" value={waiting.length} color="#FB923C" />
+        <StatCard label="Aguardando recepção" value={waiting.length} color="#FB923C" />
         <StatCard label="Em atendimento" value={inProgress.length} color="#3B82F6" />
         <StatCard label="Total na fila" value={rows.length} />
       </div>

@@ -28,7 +28,7 @@ export default async function TriagemPage() {
 
   return (
     <div>
-      <PageHeader title="Triagem" description="Sinais vitais, alertas e restricoes" />
+      <PageHeader title="Triagem" description="Sinais vitais, alertas e restrições" />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard
@@ -48,7 +48,7 @@ export default async function TriagemPage() {
         <Card>
           <EmptyState
             title="Nenhum paciente na triagem"
-            description="Os pacientes chegam aqui apos a recepcao."
+            description="Os pacientes chegam aqui apos a recepção."
           />
         </Card>
       ) : (

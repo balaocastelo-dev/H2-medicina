@@ -25,8 +25,8 @@ export interface UserRow {
 
 const PAPEIS = [
   { code: 'administrativo', nome: 'Administrativo', desc: 'Acesso total ao sistema' },
-  { code: 'medico_examinador', nome: 'Medico e examinador', desc: 'Triagem, exames e consulta' },
-  { code: 'atendimento', nome: 'Atendimento e recepcao', desc: 'Recepcao, filas e cobrancas' },
+  { code: 'medico_examinador', nome: 'Médico e examinador', desc: 'Triagem, exames e consulta' },
+  { code: 'atendimento', nome: 'Atendimento e recepção', desc: 'Recepção, filas e cobranças' },
 ];
 
 function senhaForte(): string {
@@ -76,11 +76,11 @@ export function UserManager({
 
       <Card>
         <CardHeader
-          title="Novo usuario"
-          description="Cria a conta de acesso e ja vincula ao papel escolhido"
+          title="Novo usuário"
+          description="Cria a conta de acesso e já vincula ao papel escolhido"
           action={
             <Button variant={aberto ? 'outline' : 'primary'} onClick={() => setAberto((v) => !v)}>
-              {aberto ? 'Fechar' : (<><Plus className="h-4 w-4" /> Adicionar usuario</>)}
+              {aberto ? 'Fechar' : (<><Plus className="h-4 w-4" /> Adicionar usuário</>)}
             </Button>
           }
         />
@@ -102,7 +102,7 @@ export function UserManager({
                 <Field
                   label="Como quer ser chamado(a)"
                   error={erros?.treatment}
-                  hint="Usado na saudacao ao entrar no sistema"
+                  hint="Usado na saudação ao entrar no sistema"
                 >
                   <Select name="treatment" defaultValue="">
                     <option value="">Somente o nome</option>
@@ -173,7 +173,7 @@ export function UserManager({
                       <option value="CRP">CRP</option>
                     </Select>
                   </Field>
-                  <Field label="Numero do registro" required error={erros?.council_number}>
+                  <Field label="Número do registro" required error={erros?.council_number}>
                     <Input name="council_number" placeholder="123456" />
                   </Field>
                   <Field label="UF do conselho" error={erros?.council_state}>
@@ -191,7 +191,7 @@ export function UserManager({
               </label>
 
               <Button type="submit" loading={pending}>
-                <UserPlus className="h-4 w-4" /> Criar usuario
+                <UserPlus className="h-4 w-4" /> Criar usuário
               </Button>
             </form>
           </CardBody>
@@ -201,7 +201,7 @@ export function UserManager({
       <Card>
         <CardHeader title="Usuarios" description={`${users.length} conta(s) nesta empresa`} />
         {users.length === 0 ? (
-          <EmptyState title="Nenhum usuario" description="Crie o primeiro acesso acima." />
+          <EmptyState title="Nenhum usuário" description="Crie o primeiro acesso acima." />
         ) : (
           <Table>
             <thead>
@@ -209,8 +209,8 @@ export function UserManager({
                 <Th>Nome</Th>
                 <Th>E-mail</Th>
                 <Th>Papel</Th>
-                <Th>Situacao</Th>
-                <Th>Ultimo acesso</Th>
+                <Th>Situação</Th>
+                <Th>Último acesso</Th>
                 <Th />
               </tr>
             </thead>
@@ -223,7 +223,7 @@ export function UserManager({
                   <tr key={u.id} className="hover:bg-slate-50">
                     <Td>
                       <span className="font-medium">{u.full_name || '—'}</span>
-                      {souEu && <span className="ml-2 text-xs text-slate-400">(voce)</span>}
+                      {souEu && <span className="ml-2 text-xs text-slate-400">(você)</span>}
                       <p className="text-xs text-slate-500">
                         {[u.job_title, u.council_number ? `${u.council_type} ${u.council_number}/${u.council_state ?? ''}` : null]
                           .filter(Boolean)
@@ -262,7 +262,7 @@ export function UserManager({
                           variant="outline"
                           loading={running}
                           onClick={() => {
-                            const nova = window.prompt('Nova senha (minimo 8 caracteres):', senhaForte());
+                            const nova = window.prompt('Nova senha (mínimo 8 caracteres):', senhaForte());
                             if (nova) rodar(() => resetUserPassword(u.id, nova));
                           }}
                         >

@@ -43,8 +43,8 @@ export default async function UsuariosPage() {
   return (
     <div>
       <PageHeader
-        title="Usuarios e permissoes"
-        description="Crie acessos para administracao, corpo clinico e recepcao"
+        title="Usuários e permissões"
+        description="Crie acessos para administracao, corpo clínico e recepção"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -59,7 +59,7 @@ export default async function UsuariosPage() {
           value={users.filter((u) => u.blocked_at).length}
           color="#EF4444"
         />
-        <StatCard label="Permissoes disponiveis" value={permsRes.count ?? 0} />
+        <StatCard label="Permissões disponíveis" value={permsRes.count ?? 0} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-4">

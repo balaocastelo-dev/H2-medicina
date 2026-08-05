@@ -75,7 +75,7 @@ export async function generateAttendanceDocument(
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<AttendanceForDocument>();
 
-    if (!attendance || !attendance.patients) return fail('Atendimento nao encontrado.');
+    if (!attendance || !attendance.patients) return fail('Atendimento não encontrado.');
 
     const responsavel = (ctx.settings.responsavel_tecnico ?? {}) as Record<string, string | null>;
     const documentos = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
@@ -94,7 +94,7 @@ export async function generateAttendanceDocument(
       comprovante_comparecimento: 'Comprovante de comparecimento',
       resumo_atendimento: 'Resumo do atendimento',
       relacao_exames: 'Relacao de exames',
-      ficha_clinica: 'Ficha clinica',
+      ficha_clinica: 'Ficha clínica',
       documento_final: 'Documento final consolidado',
     };
 
@@ -102,12 +102,12 @@ export async function generateAttendanceDocument(
       title: 'Identificacao',
       lines: [
         { label: 'Paciente', value: patient.full_name },
-        { label: 'CPF', value: patient.cpf ? formatCPF(patient.cpf) : 'nao informado' },
+        { label: 'CPF', value: patient.cpf ? formatCPF(patient.cpf) : 'não informado' },
         { label: 'Nascimento', value: formatDate(patient.birth_date) },
         {
           label: 'Empresa',
           value:
-            attendance.companies?.trade_name ?? attendance.companies?.legal_name ?? 'nao informada',
+            attendance.companies?.trade_name ?? attendance.companies?.legal_name ?? 'não informada',
         },
       ],
     };
@@ -140,9 +140,9 @@ export async function generateAttendanceDocument(
     const consultation = attendance.medical_consultations?.[0];
     if (consultation && (kind === 'documento_final' || kind === 'resumo_atendimento')) {
       sections.push({
-        title: 'Conclusao medica',
+        title: 'Conclusão médica',
         lines: [
-          { label: 'Aptidao', value: consultation.verdict ?? 'nao informada' },
+          { label: 'Aptidao', value: consultation.verdict ?? 'não informada' },
           { label: 'Validade', value: formatDate(consultation.valid_until) },
           { label: 'Conclusao', value: consultation.conclusion ?? '—' },
         ],
@@ -230,12 +230,12 @@ export async function getDocumentUrl(documentId: string): Promise<ActionResult<{
       .eq('id', documentId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; bucket: string; file_path: string; patient_id: string | null }>();
-    if (!doc?.file_path) return fail('Documento nao encontrado.');
+    if (!doc?.file_path) return fail('Documento não encontrado.');
 
     const { data, error } = await supabase.storage
       .from(doc.bucket)
       .createSignedUrl(doc.file_path, 300);
-    if (error || !data) return fail('Nao foi possivel gerar o link.');
+    if (error || !data) return fail('Não foi possível gerar o link.');
 
     await supabase.from('document_views').insert({
       tenant_id: ctx.tenant.id,

@@ -30,7 +30,7 @@ export default async function ProdutosPage({
   return (
     <div>
       <PageHeader
-        title="Produtos e servicos"
+        title="Produtos e serviços"
         description="Catalogo da loja: exames, consultas, pacotes e produtos fisicos"
       />
       <Card>
@@ -51,7 +51,7 @@ export default async function ProdutosPage({
                 <Th>Preco</Th>
                 <Th>Promocao</Th>
                 <Th>Agendamento</Th>
-                <Th>Situacao</Th>
+                <Th>Situação</Th>
               </tr>
             </thead>
             <tbody>

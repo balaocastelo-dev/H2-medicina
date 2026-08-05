@@ -11,8 +11,8 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 import type { Payment } from '@/types/entities';
 
 const chargeSchema = z.object({
-  description: z.string().trim().min(2, 'Informe a descricao'),
-  amount: z.coerce.number().min(0.01, 'Informe um valor valido'),
+  description: z.string().trim().min(2, 'Informe a descrição'),
+  amount: z.coerce.number().min(0.01, 'Informe um valor válido'),
   discount: z.coerce.number().min(0).default(0),
   method: z.enum([
     'pix',
@@ -47,7 +47,7 @@ export async function createCharge(
       due_date: raw.due_date || null,
     });
     if (!parsed.success) {
-      return fail('Verifique os dados da cobranca.', z.flattenError(parsed.error).fieldErrors);
+      return fail('Verifique os dados da cobrança.', z.flattenError(parsed.error).fieldErrors);
     }
 
     const supabase = await createClient();
@@ -88,14 +88,14 @@ export async function createCharge(
       if (!pixSettings.chave_pix) {
         return ok(
           data,
-          'Cobranca criada. Configure a chave Pix em Configuracoes para gerar o QR Code.',
+          'Cobrança criada. Configure a chave Pix em Configurações para gerar o QR Code.',
         );
       }
       const txid = buildTxid('CB', data.id.replace(/-/g, '').slice(0, 20));
       const payload = buildPixPayload({
         key: pixSettings.chave_pix,
         merchantName: pixSettings.beneficiario ?? ctx.tenant.trade_name,
-        merchantCity: pixSettings.cidade ?? 'SAO PAULO',
+        merchantCity: pixSettings.cidade ?? 'São PAULO',
         amount: Number(data.net_amount),
         txid,
         description: parsed.data.description,
@@ -108,7 +108,7 @@ export async function createCharge(
         pix_key: pixSettings.chave_pix,
         key_kind: pixSettings.tipo_chave ?? 'aleatoria',
         merchant_name: pixSettings.beneficiario ?? ctx.tenant.trade_name,
-        merchant_city: pixSettings.cidade ?? 'SAO PAULO',
+        merchant_city: pixSettings.cidade ?? 'São PAULO',
         txid,
         amount: data.net_amount,
         payload,
@@ -127,7 +127,7 @@ export async function createCharge(
     });
 
     revalidatePath('/financeiro');
-    return ok(data, 'Cobranca criada.');
+    return ok(data, 'Cobrança criada.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -245,10 +245,10 @@ export async function cancelPayment(paymentId: string): Promise<ActionResult> {
       action: 'update',
       entity: 'payments',
       entityId: paymentId,
-      description: 'Cobranca cancelada',
+      description: 'Cobrança cancelada',
     });
     revalidatePath('/financeiro');
-    return ok(undefined, 'Cobranca cancelada.');
+    return ok(undefined, 'Cobrança cancelada.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }

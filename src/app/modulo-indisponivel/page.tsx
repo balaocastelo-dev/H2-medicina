@@ -4,7 +4,7 @@ import { Button, Card } from '@/components/ui';
 
 const NOMES: Record<string, string> = {
   ecommerce: 'Loja',
-  scraper: 'Importacao automatizada',
+  scraper: 'Importação automatizada',
   campanhas: 'Campanhas comerciais',
   pwa: 'Aplicativo do paciente',
   lgpd: 'LGPD',
@@ -16,7 +16,7 @@ export default async function ModuloIndisponivelPage({
   searchParams: Promise<{ m?: string }>;
 }) {
   const { m } = await searchParams;
-  const nome = m ? (NOMES[m] ?? m) : 'Este modulo';
+  const nome = m ? (NOMES[m] ?? m) : 'Este módulo';
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
@@ -28,7 +28,7 @@ export default async function ModuloIndisponivelPage({
           liga-lo em Configuracoes da empresa &rarr; Modulos, sem precisar de nova instalacao.
         </p>
         <Link href="/dashboard" className="mt-5 inline-block">
-          <Button variant="outline">Voltar ao inicio</Button>
+          <Button variant="outline">Voltar ao início</Button>
         </Link>
       </Card>
     </main>

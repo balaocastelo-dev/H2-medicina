@@ -51,9 +51,9 @@ export interface Leitura {
 }
 
 export const EXEMPLOS = [
-  'chamar o proximo da fila na sala de audiometria',
-  'criar uma cobranca para o paciente do cpf 529.982.247-25 no valor de 200,00',
-  'cadastrar o medico dr miguel crm 00002520',
+  'chamar o próximo da fila na sala de audiometria',
+  'criar uma cobrança para o paciente do cpf 529.982.247-25 no valor de 200,00',
+  'cadastrar o médico dr miguel crm 00002520',
   'buscar paciente maria',
 ];
 
@@ -147,7 +147,7 @@ export function acharSala(consulta: string, salas: SalaContexto[]): SalaContexto
 }
 
 export function extrairNomePessoa(texto: string): string | null {
-  // Frases reais encadeiam titulos ("cadastro medico para o medico dr miguel").
+  // Frases reais encadeiam titulos ("cadastro médico para o médico dr miguel").
   // Por isso o nome e procurado depois do ULTIMO titulo encontrado.
   const titulos =
     /\b(?:dr\.?a?|doutora?|medic[oa]|profissional|usuari[oa]|atendente|recepcionista|enfermeir[oa])\b/gi;
@@ -201,7 +201,7 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
   if (!t || t.length < 3) {
     return {
       intencao: { tipo: 'ajuda' },
-      resumo: 'Digite o que voce precisa fazer.',
+      resumo: 'Digite o que você precisa fazer.',
       permissao: null,
     };
   }
@@ -218,10 +218,10 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
       return {
         intencao: {
           tipo: 'desconhecida',
-          motivo: 'Nao identifiquei a sala.',
+          motivo: 'Não identifiquei a sala.',
           sugestoes: contexto.salas.map((s) => `chamar proximo na sala ${s.nome.toLowerCase()}`),
         },
-        resumo: 'Sala nao encontrada',
+        resumo: 'Sala não encontrada',
         permissao: null,
       };
     }
@@ -242,9 +242,9 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
         intencao: {
           tipo: 'desconhecida',
           motivo: 'Informe o CPF do paciente (11 digitos).',
-          sugestoes: ['criar cobranca para o paciente do cpf 529.982.247-25 no valor de 200,00'],
+          sugestoes: ['criar cobrança para o paciente do cpf 529.982.247-25 no valor de 200,00'],
         },
-        resumo: 'CPF nao informado',
+        resumo: 'CPF não informado',
         permissao: null,
       };
     }
@@ -252,17 +252,17 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
       return {
         intencao: {
           tipo: 'desconhecida',
-          motivo: 'Informe o valor da cobranca.',
+          motivo: 'Informe o valor da cobrança.',
           sugestoes: [`criar cobranca para o cpf ${cpf} no valor de 200,00`],
         },
-        resumo: 'Valor nao informado',
+        resumo: 'Valor não informado',
         permissao: null,
       };
     }
 
     const metodo = metodoDe(t);
     const descMatch = texto.match(/(?:referente a|para o exame de|descricao|descrição)\s+([^,.;]+)/i);
-    const descricao = (descMatch?.[1] ?? 'Cobranca lancada pelo assistente').trim();
+    const descricao = (descMatch?.[1] ?? 'Cobrança lancada pelo assistente').trim();
 
     return {
       intencao: { tipo: 'criar_cobranca', cpf, valor, descricao, metodo },
@@ -278,10 +278,10 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
       return {
         intencao: {
           tipo: 'desconhecida',
-          motivo: 'Nao identifiquei o nome do profissional.',
-          sugestoes: ['cadastrar o medico dr miguel crm 00002520'],
+          motivo: 'Não identifiquei o nome do profissional.',
+          sugestoes: ['cadastrar o médico dr miguel crm 00002520'],
         },
-        resumo: 'Nome nao identificado',
+        resumo: 'Nome não identificado',
         permissao: null,
       };
     }
@@ -308,7 +308,7 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
         email: emailMatch?.[0] ?? null,
       },
       resumo:
-        `Cadastrar ${nome} como ${papel === 'medico_examinador' ? 'medico e examinador' : papel === 'atendimento' ? 'atendimento e recepcao' : 'administrativo'}` +
+        `Cadastrar ${nome} como ${papel === 'medico_examinador' ? 'médico e examinador' : papel === 'atendimento' ? 'atendimento e recepção' : 'administrativo'}` +
         (conselho.numero ? ` (${conselho.tipo} ${conselho.numero}${conselho.uf ? '/' + conselho.uf : ''})` : '') +
         '.',
       permissao: 'usuarios.administrar',
@@ -331,7 +331,7 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
           motivo: 'Informe o nome ou o CPF do paciente.',
           sugestoes: ['buscar paciente maria'],
         },
-        resumo: 'Termo nao informado',
+        resumo: 'Termo não informado',
         permissao: null,
       };
     }
@@ -345,10 +345,10 @@ export function interpretar(texto: string, contexto: ContextoComando): Leitura {
   return {
     intencao: {
       tipo: 'desconhecida',
-      motivo: 'Ainda nao sei fazer isso.',
+      motivo: 'Ainda não sei fazer isso.',
       sugestoes: EXEMPLOS,
     },
-    resumo: 'Comando nao reconhecido',
+    resumo: 'Comando não reconhecido',
     permissao: null,
   };
 }

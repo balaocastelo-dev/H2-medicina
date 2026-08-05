@@ -155,7 +155,7 @@ function KanbanCard({
     disabled: !draggable,
   });
 
-  const done = card.patient_exams.filter((e) => e.status === 'concluido').length;
+  const done = card.patient_exams.filter((e) => e.status === 'concluído').length;
   const total = card.patient_exams.length;
 
   return (

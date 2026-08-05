@@ -40,7 +40,7 @@ export async function GET() {
     if (error) {
       report.status = 'sem_migrations';
       report.hint =
-        'Banco alcancado, mas a tabela tenants nao respondeu. Rode as migrations (npm run db:push) e o seed.';
+        'Banco alcancado, mas a tabela tenants não respondeu. Rode as migrations (npm run db:push) e o seed.';
       (report.supabase as Record<string, unknown>).reachable = true;
       return NextResponse.json(report, { status: 503 });
     }
@@ -60,7 +60,7 @@ export async function GET() {
     return NextResponse.json(report);
   } catch {
     report.status = 'erro';
-    report.hint = 'Nao foi possivel falar com o Supabase. Confira a URL e a chave publica.';
+    report.hint = 'Não foi possível falar com o Supabase. Confira a URL e a chave pública.';
     return NextResponse.json(report, { status: 503 });
   }
 }

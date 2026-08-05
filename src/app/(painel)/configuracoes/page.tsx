@@ -30,8 +30,8 @@ export default async function ConfiguracoesPage() {
   return (
     <div>
       <PageHeader
-        title="Configuracoes da empresa"
-        description="Tudo que identifica a operacao — marca, dados, textos, prefixos e modulos"
+        title="Configurações da empresa"
+        description="Tudo que identifica a operação — marca, dados, textos, prefixos e módulos"
       />
       <SettingsTabs
         branding={ctx.branding}

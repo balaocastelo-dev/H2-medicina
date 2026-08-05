@@ -58,8 +58,8 @@ export default async function EmpresaDetalhePage({ params }: { params: Promise<{
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Colaboradores" value={patientsRes.count ?? 0} />
         <StatCard label="Atendimentos" value={company.employees_served} />
-        <StatCard label="Ultima campanha" value={formatDate(company.last_campaign_at)} />
-        <StatCard label="Ultimo atendimento" value={formatDate(company.last_attendance_at)} />
+        <StatCard label="Última campanha" value={formatDate(company.last_campaign_at)} />
+        <StatCard label="Último atendimento" value={formatDate(company.last_attendance_at)} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">

@@ -62,14 +62,14 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
           <Field label="Responsavel" error={errors?.responsible_name}>
             <Input name="responsible_name" defaultValue={company?.responsible_name ?? ''} />
           </Field>
-          <Field label="Cargo do responsavel" error={errors?.responsible_role}>
+          <Field label="Cargo do responsável" error={errors?.responsible_role}>
             <Input name="responsible_role" defaultValue={company?.responsible_role ?? ''} />
           </Field>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Contato e endereco" />
+        <CardHeader title="Contato e endereço" />
         <CardBody className="grid gap-4 md:grid-cols-3">
           <Field label="Telefone" error={errors?.phone}>
             <Input name="phone" defaultValue={company?.phone ?? ''} />
@@ -123,7 +123,7 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
       <Card>
         <CardHeader
           title="Comunicacao comercial"
-          description="Somente empresas com autorizacao entram nas campanhas. Dados clinicos nunca sao usados."
+          description="Somente empresas com autorização entram nas campanhas. Dados clínicos nunca são usados."
         />
         <CardBody className="space-y-4">
           <label className="flex items-center gap-2 text-sm">
@@ -138,7 +138,7 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
             <Input
               name="legal_basis"
               defaultValue={company?.legal_basis ?? ''}
-              placeholder="Ex.: relacionamento contratual, consentimento em formulario"
+              placeholder="Ex.: relacionamento contratual, consentimento em formulário"
             />
           </Field>
           <Field label="Observacoes" error={errors?.notes}>

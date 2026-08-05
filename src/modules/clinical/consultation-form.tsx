@@ -33,7 +33,7 @@ export function ConsultationForm({
   return (
     <Card>
       <CardHeader
-        title="Consulta medica"
+        title="Consulta médica"
         description={
           finished ? 'Consulta finalizada — alteracoes ficam registradas na auditoria' : undefined
         }
@@ -56,7 +56,7 @@ export function ConsultationForm({
             <Field label="Anamnese" error={errors?.anamnesis}>
               <Textarea name="anamnesis" defaultValue={consultation?.anamnesis ?? ''} rows={2} />
             </Field>
-            <Field label="Historia clinica">
+            <Field label="Historia clínica">
               <Textarea
                 name="clinical_history"
                 defaultValue={consultation?.clinical_history ?? ''}
@@ -113,11 +113,11 @@ export function ConsultationForm({
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Field label="Conclusao de aptidao" error={errors?.verdict} required>
+            <Field label="Conclusão de aptidão" error={errors?.verdict} required>
               <Select name="verdict" defaultValue={consultation?.verdict ?? ''}>
                 <option value="">Selecione</option>
                 <option value="apto">Apto</option>
-                <option value="apto_com_restricoes">Apto com restricoes</option>
+                <option value="apto_com_restricoes">Apto com restrições</option>
                 <option value="inapto">Inapto</option>
                 <option value="inconclusivo">Inconclusivo</option>
               </Select>

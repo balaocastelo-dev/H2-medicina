@@ -46,7 +46,7 @@ export async function saveTriage(_prev: unknown, formData: FormData): Promise<Ac
       .eq('id', parsed.data.attendance_id)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; patient_id: string }>();
-    if (!attendance) return fail('Atendimento nao encontrado.');
+    if (!attendance) return fail('Atendimento não encontrado.');
 
     const { data: existing } = await supabase
       .from('triages')
@@ -74,12 +74,12 @@ export async function saveTriage(_prev: unknown, formData: FormData): Promise<Ac
       entity: 'triages',
       entityId: existing?.id,
       patientId: attendance.patient_id,
-      description: finish ? 'Triagem concluida' : 'Triagem registrada',
+      description: finish ? 'Triagem concluída' : 'Triagem registrada',
     });
 
     revalidatePath('/triagem');
     revalidatePath('/crm');
-    return ok(undefined, finish ? 'Triagem concluida.' : 'Triagem salva.');
+    return ok(undefined, finish ? 'Triagem concluída.' : 'Triagem salva.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -108,10 +108,10 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       .eq('id', parsed.data.attendance_id)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; patient_id: string }>();
-    if (!attendance) return fail('Atendimento nao encontrado.');
+    if (!attendance) return fail('Atendimento não encontrado.');
 
     if (finish && !parsed.data.verdict) {
-      return fail('Informe a conclusao de aptidao antes de finalizar.');
+      return fail('Informe a conclusão de aptidão antes de finalizar.');
     }
 
     const { data: existing } = await supabase
@@ -172,7 +172,7 @@ export async function saveExamResult(
       .eq('id', patientExamId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; patient_id: string }>();
-    if (!exam) return fail('Exame nao encontrado.');
+    if (!exam) return fail('Exame não encontrado.');
 
     const { data: existing } = await supabase
       .from('exam_results')

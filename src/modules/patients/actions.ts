@@ -89,7 +89,7 @@ export async function createPatient(
         tenant_id: ctx.tenant.id,
         origin: 'manual',
         needs_review: duplicates.length > 0,
-        review_reason: duplicates.length > 0 ? 'Possivel duplicidade confirmada no cadastro' : null,
+        review_reason: duplicates.length > 0 ? 'Possível duplicidade confirmada no cadastro' : null,
         created_by: ctx.userId,
         updated_by: ctx.userId,
       })

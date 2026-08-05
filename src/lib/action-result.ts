@@ -16,21 +16,21 @@ export function toFriendlyError(error: unknown): string {
   if (error instanceof Error) {
     const msg = error.message;
     if (msg.includes('duplicate key')) {
-      if (msg.includes('uq_patients_tenant_cpf')) return 'Ja existe um paciente com este CPF.';
+      if (msg.includes('uq_patients_tenant_cpf')) return 'Já existe um paciente com este CPF.';
       if (msg.includes('uq_companies_tenant_document'))
-        return 'Ja existe uma empresa com este CNPJ.';
+        return 'Já existe uma empresa com este CNPJ.';
       if (msg.includes('uq_appointments_patient_day'))
-        return 'Este paciente ja possui agendamento neste dia.';
+        return 'Este paciente já possui agendamento neste dia.';
       if (msg.includes('uq_patient_exam_in_service'))
-        return 'O paciente ja esta sendo atendido em outra sala.';
+        return 'O paciente já esta sendo atendido em outra sala.';
       return 'Registro duplicado.';
     }
     if (msg.includes('violates row-level security') || msg.includes('42501')) {
-      return 'Sem permissao para executar esta operacao.';
+      return 'Sem permissão para executar esta operação.';
     }
-    if (msg.includes('Sem permissao')) return msg;
-    if (msg.includes('patients_cpf_valid')) return 'CPF invalido.';
-    if (msg.includes('companies_document_valid')) return 'CNPJ invalido.';
+    if (msg.includes('Sem permissão')) return msg;
+    if (msg.includes('patients_cpf_valid')) return 'CPF inválido.';
+    if (msg.includes('companies_document_valid')) return 'CNPJ inválido.';
     return msg;
   }
   return 'Erro inesperado. Tente novamente.';

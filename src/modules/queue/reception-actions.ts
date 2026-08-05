@@ -26,7 +26,7 @@ export async function startReception(attendanceId: string): Promise<ActionResult
       action: 'update',
       entity: 'attendances',
       entityId: attendanceId,
-      description: 'Atendimento iniciado na recepcao',
+      description: 'Atendimento iniciado na recepção',
     });
     revalidatePath('/recepcao');
     return ok(undefined, 'Atendimento iniciado.');
@@ -56,7 +56,7 @@ export async function finishReception(input: {
       .eq('id', input.attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{ id: string; patient_id: string; appointment_id: string | null }>();
-    if (!attendance) return fail('Atendimento nao encontrado.');
+    if (!attendance) return fail('Atendimento não encontrado.');
 
     // Sincroniza a lista de exames com o que foi confirmado na recepcao
     const { data: existing } = await supabase
@@ -135,7 +135,7 @@ export async function finishReception(input: {
     revalidatePath('/recepcao');
     revalidatePath('/crm');
     revalidatePath('/filas');
-    return ok(undefined, 'Recepcao concluida.');
+    return ok(undefined, 'Recepção concluída.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }

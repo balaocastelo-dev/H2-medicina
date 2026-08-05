@@ -115,13 +115,13 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                         variant="danger"
                         loading={pending}
                         onClick={() => {
-                          const reason = window.prompt('Motivo do nao comparecimento/realizacao:');
+                          const reason = window.prompt('Motivo do não comparecimento/realizacao:');
                           if (reason !== null) {
                             run(() => updateExamStatus(active.id, 'nao_realizado', reason));
                           }
                         }}
                       >
-                        <XCircle className="h-4 w-4" /> Nao realizado
+                        <XCircle className="h-4 w-4" /> Não realizado
                       </Button>
                     </div>
                   </div>
@@ -132,7 +132,7 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                     disabled={queue.length === 0}
                     onClick={() => run(() => callNextForRoom(room.id))}
                   >
-                    <PhoneCall className="h-4 w-4" /> Chamar proximo
+                    <PhoneCall className="h-4 w-4" /> Chamar próximo
                   </Button>
                 )}
 

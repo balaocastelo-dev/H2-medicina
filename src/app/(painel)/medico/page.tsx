@@ -41,13 +41,13 @@ export default async function MedicoPage() {
   return (
     <div>
       <PageHeader
-        title="Modulo medico"
-        description="Pacientes com exames concluidos aguardando avaliacao"
+        title="Módulo médico"
+        description="Pacientes com exames concluídos aguardando avaliação"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatCard
-          label="Aguardando medico"
+          label="Aguardando médico"
           value={rows.filter((r) => r.stage_code === 'aguardando_medico').length}
           color="#A855F7"
         />
@@ -67,7 +67,7 @@ export default async function MedicoPage() {
         {rows.length === 0 ? (
           <EmptyState
             title="Nenhum paciente aguardando"
-            description="Assim que todos os exames forem concluidos, o paciente aparece aqui."
+            description="Assim que todos os exames forem concluídos, o paciente aparece aqui."
           />
         ) : (
           <Table>
@@ -84,7 +84,7 @@ export default async function MedicoPage() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const done = r.patient_exams.filter((e) => e.status === 'concluido').length;
+                const done = r.patient_exams.filter((e) => e.status === 'concluído').length;
                 return (
                   <tr key={r.id} className="hover:bg-slate-50">
                     <Td className="font-mono font-bold">{r.queue_tickets[0]?.code ?? '—'}</Td>

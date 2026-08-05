@@ -37,7 +37,7 @@ export async function lookupForCheckin(cpfRaw: string): Promise<ActionResult<Tot
       .returns<{ id: string; full_name: string; birth_date: string | null }[]>();
 
     if (!patients || patients.length === 0) {
-      return fail('CPF nao localizado. Procure a recepcao.');
+      return fail('CPF não localizado. Procure a recepção.');
     }
 
     const results: TotemLookupResult[] = [];
@@ -172,7 +172,7 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
     });
     if (error) return fail(toFriendlyError(error));
     const payload = data as { found: boolean };
-    if (!payload.found) return ok({ found: false }, 'Nenhum paciente elegivel na fila desta sala.');
+    if (!payload.found) return ok({ found: false }, await explicarFilaVazia(ctx.tenant.id, roomId));
 
     // A RPC grava a chamada com o primeiro nome. O painel anuncia o nome
     // completo, entao o rotulo e completado aqui, logo apos a chamada.
@@ -182,13 +182,69 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
       action: 'update',
       entity: 'rooms',
       entityId: roomId,
-      description: 'Chamada do proximo paciente',
+      description: 'Chamada do próximo paciente',
     });
     revalidatePath('/filas');
     revalidatePath('/painel');
     return ok({ found: true }, 'Paciente chamado.');
   } catch (error) {
     return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Explica por que a fila da sala nao tem ninguem.
+ *
+ * "Nenhum paciente elegivel" sozinho confunde: o operador ve gente na clinica
+ * e nao entende o motivo. Aqui olhamos onde os pacientes realmente estao.
+ */
+async function explicarFilaVazia(tenantId: string, roomId: string): Promise<string> {
+  try {
+    const supabase = await createClient();
+
+    const [{ data: sala }, { data: emServico }, { data: naRecepcao }, { data: naTriagem }] =
+      await Promise.all([
+        supabase.from('rooms').select('name').eq('id', roomId).maybeSingle<{ name: string }>(),
+        supabase
+          .from('patient_exams')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .in('status', ['chamado', 'em_andamento'])
+          .eq('room_id', roomId)
+          .returns<{ id: string }[]>(),
+        supabase
+          .from('attendances')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .in('stage_code', ['aguardando_recepcao', 'na_recepcao'])
+          .is('finished_at', null)
+          .is('deleted_at', null)
+          .returns<{ id: string }[]>(),
+        supabase
+          .from('attendances')
+          .select('id')
+          .eq('tenant_id', tenantId)
+          .in('stage_code', ['aguardando_triagem', 'em_triagem'])
+          .is('finished_at', null)
+          .is('deleted_at', null)
+          .returns<{ id: string }[]>(),
+      ]);
+
+    const nome = sala?.name ?? 'esta sala';
+
+    if ((emServico ?? []).length > 0) {
+      return `${nome} já está com um paciente em atendimento. Conclua antes de chamar o próximo.`;
+    }
+    if ((naRecepcao ?? []).length > 0) {
+      const n = (naRecepcao ?? []).length;
+      return `Ninguém liberado para exames ainda. Há ${n} paciente(s) na recepção — libere na tela Recepção para eles entrarem nas filas.`;
+    }
+    if ((naTriagem ?? []).length > 0) {
+      return `Os pacientes ainda estão na triagem. Conclua a triagem para liberá-los aos exames.`;
+    }
+    return `Não há ninguém aguardando exames em ${nome} no momento.`;
+  } catch {
+    return 'Nenhum paciente elegível na fila desta sala.';
   }
 }
 
@@ -229,7 +285,7 @@ async function ajustarRotuloDaChamada(tenantId: string, roomId: string): Promise
     await supabase.from('tv_calls').update({ patient_label: nome }).eq('id', chamada.id);
   } catch (error) {
     // Rotulo e cosmetico: se falhar, a chamada ja aconteceu.
-    console.error('[fila] nao consegui completar o rotulo da chamada:', error);
+    console.error('[fila] não consegui completar o rotulo da chamada:', error);
   }
 }
 

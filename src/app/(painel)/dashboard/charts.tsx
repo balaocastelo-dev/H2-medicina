@@ -71,7 +71,7 @@ export function RoscaEtapas({ dados, total }: { dados: Fatia[]; total: number })
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-x-0 top-[86px] text-center">
             <p className="text-3xl font-bold text-slate-900">{total}</p>
-            <p className="text-[11px] tracking-wide text-slate-500 uppercase">na clinica</p>
+            <p className="text-[11px] tracking-wide text-slate-500 uppercase">na clínica</p>
           </div>
         </div>
       )}
@@ -119,9 +119,9 @@ export function CurvaChegadas({ dados, cor }: { dados: PontoHora[]; cor: string 
 export function BarrasEmpresas({ dados, cor }: { dados: BarraEmpresa[]; cor: string }) {
   return (
     <Card>
-      <CardHeader title="Atendimentos por empresa" description="Ultimos 30 dias" />
+      <CardHeader title="Atendimentos por empresa" description="Últimos 30 dias" />
       {dados.length === 0 ? (
-        <EmptyState title="Sem atendimentos no periodo" />
+        <EmptyState title="Sem atendimentos no período" />
       ) : (
         <div className="p-4 pt-2">
           <ResponsiveContainer width="100%" height={Math.max(180, dados.length * 42)}>
@@ -149,7 +149,7 @@ export function BarrasEmpresas({ dados, cor }: { dados: BarraEmpresa[]; cor: str
 export function BarrasExames({ dados }: { dados: BarraExame[] }) {
   return (
     <Card>
-      <CardHeader title="Exames do dia" description="Concluidos e ainda pendentes" />
+      <CardHeader title="Exames do dia" description="Concluídos e ainda pendentes" />
       {dados.length === 0 ? (
         <EmptyState title="Nenhum exame na fila hoje" />
       ) : (
@@ -198,7 +198,7 @@ export function OcupacaoSalas({
 
   return (
     <Card>
-      <CardHeader title="Ocupacao das salas" description={`${ocupadas} de ${total} em uso`} />
+      <CardHeader title="Ocupação das salas" description={`${ocupadas} de ${total} em uso`} />
       <div className="relative p-4">
         <ResponsiveContainer width="100%" height={190}>
           <RadialBarChart
@@ -216,7 +216,7 @@ export function OcupacaoSalas({
           <p className="text-3xl font-bold" style={{ color: cor }}>
             {percentual}%
           </p>
-          <p className="text-[11px] text-slate-500">ocupacao</p>
+          <p className="text-[11px] text-slate-500">ocupação</p>
         </div>
       </div>
     </Card>

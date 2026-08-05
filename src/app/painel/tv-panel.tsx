@@ -38,7 +38,7 @@ export function TvPanel({
   showName: boolean;
 }) {
   const [calls, setCalls] = useState<CallRow[]>(initialCalls);
-  // Navegadores bloqueiam audio ate haver um gesto do usuario. Numa TV isso
+  // Navegadores bloqueiam áudio ate haver um gesto do usuário. Numa TV isso
   // significa silencio para sempre — por isso a tela pede um clique inicial.
   const [somLiberado, setSomLiberado] = useState(false);
   const audioRef = useRef<AudioContext | null>(null);
@@ -136,27 +136,26 @@ export function TvPanel({
       const sintese = window.speechSynthesis;
       if (!sintese) return;
 
-      const partes = [
-        `Senha ${chamada.ticket_code.split('').join(' ')}.`,
-        showName && chamada.patient_label ? `${chamada.patient_label}.` : '',
-        chamada.room_name ? `Compareça à ${chamada.room_name}.` : '',
-      ].filter(Boolean);
+      // Uma unica locucao: o sintetizador constroi a entonacao da frase
+      // inteira. Dividir em pedacos deixava a fala picada e sem melodia.
+      const senhaSoletrada = chamada.ticket_code.split('').join(' ');
+      const nome = showName && chamada.patient_label ? `${chamada.patient_label}. ` : '';
+      const sala = chamada.room_name ? `Compareça à ${chamada.room_name}.` : '';
+      const texto = `Senha ${senhaSoletrada}. ${nome}${sala}`.trim();
 
       const escolhida = escolherVoz(sintese.getVoices(), null);
       sintese.cancel();
 
       // A fala comeca depois do gongo.
       window.setTimeout(() => {
-        for (const parte of partes) {
-          const fala = new SpeechSynthesisUtterance(prepararParaFala(parte));
-          if (escolhida) fala.voice = escolhida;
-          fala.lang = escolhida?.lang ?? 'pt-BR';
-          fala.rate = 0.92;
-          fala.pitch = 1;
-          fala.volume = Math.min(Math.max(volume, 0), 1);
-          sintese.speak(fala);
-        }
-      }, 700);
+        const fala = new SpeechSynthesisUtterance(prepararParaFala(texto));
+        if (escolhida) fala.voice = escolhida;
+        fala.lang = escolhida?.lang ?? 'pt-BR';
+        fala.rate = 0.9;
+        fala.pitch = 1;
+        fala.volume = Math.min(Math.max(volume, 0), 1);
+        sintese.speak(fala);
+      }, 750);
     },
     [sound, showName, volume, tocarGongo],
   );
@@ -257,7 +256,7 @@ export function TvPanel({
 
       <footer className="border-t border-white/10 px-8 py-5">
         <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm tracking-widest text-slate-400 uppercase">Ultimas chamadas</p>
+          <p className="text-sm tracking-widest text-slate-400 uppercase">Últimas chamadas</p>
           {somLiberado && current && (
             <button
               type="button"

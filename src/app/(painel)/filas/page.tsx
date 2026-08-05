@@ -40,7 +40,7 @@ export default async function FilasPage() {
     <div>
       <PageHeader
         title="Filas e salas"
-        description="Atendimento cruzado: o proximo paciente e escolhido por prioridade e tempo de espera"
+        description="Atendimento cruzado: o próximo paciente e escolhido por prioridade e tempo de espera"
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -51,7 +51,7 @@ export default async function FilasPage() {
           color="#FB923C"
         />
         <StatCard
-          label="Em execucao"
+          label="Em execução"
           value={exams.filter((e) => e.status === 'em_andamento').length}
           color="#3B82F6"
         />

@@ -87,7 +87,7 @@ export default async function EmpresasPage({
         {rows.length === 0 ? (
           <EmptyState
             title="Nenhuma empresa encontrada"
-            description="Cadastre empresas manualmente ou deixe que a importacao crie automaticamente."
+            description="Cadastre empresas manualmente ou deixe que a importação crie automaticamente."
           />
         ) : (
           <>
@@ -98,9 +98,9 @@ export default async function EmpresasPage({
                   <Th>CNPJ</Th>
                   <Th>Cidade</Th>
                   <Th>Telefone</Th>
-                  <Th>Situacao</Th>
+                  <Th>Situação</Th>
                   <Th>Comunicacao</Th>
-                  <Th>Ultimo atendimento</Th>
+                  <Th>Último atendimento</Th>
                 </tr>
               </thead>
               <tbody>
