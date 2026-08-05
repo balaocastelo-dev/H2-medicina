@@ -27,12 +27,12 @@ export default async function RecepcaoPage() {
       .returns<ReceptionRow[]>(),
     supabase
       .from('exam_types')
-      .select('id, name, code')
+      .select('id, name, code, price')
       .eq('tenant_id', ctx.tenant.id)
       .eq('is_active', true)
       .is('deleted_at', null)
       .order('sort_order')
-      .returns<{ id: string; name: string; code: string }[]>(),
+      .returns<{ id: string; name: string; code: string; price: number | null }[]>(),
   ]);
 
   const rows = rowsRes.data ?? [];
