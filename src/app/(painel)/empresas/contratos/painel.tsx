@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { FileDown, FileText, Plus, Save, Trash2, XCircle } from 'lucide-react';
+import { ExternalLink, FileDown, FileText, Plus, Save, Trash2, XCircle } from 'lucide-react';
 import {
   Alert,
   Badge,
@@ -15,7 +15,7 @@ import {
   Textarea,
 } from '@/components/ui';
 import { formatDate, formatMoney } from '@/lib/format';
-import { getDocumentUrl } from '@/modules/documents/actions';
+import { abrirDocumentoEmNovaAba } from '@/lib/abrir-documento';
 import {
   encerrarContrato,
   gerarContratoPdf,
@@ -166,6 +166,7 @@ export function PainelContratos({
 }) {
   const [rascunho, setRascunho] = useState<Rascunho | null>(null);
   const [mensagem, setMensagem] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [linkDireto, setLinkDireto] = useState<string | null>(null);
   const [pendente, startTransition] = useTransition();
 
   const campo = <K extends keyof Rascunho>(chaveCampo: K, valor: Rascunho[K]) =>
@@ -254,17 +255,28 @@ export function PainelContratos({
 
   const gerarPdf = (contractId: string) =>
     startTransition(async () => {
+      setLinkDireto(null);
       const r = await gerarContratoPdf(contractId);
       setMensagem({ ok: r.ok, texto: r.ok ? (r.message ?? 'Gerado.') : r.error });
       if (r.ok && r.data) {
-        const url = await getDocumentUrl(r.data.documentId);
-        if (url.ok && url.data) window.open(url.data.url, '_blank', 'noopener');
+        const aberto = await abrirDocumentoEmNovaAba(r.data.documentId);
+        if (aberto.ok && !aberto.abriu) setLinkDireto(aberto.url);
       }
     });
 
   return (
     <div className="space-y-4">
       {mensagem && <Alert variant={mensagem.ok ? 'success' : 'error'}>{mensagem.texto}</Alert>}
+      {linkDireto && (
+        <a
+          href={linkDireto}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium underline"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> Abrir o contrato em PDF
+        </a>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-1">

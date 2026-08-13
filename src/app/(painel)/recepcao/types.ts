@@ -28,5 +28,7 @@ export interface ReceptionRow {
     method: string;
     status: string;
     signed_at: string | null;
+    document_id: string | null;
+    deleted_at: string | null;
   }[];
 }

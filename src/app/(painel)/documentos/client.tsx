@@ -3,11 +3,8 @@
 import { useState, useTransition } from 'react';
 import { CheckCircle2, Download, FileText, PackageCheck } from 'lucide-react';
 import { Alert, Button, Card, CardBody, CardHeader, Field, Select } from '@/components/ui';
-import {
-  emitirDocumentosDeSaida,
-  generateAttendanceDocument,
-  getDocumentUrl,
-} from '@/modules/documents/actions';
+import { emitirDocumentosDeSaida, generateAttendanceDocument } from '@/modules/documents/actions';
+import { abrirDocumentoEmNovaAba } from '@/lib/abrir-documento';
 import { encerrarAtendimento } from '@/modules/finance/attendance-actions';
 import { formatDateTime } from '@/lib/format';
 import type { DocumentKind } from '@/types/entities';
@@ -120,6 +117,23 @@ export function GenerateDocumentCard({
 
 export function DocumentActions({ documentId }: { documentId: string }) {
   const [pending, startTransition] = useTransition();
+  const [url, setUrl] = useState<string | null>(null);
+
+  // Quando o navegador barra a aba, o botao vira link: o clique direto no
+  // link nao passa pela mesma checagem de popup.
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-sm font-medium underline"
+      >
+        <Download className="h-4 w-4" /> Abrir documento
+      </a>
+    );
+  }
+
   return (
     <Button
       size="sm"
@@ -127,9 +141,9 @@ export function DocumentActions({ documentId }: { documentId: string }) {
       loading={pending}
       onClick={() =>
         startTransition(async () => {
-          const result = await getDocumentUrl(documentId);
-          if (result.ok && result.data) window.open(result.data.url, '_blank', 'noopener');
-          else if (!result.ok) window.alert(result.error);
+          const r = await abrirDocumentoEmNovaAba(documentId);
+          if (!r.ok) window.alert(r.error);
+          else if (!r.abriu) setUrl(r.url);
         })
       }
     >

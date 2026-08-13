@@ -4,9 +4,10 @@ import { randomBytes } from 'node:crypto';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { assertPermission, type SessionContext } from '@/lib/auth';
+import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { buildDocumentPdf, type PdfBrand } from './pdf';
+import { buildDocumentPdf } from './pdf';
+import { marcaDoTenant } from './brand';
 import { paragrafosDoTermo } from './authorization';
 import { formatCPF } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
@@ -14,32 +15,6 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 const TITULO = 'Autorização para entrega de prontuário à empresa';
 const FINALIDADE = 'autorizacao_envio_resultados';
 
-function brandFrom(ctx: SessionContext): PdfBrand {
-  const empresa = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
-  const contato = (ctx.settings.contato ?? {}) as Record<string, string | null>;
-  const documentos = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
-
-  const address = [
-    contato.logradouro,
-    contato.numero,
-    contato.bairro,
-    contato.cidade,
-    contato.estado,
-  ]
-    .filter(Boolean)
-    .join(', ');
-
-  return {
-    systemName: ctx.branding.system_name,
-    legalName: empresa.razao_social ?? ctx.tenant.legal_name,
-    document: empresa.cnpj ? `CNPJ ${empresa.cnpj}` : null,
-    address: address || null,
-    contact: [contato.telefone, contato.email].filter(Boolean).join(' · ') || null,
-    headerText: documentos.cabecalho ?? ctx.branding.pdf_header_html,
-    footerText: documentos.rodape ?? ctx.branding.footer_text,
-    primaryColor: ctx.branding.color_primary,
-  };
-}
 
 /**
  * Converte a data URL vinda do quadro de assinatura em bytes.
@@ -132,7 +107,7 @@ export async function emitirTermoAutorizacao(input: {
     const verificationCode = randomBytes(5).toString('hex').toUpperCase();
 
     const pdfBytes = await buildDocumentPdf({
-      brand: brandFrom(ctx),
+      brand: await marcaDoTenant(ctx),
       title: TITULO,
       subtitle:
         input.method === 'tela'
@@ -213,28 +188,79 @@ export async function emitirTermoAutorizacao(input: {
     const cabecalhos = await headers();
     const ip = cabecalhos.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
-    const { data: assinaturaRegistro } = await supabase
+    // Reemissao e caso normal, nao excecao: a via em papel se perde, o
+    // paciente rasura, a impressora falha. O registro anterior e reusado
+    // (papel) ou arquivado (tela) para o indice unico nao travar a segunda via.
+    const { data: anteriores } = await supabase
       .from('patient_signatures')
-      .insert({
-        tenant_id: ctx.tenant.id,
-        patient_id: atendimento.patient_id,
-        attendance_id: input.attendanceId,
-        company_id: atendimento.company_id,
-        document_id: doc.id,
-        purpose: FINALIDADE,
-        method: input.method,
-        status: input.method === 'tela' ? 'assinado' : 'pendente',
-        signer_name: nomeAssinante,
-        signer_rg: input.signerRg?.trim() || paciente.rg,
-        signer_cpf: input.signerCpf?.trim() || paciente.cpf,
-        signature_path: signaturePath,
-        signed_at: input.method === 'tela' ? new Date().toISOString() : null,
-        ip_address: ip,
-        user_agent: cabecalhos.get('user-agent'),
-        created_by: ctx.userId,
-      })
-      .select('id')
-      .maybeSingle<{ id: string }>();
+      .select('id, status')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', input.attendanceId)
+      .eq('purpose', FINALIDADE)
+      .is('deleted_at', null)
+      .returns<{ id: string; status: string }[]>();
+
+    const pendenteAnterior = (anteriores ?? []).find((a) => a.status === 'pendente');
+    const assinadoAnterior = (anteriores ?? []).find((a) => a.status === 'assinado');
+
+    if (assinadoAnterior) {
+      await supabase
+        .from('patient_signatures')
+        .update({
+          deleted_at: new Date().toISOString(),
+          notes: 'Substituída por nova via emitida na recepção',
+          updated_by: ctx.userId,
+        })
+        .eq('id', assinadoAnterior.id)
+        .eq('tenant_id', ctx.tenant.id);
+    }
+
+    const registro = {
+      tenant_id: ctx.tenant.id,
+      patient_id: atendimento.patient_id,
+      attendance_id: input.attendanceId,
+      company_id: atendimento.company_id,
+      document_id: doc.id,
+      purpose: FINALIDADE,
+      method: input.method,
+      status: input.method === 'tela' ? 'assinado' : 'pendente',
+      signer_name: nomeAssinante,
+      signer_rg: input.signerRg?.trim() || paciente.rg,
+      signer_cpf: input.signerCpf?.trim() || paciente.cpf,
+      signature_path: signaturePath,
+      signed_at: input.method === 'tela' ? new Date().toISOString() : null,
+      ip_address: ip,
+      user_agent: cabecalhos.get('user-agent'),
+    };
+
+    // Uma via em papel pendente basta: a reimpressao so troca o PDF apontado.
+    const { data: assinaturaRegistro } =
+      pendenteAnterior && input.method === 'papel'
+        ? await supabase
+            .from('patient_signatures')
+            .update({ ...registro, updated_by: ctx.userId })
+            .eq('id', pendenteAnterior.id)
+            .eq('tenant_id', ctx.tenant.id)
+            .select('id')
+            .maybeSingle<{ id: string }>()
+        : await supabase
+            .from('patient_signatures')
+            .insert({ ...registro, created_by: ctx.userId })
+            .select('id')
+            .maybeSingle<{ id: string }>();
+
+    // Assinar na tela encerra a pendencia de papel que existia.
+    if (pendenteAnterior && input.method === 'tela') {
+      await supabase
+        .from('patient_signatures')
+        .update({
+          deleted_at: new Date().toISOString(),
+          notes: 'Via em papel dispensada — paciente assinou na tela',
+          updated_by: ctx.userId,
+        })
+        .eq('id', pendenteAnterior.id)
+        .eq('tenant_id', ctx.tenant.id);
+    }
 
     // O consentimento tambem entra no registro de LGPD do paciente: e la
     // que se procura quando o titular pergunta o que autorizou.

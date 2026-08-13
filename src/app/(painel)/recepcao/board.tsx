@@ -200,7 +200,9 @@ function ReceptionDetail({
     .filter((e) => selectedExams.includes(e.id))
     .reduce((soma, e) => soma + Number(e.price ?? 0), 0);
 
-  const temAutorizacao = (row.patient_signatures ?? []).some(
+  // Via substituida continua no banco para o historico, mas nao conta aqui.
+  const assinaturasVigentes = (row.patient_signatures ?? []).filter((a) => !a.deleted_at);
+  const temAutorizacao = assinaturasVigentes.some(
     (a) => a.purpose === 'autorizacao_envio_resultados' && a.status === 'assinado',
   );
 
@@ -283,7 +285,7 @@ function ReceptionDetail({
             pacienteRg={row.patients?.rg ?? null}
             pacienteCpf={row.patients?.cpf ?? null}
             empresaNome={row.companies?.trade_name ?? row.companies?.legal_name ?? null}
-            assinaturas={row.patient_signatures ?? []}
+            assinaturas={assinaturasVigentes}
           />
         )}
 

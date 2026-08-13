@@ -10,6 +10,48 @@ export interface PdfBrand {
   headerText: string | null;
   footerText: string | null;
   primaryColor: string;
+  /** Logo do tenant no cabecalho. PNG ou JPEG. */
+  logo?: { bytes: Uint8Array; format: 'png' | 'jpg' } | null;
+}
+
+/** Base para resolver caminhos relativos do proprio app. */
+function baseDoApp(): string {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    'http://localhost:3000'
+  );
+}
+
+/**
+ * Baixa o logo do tenant para carimbar no cabecalho.
+ *
+ * Falha aqui nunca pode impedir a emissao: sem o logo o documento sai com
+ * o nome do sistema em texto, como antes. Documento que nao sai atrapalha
+ * o atendimento; documento sem logo, nao.
+ */
+export async function carregarLogo(
+  url: string | null | undefined,
+): Promise<{ bytes: Uint8Array; format: 'png' | 'jpg' } | null> {
+  if (!url) return null;
+  try {
+    // Caminho relativo (arquivo servido pelo proprio app) precisa virar
+    // absoluto: fetch no servidor nao tem uma "pagina atual" como base.
+    const absoluta = url.startsWith('/') ? new URL(url, baseDoApp()).toString() : url;
+
+    const resposta = await fetch(absoluta, { cache: 'force-cache' });
+    if (!resposta.ok) return null;
+
+    const tipo = resposta.headers.get('content-type') ?? '';
+    const formato: 'png' | 'jpg' =
+      tipo.includes('jpeg') || tipo.includes('jpg') || /\.jpe?g($|\?)/i.test(url) ? 'jpg' : 'png';
+
+    const bytes = new Uint8Array(await resposta.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > 4_000_000) return null;
+    return { bytes, format: formato };
+  } catch {
+    return null;
+  }
 }
 
 export interface PdfSection {
@@ -108,23 +150,59 @@ export async function buildDocumentPdf(input: {
 
   // Cabecalho
   page.drawRectangle({ x: 0, y: 841.89 - 8, width: 595.28, height: 8, color: brandColor });
+
+  // Logo a direita, alinhado com o topo do bloco de identificacao.
+  let logoAltura = 0;
+  if (input.brand.logo && input.brand.logo.bytes.byteLength > 0) {
+    try {
+      const imagem =
+        input.brand.logo.format === 'jpg'
+          ? await pdf.embedJpg(input.brand.logo.bytes)
+          : await pdf.embedPng(input.brand.logo.bytes);
+
+      const alturaMaxima = 52;
+      const larguraMaxima = 150;
+      const escala = Math.min(alturaMaxima / imagem.height, larguraMaxima / imagem.width);
+      const largura = imagem.width * escala;
+      logoAltura = imagem.height * escala;
+
+      page.drawImage(imagem, {
+        x: 595.28 - margin - largura,
+        y: y - logoAltura + 12,
+        width: largura,
+        height: logoAltura,
+      });
+    } catch {
+      // Logo corrompido nao derruba a emissao: segue so com o texto.
+      logoAltura = 0;
+    }
+  }
+
+  // Com logo, o nome da empresa carrega o cabecalho; sem ele, o nome do
+  // sistema precisa ocupar esse papel.
+  const larguraTexto = logoAltura > 0 ? 595.28 - margin * 2 - 165 : 595.28 - margin * 2;
+
   page.drawText(input.brand.systemName, { x: margin, y, size: 16, font: bold, color: brandColor });
   y -= 16;
-  page.drawText(input.brand.legalName, {
-    x: margin,
-    y,
-    size: 9,
-    font,
-    color: rgb(0.35, 0.35, 0.35),
-  });
-  y -= 12;
+
+  for (const linha of wrap(input.brand.legalName, font, 9, larguraTexto)) {
+    page.drawText(linha, { x: margin, y, size: 9, font, color: rgb(0.35, 0.35, 0.35) });
+    y -= 12;
+  }
 
   for (const line of [input.brand.document, input.brand.address, input.brand.contact].filter(
     Boolean,
   )) {
-    page.drawText(String(line), { x: margin, y, size: 8, font, color: rgb(0.45, 0.45, 0.45) });
-    y -= 10;
+    for (const linha of wrap(String(line), font, 8, larguraTexto)) {
+      page.drawText(linha, { x: margin, y, size: 8, font, color: rgb(0.45, 0.45, 0.45) });
+      y -= 10;
+    }
   }
+
+  // O logo pode ser mais alto que o texto ao lado; a regua so desce depois
+  // que o maior dos dois termina, senao o titulo entra por baixo dele.
+  const baseDoLogo = 841.89 - margin - logoAltura + 6;
+  if (logoAltura > 0 && y > baseDoLogo) y = baseDoLogo;
 
   if (input.brand.headerText) {
     for (const line of wrap(input.brand.headerText, font, 8, maxWidth)) {

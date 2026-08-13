@@ -3,41 +3,15 @@
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
-import { assertPermission, type SessionContext } from '@/lib/auth';
+import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { buildDocumentPdf, type PdfBrand } from './pdf';
+import { buildDocumentPdf } from './pdf';
+import { marcaDoTenant } from './brand';
 import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
 import { regraDe } from '@/modules/queue/origin-kind';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { DocumentKind } from '@/types/entities';
 
-function brandFrom(ctx: SessionContext): PdfBrand {
-  const empresa = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
-  const contato = (ctx.settings.contato ?? {}) as Record<string, string | null>;
-  const documentos = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
-
-  const address = [
-    contato.logradouro,
-    contato.numero,
-    contato.bairro,
-    contato.cidade,
-    contato.estado,
-  ]
-    .filter(Boolean)
-    .join(', ');
-  const contact = [contato.telefone, contato.email, empresa.site].filter(Boolean).join(' · ');
-
-  return {
-    systemName: ctx.branding.system_name,
-    legalName: empresa.razao_social ?? ctx.tenant.legal_name,
-    document: empresa.cnpj ? `CNPJ ${empresa.cnpj}` : null,
-    address: address || null,
-    contact: contact || null,
-    headerText: documentos.cabecalho ?? ctx.branding.pdf_header_html,
-    footerText: documentos.rodape ?? ctx.branding.footer_text,
-    primaryColor: ctx.branding.color_primary,
-  };
-}
 
 interface AttendanceForDocument {
   id: string;
@@ -250,7 +224,7 @@ export async function generateAttendanceDocument(
       .join(' ');
 
     const pdfBytes = await buildDocumentPdf({
-      brand: brandFrom(ctx),
+      brand: await marcaDoTenant(ctx),
       title: titles[kind] ?? 'Documento',
       subtitle: `Emitido em ${formatDate(new Date())} por ${ctx.profile.full_name}`,
       sections,
