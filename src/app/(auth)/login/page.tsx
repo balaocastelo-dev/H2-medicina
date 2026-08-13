@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { publicEnv } from '@/lib/env';
 import { LoginForm } from './login-form';
-import { FactoryScene } from '@/components/scene/factory-scene';
 import type { TenantBranding, Tenant } from '@/types/entities';
 
 /** O login e white label: busca a marca do tenant pelo dominio ou pelo slug padrao. */
@@ -39,11 +38,6 @@ export default async function LoginPage({
 
   return (
     <div className="w-full max-w-md">
-      {/* Cena de abertura: dá contexto ao sistema antes de pedir a senha. */}
-      <div className="mb-5 shadow-lg">
-        <FactoryScene cor={cor} />
-      </div>
-
       <div className="mb-6 text-center">
         {branding?.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
