@@ -93,6 +93,11 @@ describe('procedência do paciente', () => {
     expect(REGRAS.ingresso.requiresAuthorization).toBe(false);
   });
 
+  it('cobra apenas o particular — os demais são custeados pelo órgão de origem', () => {
+    expect(REGRAS.particular.requiresPayment).toBe(true);
+    expect(ORIGIN_KINDS.filter((k) => REGRAS[k].requiresPayment)).toEqual(['particular']);
+  });
+
   it('marca ficha completa apenas no ingresso escolar', () => {
     expect(REGRAS.ingresso.fichaCompleta).toBe(true);
     expect(ORIGIN_KINDS.filter((k) => REGRAS[k].fichaCompleta)).toEqual(['ingresso']);

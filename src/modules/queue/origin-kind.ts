@@ -28,6 +28,13 @@ export interface RegraProcedencia {
   fichaCompleta: boolean;
   /** Exige o termo de autorizacao de envio de resultados a empresa. */
   requiresAuthorization: boolean;
+  /**
+   * Se o atendimento gera cobranca na recepcao.
+   *
+   * Estado, SISPER e ingresso sao custeados pelo orgao de origem: o
+   * paciente nao paga no balcao e a tela nao deve nem oferecer o Pix.
+   */
+  requiresPayment: boolean;
   /** Explicacao mostrada na recepcao ao escolher a opcao. */
   description: string;
 }
@@ -43,7 +50,8 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
     afterTriage: 'exames',
     fichaCompleta: false,
     requiresAuthorization: true,
-    description: 'Triagem e fichas, depois as filas de exame e o médico.',
+    requiresPayment: true,
+    description: 'Triagem e fichas, depois as filas de exame e o médico. Paga na recepção.',
   },
   estado: {
     code: 'estado',
@@ -55,7 +63,8 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
     afterTriage: 'medico',
     fichaCompleta: false,
     requiresAuthorization: false,
-    description: 'Vai direto ao módulo médico, sem passar pela triagem.',
+    requiresPayment: false,
+    description: 'Vai direto ao módulo médico, sem passar pela triagem. Sem cobrança.',
   },
   sisper: {
     code: 'sisper',
@@ -67,7 +76,8 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
     afterTriage: 'medico',
     fichaCompleta: false,
     requiresAuthorization: false,
-    description: 'Passa pela triagem e segue direto ao médico.',
+    requiresPayment: false,
+    description: 'Passa pela triagem e segue direto ao médico. Sem cobrança.',
   },
   ingresso: {
     code: 'ingresso',
@@ -79,7 +89,8 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
     afterTriage: 'medico',
     fichaCompleta: true,
     requiresAuthorization: false,
-    description: 'Triagem e depois o médico, com ficha completa (todos os selos).',
+    requiresPayment: false,
+    description: 'Triagem e depois o médico, com ficha completa (todos os selos). Sem cobrança.',
   },
 };
 

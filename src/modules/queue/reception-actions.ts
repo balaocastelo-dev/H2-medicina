@@ -292,16 +292,26 @@ export async function gerarCobrancaRecepcao(
 
     const { data: atendimento } = await supabase
       .from('attendances')
-      .select('id, patient_id, company_id, patients(full_name)')
+      .select('id, patient_id, company_id, origin_kind, patients(full_name)')
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
         patient_id: string;
         company_id: string | null;
+        origin_kind: string;
         patients: { full_name: string } | null;
       }>();
     if (!atendimento) return fail('Atendimento nao encontrado.');
+
+    // A tela ja esconde o Pix para Estado, SISPER e ingresso. A trava fica
+    // tambem aqui porque a acao e chamavel direto, sem passar pela tela.
+    const regra = regraDe(atendimento.origin_kind);
+    if (!regra.requiresPayment) {
+      return fail(
+        `Paciente ${regra.label} não gera cobrança: o atendimento é custeado pelo órgão de origem.`,
+      );
+    }
 
     if (examTypeIds.length === 0) return fail('Selecione ao menos um exame para cobrar.');
 

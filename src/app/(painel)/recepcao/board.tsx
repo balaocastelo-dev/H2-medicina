@@ -318,9 +318,12 @@ function ReceptionDetail({
                   />
                   <span className="truncate">{e.name}</span>
                 </span>
-                <span className="shrink-0 text-xs text-slate-500 tabular-nums">
-                  {formatMoney(e.price ?? 0)}
-                </span>
+                {/* Preço só interessa a quem vai pagar no balcão. */}
+                {regra.requiresPayment && (
+                  <span className="shrink-0 text-xs text-slate-500 tabular-nums">
+                    {formatMoney(e.price ?? 0)}
+                  </span>
+                )}
               </label>
             ))}
           </div>
@@ -351,7 +354,15 @@ function ReceptionDetail({
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         </label>
 
-        {/* ---- Cobrança dos exames, antes de seguir para a triagem ---- */}
+        {/* ---- Cobrança dos exames, antes de seguir para a triagem ----
+             Só existe para o particular: Estado, SISPER e ingresso são
+             custeados pelo órgão de origem e o paciente não paga no balcão. */}
+        {!regra.requiresPayment ? (
+          <Alert variant="info" title={`${regra.label} — sem cobrança`}>
+            Este atendimento é custeado pelo órgão de origem. Não há Pix a gerar nem valor a
+            receber na recepção.
+          </Alert>
+        ) : (
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -483,13 +494,14 @@ function ReceptionDetail({
             </div>
           )}
         </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <Button
             loading={pending}
             disabled={!procedenciaDefinida}
             onClick={() => {
-              if (!pago && total > 0) {
+              if (regra.requiresPayment && !pago && total > 0) {
                 const seguir = window.confirm(
                   `Este atendimento tem ${formatMoney(total)} em aberto.\n\n` +
                     'Liberar mesmo assim? O valor continua registrado no Financeiro.',
@@ -525,7 +537,7 @@ function ReceptionDetail({
             </span>
           )}
 
-          {!pago && total > 0 && (
+          {regra.requiresPayment && !pago && total > 0 && (
             <span className="text-xs text-amber-700">
               Pagamento pendente — o sistema pede confirmação antes de liberar.
             </span>
