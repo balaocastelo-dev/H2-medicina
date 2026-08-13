@@ -34,7 +34,7 @@ export function Sidebar({
       : pathname === href || pathname.startsWith(`${href}/`);
 
   const content = (
-    <nav className="flex h-full flex-col">
+    <nav className="flex h-full flex-col" data-guia="menu-lateral">
       <div className="flex items-center gap-3 px-4 py-4">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -71,7 +71,9 @@ export function Sidebar({
                   >
                     <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
                     <span className="flex-1 truncate">{item.label}</span>
-                    <Contador valor={item.badge ? contadores[item.badge] : undefined} />
+                    <span data-guia={item.badge ? 'menu-contador' : undefined}>
+                      <Contador valor={item.badge ? contadores[item.badge] : undefined} />
+                    </span>
                   </Link>
                 </li>
               ))}

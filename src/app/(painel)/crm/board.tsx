@@ -14,6 +14,8 @@ import { AlertTriangle, ShoppingBag } from 'lucide-react';
 import { Alert, Badge } from '@/components/ui';
 import { elapsedFrom, formatTime } from '@/lib/format';
 import { moveAttendanceStage } from '@/modules/queue/actions';
+import { trilhaDoAtendimento, type TrilhaCompleta } from '@/modules/guide/trilha-actions';
+import { PainelDaTrilha } from '@/app/(painel)/jornada/mapa';
 import type { CrmStage } from '@/types/entities';
 import type { CrmCard } from './types';
 
@@ -28,7 +30,17 @@ export function CrmBoard({
 }) {
   const [items, setItems] = useState(cards);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [trilha, setTrilha] = useState<TrilhaCompleta | null>(null);
   const [, startTransition] = useTransition();
+
+  // Clicar no cartao abre a trilha: por onde o paciente passou, quanto
+  // tempo em cada etapa e qual o proximo passo.
+  const abrirTrilha = (attendanceId: string) =>
+    startTransition(async () => {
+      const r = await trilhaDoAtendimento(attendanceId);
+      if (r.ok && r.data) setTrilha(r.data);
+      else if (!r.ok) setMessage({ ok: false, text: r.error });
+    });
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const byStage = useMemo(() => {
@@ -102,10 +114,13 @@ export function CrmBoard({
               stage={stage}
               cards={byStage.get(stage.code) ?? []}
               canMove={canMove}
+              onAbrirTrilha={abrirTrilha}
             />
           ))}
         </div>
       </DndContext>
+
+      {trilha && <PainelDaTrilha dados={trilha} onFechar={() => setTrilha(null)} />}
     </div>
   );
 }
@@ -114,16 +129,19 @@ function StageColumn({
   stage,
   cards,
   canMove,
+  onAbrirTrilha,
 }: {
   stage: CrmStage;
   cards: CrmCard[];
   canMove: boolean;
+  onAbrirTrilha: (attendanceId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.code });
 
   return (
     <div
       ref={setNodeRef}
+      data-guia="coluna-crm"
       className={`flex min-w-0 flex-col rounded-xl border bg-slate-100/60 ${
         isOver ? 'border-slate-400 bg-slate-200/70' : 'border-slate-200'
       }`}
@@ -147,7 +165,13 @@ function StageColumn({
       <div className="flex-1 space-y-1.5 p-1.5">
         {cards.length === 0 && <p className="py-5 text-center text-[10px] text-slate-400">—</p>}
         {cards.map((card) => (
-          <KanbanCard key={card.id} card={card} color={stage.color} draggable={canMove} />
+          <KanbanCard
+            key={card.id}
+            card={card}
+            color={stage.color}
+            draggable={canMove}
+            onAbrirTrilha={onAbrirTrilha}
+          />
         ))}
       </div>
     </div>
@@ -158,10 +182,12 @@ function KanbanCard({
   card,
   color,
   draggable,
+  onAbrirTrilha,
 }: {
   card: CrmCard;
   color: string;
   draggable: boolean;
+  onAbrirTrilha: (attendanceId: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: card.id,
@@ -181,10 +207,14 @@ function KanbanCard({
         borderLeftColor: color,
         opacity: isDragging ? 0.6 : 1,
       }}
+      data-guia="cartao-crm"
+      // Clique abre a trilha; arrastar continua funcionando porque o
+      // dnd-kit só ativa depois de 6px de movimento.
+      onClick={() => onAbrirTrilha(card.id)}
       className={`rounded-lg border border-l-[3px] border-slate-200 bg-white p-2 shadow-sm ${
-        draggable ? 'cursor-grab active:cursor-grabbing' : ''
+        draggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
       }`}
-      title={card.patients?.full_name ?? ''}
+      title={`${card.patients?.full_name ?? ''} — clique para ver por onde passou`}
     >
       <div className="flex items-start justify-between gap-1">
         <p className="truncate text-[11.5px] leading-tight font-semibold text-slate-900">

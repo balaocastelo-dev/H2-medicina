@@ -23,7 +23,7 @@ export function TriageWorkspace({ rows }: { rows: TriageRow[] }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <Card>
+      <Card data-guia="fila-triagem">
         <CardHeader title="Fila da triagem" description={`${rows.length} paciente(s)`} />
         <div className="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
           {rows.map((r) => (
@@ -77,7 +77,7 @@ function TriageForm({ row }: { row: TriageRow }) {
         action={row.priority !== 'normal' ? <Badge color="#EF4444">{row.priority}</Badge> : null}
       />
       <CardBody>
-        <form action={formAction} className="space-y-4">
+        <form action={formAction} className="space-y-4" data-guia="formulario-triagem">
           {state?.ok && <Alert variant="success">{state.message}</Alert>}
           {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
 

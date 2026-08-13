@@ -38,6 +38,12 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: 'dashboard.ver',
       },
       {
+        href: '/jornada',
+        label: 'Onde está cada um',
+        icon: 'MapPin',
+        permission: 'agenda.ver',
+      },
+      {
         href: '/crm',
         label: 'CRM do dia',
         icon: 'KanbanSquare',

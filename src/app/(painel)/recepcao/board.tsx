@@ -40,7 +40,7 @@ export function ReceptionBoard({
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-1">
+      <Card className="lg:col-span-1" data-guia="fila-recepcao">
         <CardHeader title="Fila da recepção" description={`${rows.length} paciente(s)`} />
         <div className="max-h-[70vh] divide-y divide-slate-100 overflow-y-auto">
           {rows.map((r) => (
@@ -129,7 +129,10 @@ function SeletorProcedencia({
   const regra = REGRAS[atual];
 
   return (
-    <div className={`rounded-xl border p-3 ${definida ? 'border-slate-200' : 'border-sky-300 bg-sky-50'}`}>
+    <div
+      data-guia="procedencia"
+      className={`rounded-xl border p-3 ${definida ? 'border-slate-200' : 'border-sky-300 bg-sky-50'}`}
+    >
       <p className="mb-2 text-sm font-medium text-slate-700">
         De onde vem este paciente?
         {!definida && <span className="ml-2 text-xs font-normal text-sky-700">defina antes de liberar</span>}
@@ -279,6 +282,7 @@ function ReceptionDetail({
         />
 
         {regra.requiresAuthorization && procedenciaDefinida && (
+          <div data-guia="autorizacao">
           <BlocoAutorizacao
             attendanceId={row.id}
             pacienteNome={row.patients?.full_name ?? ''}
@@ -287,6 +291,7 @@ function ReceptionDetail({
             empresaNome={row.companies?.trade_name ?? row.companies?.legal_name ?? null}
             assinaturas={assinaturasVigentes}
           />
+          </div>
         )}
 
         {regra.fichaCompleta && (
@@ -295,7 +300,7 @@ function ReceptionDetail({
           </Alert>
         )}
 
-        <div>
+        <div data-guia="exames">
           <p className="mb-2 text-sm font-medium text-slate-700">
             Exames confirmados
             {regra.afterTriage === 'medico' && (
@@ -357,6 +362,7 @@ function ReceptionDetail({
         {/* ---- Cobrança dos exames, antes de seguir para a triagem ----
              Só existe para o particular: Estado, SISPER e ingresso são
              custeados pelo órgão de origem e o paciente não paga no balcão. */}
+        <div data-guia="cobranca">
         {!regra.requiresPayment ? (
           <Alert variant="info" title={`${regra.label} — sem cobrança`}>
             Este atendimento é custeado pelo órgão de origem. Não há Pix a gerar nem valor a
@@ -495,8 +501,9 @@ function ReceptionDetail({
           )}
         </div>
         )}
+        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2" data-guia="liberar">
           <Button
             loading={pending}
             disabled={!procedenciaDefinida}
