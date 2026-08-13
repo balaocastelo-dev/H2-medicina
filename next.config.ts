@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // O gerador de PDF le o logo direto do disco. Nada em `public/` e
+  // importado por codigo, entao o rastreador do Next nao levaria esses
+  // arquivos para a funcao serverless sem esta instrucao.
+  outputFileTracingIncludes: {
+    '/**': ['./public/marca/**'],
+  },
   images: {
     remotePatterns: supabaseHost
       ? [{ protocol: 'https', hostname: supabaseHost, pathname: '/storage/v1/object/**' }]

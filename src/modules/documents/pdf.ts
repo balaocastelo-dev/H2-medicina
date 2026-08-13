@@ -23,6 +23,38 @@ function baseDoApp(): string {
   );
 }
 
+function formatoPor(url: string, contentType?: string | null): 'png' | 'jpg' {
+  const tipo = contentType ?? '';
+  return tipo.includes('jpeg') || tipo.includes('jpg') || /\.jpe?g($|\?)/i.test(url)
+    ? 'jpg'
+    : 'png';
+}
+
+/**
+ * Le o logo do disco quando ele e um arquivo do proprio app.
+ *
+ * Evita a volta pela rede — e, principalmente, evita depender de a URL
+ * publica do deploy estar acessivel sem autenticacao, que e o caso das
+ * URLs de preview da Vercel.
+ */
+async function lerLogoLocal(
+  caminho: string,
+): Promise<{ bytes: Uint8Array; format: 'png' | 'jpg' } | null> {
+  try {
+    const { readFile } = await import('node:fs/promises');
+    const { join, normalize } = await import('node:path');
+
+    const relativo = normalize(caminho).replace(/^([/\\]|\.\.)+/, '');
+    if (!relativo) return null;
+
+    const bytes = new Uint8Array(await readFile(join(process.cwd(), 'public', relativo)));
+    if (bytes.byteLength === 0 || bytes.byteLength > 4_000_000) return null;
+    return { bytes, format: formatoPor(caminho) };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Baixa o logo do tenant para carimbar no cabecalho.
  *
@@ -35,20 +67,28 @@ export async function carregarLogo(
 ): Promise<{ bytes: Uint8Array; format: 'png' | 'jpg' } | null> {
   if (!url) return null;
   try {
-    // Caminho relativo (arquivo servido pelo proprio app) precisa virar
-    // absoluto: fetch no servidor nao tem uma "pagina atual" como base.
+    // Arquivo do proprio app: le do disco. Sai mais rapido e nao depende de
+    // a URL do deploy responder sem autenticacao.
+    if (url.startsWith('/')) {
+      const local = await lerLogoLocal(url);
+      if (local) return local;
+    }
+
+    // Caminho relativo precisa virar absoluto: fetch no servidor nao tem
+    // uma "pagina atual" para servir de base.
     const absoluta = url.startsWith('/') ? new URL(url, baseDoApp()).toString() : url;
 
-    const resposta = await fetch(absoluta, { cache: 'force-cache' });
+    const resposta = await fetch(absoluta, { cache: 'force-cache', redirect: 'follow' });
     if (!resposta.ok) return null;
 
     const tipo = resposta.headers.get('content-type') ?? '';
-    const formato: 'png' | 'jpg' =
-      tipo.includes('jpeg') || tipo.includes('jpg') || /\.jpe?g($|\?)/i.test(url) ? 'jpg' : 'png';
+    // URL protegida devolve a pagina de login com 200. Sem esta checagem, o
+    // HTML iria para o embedPng e o logo sumiria sem explicacao.
+    if (tipo && !tipo.startsWith('image/')) return null;
 
     const bytes = new Uint8Array(await resposta.arrayBuffer());
     if (bytes.byteLength === 0 || bytes.byteLength > 4_000_000) return null;
-    return { bytes, format: formato };
+    return { bytes, format: formatoPor(url, tipo) };
   } catch {
     return null;
   }
@@ -294,7 +334,19 @@ export async function buildDocumentPdf(input: {
   // Blocos de assinatura (paciente, responsavel, testemunha)
   if (input.signatureBlocks?.length) {
     for (const block of input.signatureBlocks) {
-      ensureSpace(130);
+      // Reservar um valor fixo e generoso jogava o segundo bloco para a
+      // pagina seguinte e deixava meia folha em branco. Aqui o espaco pedido
+      // e o que o bloco realmente ocupa.
+      const alturaBloco =
+        30 +
+        (block.imagePng ? 60 : 12) +
+        (block.caption ? 12 : 0) +
+        (block.name ? 12 : 0) +
+        (block.role ? 12 : 0) +
+        (block.lines?.length ?? 0) * 12 +
+        10;
+
+      ensureSpace(alturaBloco);
       y -= 30;
 
       if (block.imagePng && block.imagePng.byteLength > 0) {

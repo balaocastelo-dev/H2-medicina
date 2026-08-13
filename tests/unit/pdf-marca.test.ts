@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
-import { buildDocumentPdf, type PdfBrand } from '@/modules/documents/pdf';
+import { buildDocumentPdf, carregarLogo, type PdfBrand } from '@/modules/documents/pdf';
 
 /** PNG 1x1 opaco — suficiente para exercitar a incorporacao do logo. */
 const PNG_MINIMO = Uint8Array.from(
@@ -74,6 +74,24 @@ describe('documento em PDF', () => {
 
     const pdf = await PDFDocument.load(bytes);
     expect(pdf.getPageCount()).toBeGreaterThan(1);
+  });
+
+  describe('carregamento do logo', () => {
+    it('lê o arquivo do próprio app direto do disco', async () => {
+      const logo = await carregarLogo('/marca/h2-logo.png');
+      expect(logo).not.toBeNull();
+      expect(logo?.format).toBe('png');
+      expect(logo?.bytes.byteLength).toBeGreaterThan(1000);
+    });
+
+    it('devolve nulo sem logo cadastrado', async () => {
+      expect(await carregarLogo(null)).toBeNull();
+      expect(await carregarLogo('')).toBeNull();
+    });
+
+    it('não sai da pasta pública por caminho com ..', async () => {
+      expect(await carregarLogo('/../../package.json')).toBeNull();
+    });
   });
 
   it('desenha o bloco de assinatura com o traço coletado na tela', async () => {
