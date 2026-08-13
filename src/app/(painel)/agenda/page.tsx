@@ -7,6 +7,7 @@ import { Badge, Button, Card, EmptyState, StatCard, Table, Td, Th } from '@/comp
 import { FilterSelect } from '@/components/ui/data-controls';
 import { formatDate, formatTime, todayISO } from '@/lib/format';
 import { AgendaDatePicker } from './date-picker';
+import { PedidosOnline, type PedidoOnline } from './pedidos-online';
 import { Calendario, type DiaDoCalendario } from './calendario';
 
 export const dynamic = 'force-dynamic';
@@ -94,7 +95,7 @@ export default async function AgendaPage({
   if (sp.status) query = query.eq('status', sp.status);
   if (sp.empresa) query = query.eq('company_id', sp.empresa);
 
-  const [rowsRes, companiesRes, mesRes] = await Promise.all([
+  const [rowsRes, companiesRes, mesRes, pedidosRes] = await Promise.all([
     query.order('scheduled_at').returns<Row[]>(),
     supabase
       .from('companies')
@@ -111,7 +112,25 @@ export default async function AgendaPage({
       .lte('scheduled_date', ultimoDia)
       .is('deleted_at', null)
       .returns<{ scheduled_date: string; status: string }[]>(),
+    // Pedidos do site aguardando decisao, de qualquer data: o horario fica
+    // travado ate alguem responder, entao nao pode depender do dia escolhido.
+    supabase
+      .from('appointments')
+      .select(
+        'id, scheduled_at, public_code, requester_name, requester_phone, requester_email, requested_at, notes, patients(full_name, cpf), appointment_exams(exam_types(name))',
+      )
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('requested_online', true)
+      .is('confirmed_at', null)
+      .is('rejected_at', null)
+      .is('deleted_at', null)
+      .gte('scheduled_date', todayISO())
+      .order('scheduled_at')
+      .limit(30)
+      .returns<PedidoOnline[]>(),
   ]);
+
+  const pedidos = pedidosRes.data ?? [];
 
   const porDia = new Map<string, DiaDoCalendario>();
   for (const iso of dias) {
@@ -148,6 +167,9 @@ export default async function AgendaPage({
           )
         }
       />
+
+      {/* Pedidos do site esperando decisao: horario reservado, relogio correndo. */}
+      {ctx.permissions.has('agenda.administrar') && <PedidosOnline pedidos={pedidos} />}
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Total do dia" value={total} />

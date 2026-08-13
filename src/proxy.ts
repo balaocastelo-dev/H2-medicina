@@ -9,6 +9,9 @@ const PUBLIC_PREFIXES = [
   '/aceitar-convite',
   '/loja',
   '/meu',
+  // Agendamento pelo site e consulta do comprovante: quem chega aqui nao
+  // tem login, e e justamente esse o ponto.
+  '/agendar',
   '/verificar',
   '/api/public',
   '/api/health',
