@@ -105,6 +105,42 @@ com valor atual, valor recebido e origem.
 nome original, valor original, valor normalizado e confianca do mapeamento.
 Nada e descartado — o valor bruto sempre pode ser auditado.
 
+## Procedencia do paciente
+
+`patient_origin_kind` (`particular`, `estado`, `sisper`, `ingresso`) aparece em
+tres lugares:
+
+| Tabela         | Coluna                | Para que serve                                  |
+| -------------- | --------------------- | ----------------------------------------------- |
+| `attendances`  | `origin_kind`         | decide o caminho do paciente naquele dia        |
+| `appointments` | `origin_kind`         | ja nasce definida na importacao e no avulso     |
+| `patients`     | `default_origin_kind` | pre-seleciona a opcao na proxima vinda          |
+
+O trigger `tg_triage_finished` le `attendances.origin_kind` para escolher o
+destino apos a triagem: `particular` com exame pendente vai para
+`aguardando_exames`; as demais procedencias vao direto para `aguardando_medico`.
+
+## Assinaturas de termos
+
+`patient_signatures` guarda a prova da coleta, nao so o PDF: quem assinou, com
+que documento, por qual meio (`tela` ou `papel`), de qual IP e com qual
+navegador. O traco em PNG fica separado do PDF em `clinical-documents` — se a
+assinatura for contestada, a imagem original vale mais que o desenho embutido.
+
+Um indice unico impede dois termos assinados para o mesmo atendimento e a mesma
+finalidade.
+
+## Contratos das empresas
+
+`company_contracts` ganhou vigencia, mensalidade, dia de vencimento, indice de
+reajuste, dados do coordenador e e-mails de agendamento e financeiro.
+`company_contract_items` guarda a cota por exame ou servico, com preco dentro da
+cota e preco de excedente.
+
+O trigger `tg_consumo_cota_contrato` incrementa `quantity_used` quando um exame
+e concluido para funcionario de empresa com contrato ativo na data — assim o
+consumo da cota nao depende de contagem manual no fim do mes.
+
 ## Storage
 
 | Bucket               | Publico | Conteudo             |

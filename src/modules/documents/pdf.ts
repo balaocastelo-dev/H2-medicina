@@ -17,6 +17,24 @@ export interface PdfSection {
   lines: { label?: string; value: string }[];
 }
 
+/**
+ * Bloco de assinatura no pe do documento.
+ *
+ * Aceita o traco desenhado na tela (PNG). Quando nao vem imagem, sai a
+ * linha em branco de sempre — e o mesmo documento serve para assinar no
+ * papel.
+ */
+export interface PdfSignatureBlock {
+  name?: string | null;
+  role?: string | null;
+  /** Legenda abaixo da linha, tipo "Assinatura do funcionario". */
+  caption?: string | null;
+  /** PNG do traco coletado na tela. */
+  imagePng?: Uint8Array | null;
+  /** Linhas complementares: nome legivel, RG, CPF. */
+  lines?: string[];
+}
+
 function hexToRgb(hex: string) {
   const clean = hex.replace('#', '');
   const full =
@@ -63,8 +81,11 @@ export async function buildDocumentPdf(input: {
   subtitle?: string;
   sections: PdfSection[];
   body?: string;
+  /** Texto longo em varios paragrafos — termos, contratos, clausulas. */
+  paragraphs?: string[];
   signatureName?: string | null;
   signatureRole?: string | null;
+  signatureBlocks?: PdfSignatureBlock[];
   verificationCode?: string | null;
   verificationUrl?: string | null;
 }): Promise<Uint8Array> {
@@ -167,6 +188,89 @@ export async function buildDocumentPdf(input: {
       ensureSpace(16);
       page.drawText(line, { x: margin, y, size: 10, font });
       y -= 15;
+    }
+  }
+
+  // Paragrafos longos (termos, clausulas contratuais)
+  if (input.paragraphs?.length) {
+    y -= 6;
+    for (const paragraph of input.paragraphs) {
+      // Linha vazia no texto vira respiro entre blocos.
+      if (!paragraph.trim()) {
+        y -= 8;
+        continue;
+      }
+      // Titulo de clausula: curto e sem ponto final, sai em negrito.
+      const isHeading = paragraph.length < 90 && /^(Cl[áa]usula|Par[áa]grafo|Art\.|ANEXO|\d+\.)/i.test(paragraph);
+      const size = isHeading ? 10 : 9.5;
+      const chosen = isHeading ? bold : font;
+      for (const line of wrap(paragraph, chosen, size, maxWidth)) {
+        ensureSpace(16);
+        page.drawText(line, { x: margin, y, size, font: chosen });
+        y -= size + 4;
+      }
+      y -= 6;
+    }
+  }
+
+  // Blocos de assinatura (paciente, responsavel, testemunha)
+  if (input.signatureBlocks?.length) {
+    for (const block of input.signatureBlocks) {
+      ensureSpace(130);
+      y -= 30;
+
+      if (block.imagePng && block.imagePng.byteLength > 0) {
+        try {
+          const png = await pdf.embedPng(block.imagePng);
+          // Largura fixa mantem todas as assinaturas do mesmo tamanho,
+          // independente de quanto espaco a pessoa usou no quadro.
+          const targetWidth = 200;
+          const scale = targetWidth / png.width;
+          const height = Math.min(png.height * scale, 60);
+          page.drawImage(png, {
+            x: margin + 20,
+            y: y + 4,
+            width: targetWidth,
+            height,
+          });
+        } catch {
+          // PNG invalido nao pode derrubar a emissao do documento inteiro:
+          // sai a linha em branco e alguem assina no papel.
+        }
+      }
+
+      page.drawLine({
+        start: { x: margin + 20, y },
+        end: { x: margin + 280, y },
+        thickness: 0.8,
+        color: rgb(0.3, 0.3, 0.3),
+      });
+      y -= 12;
+
+      if (block.caption) {
+        page.drawText(block.caption, {
+          x: margin + 20,
+          y,
+          size: 8,
+          font,
+          color: rgb(0.45, 0.45, 0.45),
+        });
+        y -= 12;
+      }
+      if (block.name) {
+        page.drawText(block.name, { x: margin + 20, y, size: 9.5, font: bold });
+        y -= 12;
+      }
+      if (block.role) {
+        page.drawText(block.role, { x: margin + 20, y, size: 8.5, font, color: rgb(0.4, 0.4, 0.4) });
+        y -= 12;
+      }
+      for (const extra of block.lines ?? []) {
+        ensureSpace(14);
+        page.drawText(extra, { x: margin + 20, y, size: 8.5, font, color: rgb(0.35, 0.35, 0.35) });
+        y -= 12;
+      }
+      y -= 10;
     }
   }
 

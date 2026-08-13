@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/server';
 import { assertPermission, type SessionContext } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { buildDocumentPdf, type PdfBrand } from './pdf';
-import { formatCPF, formatDate, formatDuration, formatTime } from '@/lib/format';
+import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
+import { regraDe } from '@/modules/queue/origin-kind';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { DocumentKind } from '@/types/entities';
 
@@ -44,6 +45,7 @@ interface AttendanceForDocument {
   finished_at: string | null;
   exit_at: string | null;
   patient_id: string;
+  origin_kind: string;
   patients: { full_name: string; cpf: string | null; birth_date: string | null } | null;
   companies: { trade_name: string | null; legal_name: string } | null;
   patient_exams: { status: string; exam_types: { name: string } | null }[];
@@ -52,6 +54,15 @@ interface AttendanceForDocument {
     valid_until: string | null;
     conclusion: string | null;
   }[];
+}
+
+interface PagamentoDoAtendimento {
+  id: string;
+  description: string | null;
+  net_amount: number;
+  method: string;
+  status: string;
+  paid_at: string | null;
 }
 
 /**
@@ -69,7 +80,7 @@ export async function generateAttendanceDocument(
     const { data: attendance } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, finished_at, exit_at, patient_id, patients(full_name, cpf, birth_date), companies(trade_name, legal_name), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion)',
+        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, patients(full_name, cpf, birth_date), companies(trade_name, legal_name), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion)',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -96,6 +107,8 @@ export async function generateAttendanceDocument(
       relacao_exames: 'Relacao de exames',
       ficha_clinica: 'Ficha clínica',
       documento_final: 'Documento final consolidado',
+      recibo: 'Recibo de pagamento',
+      comprovante_agendamento: 'Comprovante de agendamento',
     };
 
     const identification = {
@@ -108,6 +121,10 @@ export async function generateAttendanceDocument(
           label: 'Empresa',
           value:
             attendance.companies?.trade_name ?? attendance.companies?.legal_name ?? 'não informada',
+        },
+        {
+          label: 'Procedência',
+          value: `${regraDe(attendance.origin_kind).letter} — ${regraDe(attendance.origin_kind).label}`,
         },
       ],
     };
@@ -137,6 +154,66 @@ export async function generateAttendanceDocument(
       });
     }
 
+    // Recibo: o que foi cobrado e como foi pago.
+    if (kind === 'recibo') {
+      const { data: pagamentos } = await supabase
+        .from('payments')
+        .select('id, description, net_amount, method, status, paid_at')
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('attendance_id', attendanceId)
+        .is('deleted_at', null)
+        .order('created_at')
+        .returns<PagamentoDoAtendimento[]>();
+
+      const pagos = (pagamentos ?? []).filter((p) => p.status === 'pago');
+      const total = pagos.reduce((soma, p) => soma + Number(p.net_amount), 0);
+
+      sections.push({
+        title: 'Pagamento',
+        lines:
+          pagos.length > 0
+            ? [
+                ...pagos.map((p) => ({
+                  label: p.description ?? 'Atendimento',
+                  value: `${formatMoney(Number(p.net_amount))} — ${p.method}${
+                    p.paid_at ? ` em ${formatDate(p.paid_at)}` : ''
+                  }`,
+                })),
+                { label: 'Total pago', value: formatMoney(total) },
+              ]
+            : [{ label: 'Situação', value: 'sem pagamento registrado neste atendimento' }],
+      });
+    }
+
+    // Comprovante de agendamento: o proximo compromisso do paciente.
+    let proximoAgendamento: { scheduled_at: string; attendance_kind: string } | null = null;
+    if (kind === 'comprovante_agendamento') {
+      const { data: proximo } = await supabase
+        .from('appointments')
+        .select('scheduled_at, attendance_kind')
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('patient_id', attendance.patient_id)
+        .is('deleted_at', null)
+        .not('status', 'in', '("cancelado","remarcado")')
+        .gte('scheduled_at', new Date().toISOString())
+        .order('scheduled_at')
+        .limit(1)
+        .maybeSingle<{ scheduled_at: string; attendance_kind: string }>();
+
+      proximoAgendamento = proximo ?? null;
+
+      sections.push({
+        title: 'Próximo agendamento',
+        lines: proximo
+          ? [
+              { label: 'Data', value: formatDate(proximo.scheduled_at) },
+              { label: 'Horário', value: formatTime(proximo.scheduled_at) },
+              { label: 'Tipo', value: proximo.attendance_kind },
+            ]
+          : [{ label: 'Situação', value: 'nenhum agendamento futuro registrado' }],
+      });
+    }
+
     const consultation = attendance.medical_consultations?.[0];
     if (consultation && (kind === 'documento_final' || kind === 'resumo_atendimento')) {
       sections.push({
@@ -149,14 +226,23 @@ export async function generateAttendanceDocument(
       });
     }
 
-    const body =
-      kind === 'atestado_comparecimento' || kind === 'comprovante_comparecimento'
-        ? `Atesto para os devidos fins que o(a) paciente acima compareceu a esta unidade em ${formatDate(
-            attendance.checkin_at,
-          )}, permanecendo das ${formatTime(attendance.checkin_at)} as ${formatTime(exit)} (${formatDuration(
-            durationSeconds,
-          )}), para realizacao de avaliacao ocupacional.`
-        : undefined;
+    let body: string | undefined;
+    if (kind === 'atestado_comparecimento' || kind === 'comprovante_comparecimento') {
+      body = `Atesto para os devidos fins que o(a) paciente acima compareceu a esta unidade em ${formatDate(
+        attendance.checkin_at,
+      )}, permanecendo das ${formatTime(attendance.checkin_at)} as ${formatTime(exit)} (${formatDuration(
+        durationSeconds,
+      )}), para realizacao de avaliacao ocupacional.`;
+    } else if (kind === 'recibo') {
+      body =
+        'Recibo referente aos serviços prestados no atendimento acima identificado. Documento emitido eletronicamente, dispensando assinatura de próprio punho.';
+    } else if (kind === 'comprovante_agendamento') {
+      body = proximoAgendamento
+        ? `Comprovante do agendamento do(a) paciente acima para ${formatDate(
+            proximoAgendamento.scheduled_at,
+          )} as ${formatTime(proximoAgendamento.scheduled_at)}. Recomenda-se chegar com 15 minutos de antecedencia e trazer documento com foto.`
+        : 'Nenhum agendamento futuro registrado para este paciente no momento da emissao.';
+    }
 
     const signatureName = responsavel.nome ?? null;
     const signatureRole = [responsavel.conselho, responsavel.numero, responsavel.uf]
@@ -216,6 +302,46 @@ export async function generateAttendanceDocument(
   } catch (error) {
     return fail(toFriendlyError(error));
   }
+}
+
+/**
+ * Kit de saida: os tres documentos que todo paciente leva embora.
+ *
+ * A regra veio da clinica e vale para as quatro procedencias — particular,
+ * Estado, SISPER e ingresso. Antes, quem lembrava emitia; quem esquecia
+ * gerava ligacao no dia seguinte.
+ *
+ * Um documento que falha nao impede os outros: e melhor entregar dois e
+ * avisar do terceiro do que segurar o paciente na recepcao.
+ */
+export async function emitirDocumentosDeSaida(
+  attendanceId: string,
+): Promise<ActionResult<{ emitidos: string[]; falhas: string[] }>> {
+  const kinds: { kind: DocumentKind; nome: string }[] = [
+    { kind: 'comprovante_comparecimento', nome: 'comprovante de comparecimento' },
+    { kind: 'recibo', nome: 'recibo de pagamento' },
+    { kind: 'comprovante_agendamento', nome: 'comprovante de agendamento' },
+  ];
+
+  const emitidos: string[] = [];
+  const falhas: string[] = [];
+
+  for (const { kind, nome } of kinds) {
+    const resultado = await generateAttendanceDocument(attendanceId, kind);
+    if (resultado.ok) emitidos.push(nome);
+    else falhas.push(`${nome} (${resultado.error})`);
+  }
+
+  if (emitidos.length === 0) {
+    return fail(`Nenhum documento foi emitido. ${falhas.join('; ')}`);
+  }
+
+  return ok(
+    { emitidos, falhas },
+    falhas.length === 0
+      ? `${emitidos.length} documentos emitidos: ${emitidos.join(', ')}.`
+      : `Emitidos: ${emitidos.join(', ')}. Falhou: ${falhas.join('; ')}.`,
+  );
 }
 
 /** URL assinada temporaria (documentos clinicos nunca sao publicos). */

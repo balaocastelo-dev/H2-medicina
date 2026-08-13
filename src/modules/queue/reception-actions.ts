@@ -8,6 +8,12 @@ import QRCode from 'qrcode';
 import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
+import {
+  isOriginKind,
+  proximaEtapaDaRecepcao,
+  regraDe,
+  type OriginKind,
+} from '@/modules/queue/origin-kind';
 
 /** Inicia o atendimento na recepcao. */
 export async function startReception(attendanceId: string): Promise<ActionResult> {
@@ -41,7 +47,76 @@ export async function startReception(attendanceId: string): Promise<ActionResult
 }
 
 /**
- * Conclui a recepcao: encaminha para triagem ou direto para as filas de exame.
+ * Registra de onde vem o paciente (P/E/S/I).
+ *
+ * Fica numa acao propria porque a recepcao escolhe isso logo na chegada,
+ * antes de conferir exames — e a escolha ja muda o que a tela oferece.
+ */
+export async function definirProcedencia(
+  attendanceId: string,
+  originKind: string,
+): Promise<ActionResult> {
+  try {
+    if (!isOriginKind(originKind)) return fail('Procedência inválida.');
+    const ctx = await assertPermission('recepcao.operar');
+    const supabase = await createClient();
+
+    const { data: attendance } = await supabase
+      .from('attendances')
+      .select('id, patient_id, appointment_id')
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{ id: string; patient_id: string; appointment_id: string | null }>();
+    if (!attendance) return fail('Atendimento não encontrado.');
+
+    const regra = regraDe(originKind);
+
+    const { error } = await supabase
+      .from('attendances')
+      .update({
+        origin_kind: originKind,
+        needs_triage: regra.needsTriage,
+        origin_kind_set_at: new Date().toISOString(),
+        origin_kind_set_by: ctx.userId,
+        updated_by: ctx.userId,
+      })
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id);
+    if (error) return fail(toFriendlyError(error));
+
+    // Guarda a procedencia habitual: na proxima vinda ja vem pre-selecionada.
+    await supabase
+      .from('patients')
+      .update({ default_origin_kind: originKind, updated_by: ctx.userId })
+      .eq('id', attendance.patient_id)
+      .eq('tenant_id', ctx.tenant.id);
+
+    if (attendance.appointment_id) {
+      await supabase
+        .from('appointments')
+        .update({ origin_kind: originKind, updated_by: ctx.userId })
+        .eq('id', attendance.appointment_id)
+        .eq('tenant_id', ctx.tenant.id);
+    }
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'attendances',
+      entityId: attendanceId,
+      patientId: attendance.patient_id,
+      description: `Procedência definida: ${regra.letter} — ${regra.label}`,
+    });
+
+    revalidatePath('/recepcao');
+    return ok(undefined, `Procedência ${regra.letter} registrada.`);
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Conclui a recepcao: encaminha para triagem, para as filas de exame ou
+ * direto ao medico, conforme a procedencia do paciente.
  * Tambem confirma os exames selecionados e a prioridade.
  */
 export async function finishReception(input: {
@@ -50,6 +125,7 @@ export async function finishReception(input: {
   priority: 'normal' | 'prioritario' | 'encaixe';
   examTypeIds: string[];
   notes?: string;
+  originKind?: string;
 }): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('recepcao.operar');
@@ -57,11 +133,18 @@ export async function finishReception(input: {
 
     const { data: attendance } = await supabase
       .from('attendances')
-      .select('id, patient_id, appointment_id')
+      .select('id, patient_id, appointment_id, origin_kind')
       .eq('id', input.attendanceId)
       .eq('tenant_id', ctx.tenant.id)
-      .maybeSingle<{ id: string; patient_id: string; appointment_id: string | null }>();
+      .maybeSingle<{
+        id: string;
+        patient_id: string;
+        appointment_id: string | null;
+        origin_kind: string;
+      }>();
     if (!attendance) return fail('Atendimento não encontrado.');
+
+    const originKind: OriginKind = regraDe(input.originKind ?? attendance.origin_kind).code;
 
     // Sincroniza a lista de exames com o que foi confirmado na recepcao
     const { data: existing } = await supabase
@@ -123,20 +206,18 @@ export async function finishReception(input: {
       .eq('status', 'pendente')
       .is('queued_at', null);
 
-    // Sem exame nenhum, mandar para a fila deixaria o paciente parado: nao ha
-    // exame para concluir e nada dispara a etapa seguinte. Vai direto ao medico.
-    const semExames = input.examTypeIds.length === 0;
-    const proximaEtapa = input.needsTriage
-      ? 'aguardando_triagem'
-      : semExames
-        ? 'aguardando_medico'
-        : 'aguardando_exames';
+    const proximaEtapa = proximaEtapaDaRecepcao({
+      originKind,
+      needsTriage: input.needsTriage,
+      temExames: input.examTypeIds.length > 0,
+    });
 
     const { error } = await supabase
       .from('attendances')
       .update({
         stage_code: proximaEtapa,
         needs_triage: input.needsTriage,
+        origin_kind: originKind,
         priority: input.priority,
         reception_finished_at: new Date().toISOString(),
         notes: input.notes ?? null,
@@ -148,18 +229,27 @@ export async function finishReception(input: {
 
     await sincronizarAgendamento(ctx.tenant.id, input.attendanceId);
 
+    const destino =
+      proximaEtapa === 'aguardando_triagem'
+        ? 'triagem'
+        : proximaEtapa === 'aguardando_exames'
+          ? 'exames'
+          : 'módulo médico';
+
     await audit(ctx, {
       action: 'update',
       entity: 'attendances',
       entityId: input.attendanceId,
       patientId: attendance.patient_id,
-      description: input.needsTriage ? 'Encaminhado para triagem' : 'Encaminhado para exames',
+      description: `Encaminhado para ${destino} (${regraDe(originKind).letter})`,
     });
 
     revalidatePath('/recepcao');
     revalidatePath('/crm');
     revalidatePath('/filas');
-    return ok(undefined, 'Recepção concluída.');
+    revalidatePath('/medico');
+    revalidatePath('/triagem');
+    return ok(undefined, `Recepção concluída — paciente encaminhado para ${destino}.`);
   } catch (error) {
     return fail(toFriendlyError(error));
   }

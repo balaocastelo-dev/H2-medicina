@@ -18,7 +18,7 @@ export default async function RecepcaoPage() {
     supabase
       .from('attendances')
       .select(
-        'id, stage_code, priority, checkin_at, needs_triage, payment_status, notes, order_id, patients(id, full_name, cpf, job_title), companies(trade_name, legal_name), queue_tickets(code), patient_exams(id, exam_type_id, status)',
+        'id, stage_code, priority, checkin_at, needs_triage, payment_status, notes, order_id, origin_kind, origin_kind_set_at, company_id, patients(id, full_name, cpf, rg, job_title, default_origin_kind), companies(trade_name, legal_name), queue_tickets(code), patient_exams(id, exam_type_id, status), patient_signatures(id, purpose, method, status, signed_at)',
       )
       .eq('tenant_id', ctx.tenant.id)
       .in('stage_code', ['aguardando_recepcao', 'na_recepcao'])

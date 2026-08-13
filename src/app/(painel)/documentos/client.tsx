@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { CheckCircle2, Download, FileText } from 'lucide-react';
+import { CheckCircle2, Download, FileText, PackageCheck } from 'lucide-react';
 import { Alert, Button, Card, CardBody, CardHeader, Field, Select } from '@/components/ui';
-import { generateAttendanceDocument, getDocumentUrl } from '@/modules/documents/actions';
+import {
+  emitirDocumentosDeSaida,
+  generateAttendanceDocument,
+  getDocumentUrl,
+} from '@/modules/documents/actions';
 import { encerrarAtendimento } from '@/modules/finance/attendance-actions';
 import { formatDateTime } from '@/lib/format';
 import type { DocumentKind } from '@/types/entities';
@@ -15,6 +19,8 @@ const KINDS: { value: DocumentKind; label: string }[] = [
   { value: 'relacao_exames', label: 'Relacao dos exames' },
   { value: 'ficha_clinica', label: 'Ficha clínica' },
   { value: 'documento_final', label: 'Documento final consolidado' },
+  { value: 'recibo', label: 'Recibo de pagamento' },
+  { value: 'comprovante_agendamento', label: 'Comprovante de agendamento' },
 ];
 
 export function GenerateDocumentCard({
@@ -74,11 +80,30 @@ export function GenerateDocumentCard({
           </Button>
 
           <Button
+            variant="outline"
+            loading={pending}
+            disabled={!attendanceId}
+            onClick={() =>
+              startTransition(async () => {
+                const r = await emitirDocumentosDeSaida(attendanceId);
+                setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Emitidos.') : r.error });
+              })
+            }
+          >
+            <PackageCheck className="h-4 w-4" /> Kit de saída
+          </Button>
+
+          <Button
             variant="success"
             loading={pending}
             disabled={!attendanceId}
             onClick={() => {
-              if (!window.confirm('Encerrar o atendimento deste paciente?')) return;
+              if (
+                !window.confirm(
+                  'Encerrar o atendimento deste paciente?\n\nO kit de saída (comprovante, recibo e agendamento) é emitido automaticamente.',
+                )
+              )
+                return;
               startTransition(async () => {
                 const r = await encerrarAtendimento(attendanceId);
                 setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Encerrado.') : r.error });

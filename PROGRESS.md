@@ -121,6 +121,38 @@ e os tipos ja estao prontos; falta a camada de UI e as Server Actions.
 
 ---
 
+## Procedencia do paciente (P / E / S / I)
+
+Pedido da clinica apos a apresentacao de 12/08/2026. A casa atende quatro
+publicos que entram pela mesma porta e seguem por corredores diferentes.
+
+| Letra | Procedencia          | Caminho                          |
+| ----- | -------------------- | -------------------------------- |
+| P     | Empresa / particular | triagem e fichas → exames → medico |
+| E     | Estado (ESISLA)      | direto ao modulo medico          |
+| S     | SISPER               | triagem → medico                 |
+| I     | Ingresso (escola)    | triagem → medico, ficha completa |
+
+- [x] Migration `0017` — enum `patient_origin_kind`, coluna em `attendances`,
+      `appointments` e `patients`
+- [x] Selecao na recepcao logo apos o totem, com sugestao pela ultima visita
+- [x] Encaminhamento automatico a partir da procedencia
+- [x] Trigger `tg_triage_finished` reescrito: E, S e I nao caem mais na fila
+      de exames ao sair da triagem
+- [x] Kit de saida para as quatro procedencias — comprovante de comparecimento,
+      recibo e comprovante de agendamento, emitidos ao encerrar o atendimento
+- [x] Termo de autorizacao de envio de resultados a empresa (Arts. 85 e 89 do
+      CEM), com assinatura na tela ou impressao para assinar no papel
+- [x] Agendamento avulso em lote para empresa contratante (`/agenda/avulso`)
+- [x] Importacao de planilha SISPER / Estado / ingresso (`/importacao/planilhas`)
+- [x] Contratos das empresas com alerta de vencimento, cota de exames e
+      geracao do contrato em PDF (`/empresas/contratos`)
+
+**A migration `0017` precisa ser aplicada antes do deploy do codigo.**
+Sem ela, a recepcao consulta colunas que ainda nao existem.
+
+---
+
 ## Pronto para deploy
 
 Ver **DEPLOY.md** para o roteiro completo.

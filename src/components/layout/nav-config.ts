@@ -112,8 +112,21 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: 'agenda.ver',
         module: 'agenda',
       },
+      {
+        href: '/agenda/avulso',
+        label: 'Agendamento avulso',
+        icon: 'CalendarPlus',
+        permission: 'agenda.administrar',
+        module: 'agenda',
+      },
       { href: '/pacientes', label: 'Pacientes', icon: 'Users', permission: 'pacientes.ver' },
       { href: '/empresas', label: 'Empresas', icon: 'Building2', permission: 'empresas.ver' },
+      {
+        href: '/empresas/contratos',
+        label: 'Contratos',
+        icon: 'FileSignature',
+        permission: 'empresas.ver',
+      },
     ],
   },
   {
@@ -160,6 +173,13 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Automação',
     items: [
+      {
+        href: '/importacao/planilhas',
+        label: 'Planilhas (SISPER / Estado)',
+        icon: 'UploadCloud',
+        permission: 'importacoes.aprovar',
+        module: 'importacao',
+      },
       {
         href: '/importacao/conectores',
         label: 'Conectores',

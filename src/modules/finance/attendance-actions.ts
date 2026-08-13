@@ -8,6 +8,7 @@ import { audit } from '@/lib/audit';
 import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
+import { emitirDocumentosDeSaida } from '@/modules/documents/actions';
 
 /**
  * Etapa de pagamento, entre a consulta e a emissão dos documentos.
@@ -209,12 +210,20 @@ export async function liberarDocumentos(attendanceId: string): Promise<ActionRes
   }
 }
 
-/** Encerra o atendimento após a entrega dos documentos. */
+/**
+ * Encerra o atendimento após a entrega dos documentos.
+ *
+ * Antes de fechar, garante o kit de saída — comprovante de comparecimento,
+ * recibo e comprovante de agendamento. A clínica pediu que saia para todos,
+ * e depender da memória de quem está no balcão não estava funcionando.
+ */
 export async function encerrarAtendimento(attendanceId: string): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('documentos.emitir');
     const supabase = await createClient();
     const agora = new Date().toISOString();
+
+    const kit = await emitirDocumentosDeSaida(attendanceId);
 
     const { error } = await supabase
       .from('attendances')
@@ -241,7 +250,12 @@ export async function encerrarAtendimento(attendanceId: string): Promise<ActionR
 
     revalidatePath('/documentos');
     revalidatePath('/crm');
-    return ok(undefined, 'Atendimento encerrado.');
+    return ok(
+      undefined,
+      kit.ok
+        ? `Atendimento encerrado. ${kit.message ?? ''}`.trim()
+        : `Atendimento encerrado, mas os documentos de saída falharam: ${kit.error}`,
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }

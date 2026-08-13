@@ -15,12 +15,15 @@ import {
 import { elapsedFrom, formatCPF, formatTime } from '@/lib/format';
 import {
   confirmarPagamentoRecepcao,
+  definirProcedencia,
   finishReception,
   gerarCobrancaRecepcao,
   startReception,
   type CobrancaRecepcao,
 } from '@/modules/queue/reception-actions';
+import { ORIGIN_KINDS, REGRAS, regraDe, type OriginKind } from '@/modules/queue/origin-kind';
 import { formatCNPJ, formatMoney } from '@/lib/format';
+import { BlocoAutorizacao } from './autorizacao';
 import type { ReceptionRow } from './types';
 
 export function ReceptionBoard({
@@ -49,12 +52,15 @@ export function ReceptionBoard({
                 selectedId === r.id ? 'bg-slate-100' : ''
               }`}
             >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{r.patients?.full_name ?? '—'}</p>
-                <p className="text-xs text-slate-500">
-                  {r.companies?.trade_name ?? r.companies?.legal_name ?? 'Sem empresa'} ·{' '}
-                  {formatTime(r.checkin_at)}
-                </p>
+              <div className="flex min-w-0 items-center gap-2">
+                {r.origin_kind_set_at && <SeloProcedencia kind={r.origin_kind} />}
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{r.patients?.full_name ?? '—'}</p>
+                  <p className="text-xs text-slate-500">
+                    {r.companies?.trade_name ?? r.companies?.legal_name ?? 'Sem empresa'} ·{' '}
+                    {formatTime(r.checkin_at)}
+                  </p>
+                </div>
               </div>
               <div className="text-right">
                 <span className="font-mono text-lg font-bold">
@@ -89,6 +95,77 @@ export function ReceptionBoard({
   );
 }
 
+/** Selo de uma letra com a procedencia — cabe na lista sem roubar espaco. */
+function SeloProcedencia({ kind }: { kind: string }) {
+  const regra = regraDe(kind);
+  return (
+    <span
+      title={regra.label}
+      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
+      style={{ backgroundColor: regra.color }}
+    >
+      {regra.letter}
+    </span>
+  );
+}
+
+/**
+ * Escolha da procedencia, logo apos o totem.
+ *
+ * Quatro botoes grandes em vez de um menu: a recepcao faz isso dezenas de
+ * vezes por dia e cada clique a menos conta.
+ */
+function SeletorProcedencia({
+  atual,
+  definida,
+  disabled,
+  onSelect,
+}: {
+  atual: OriginKind;
+  definida: boolean;
+  disabled: boolean;
+  onSelect: (kind: OriginKind) => void;
+}) {
+  const regra = REGRAS[atual];
+
+  return (
+    <div className={`rounded-xl border p-3 ${definida ? 'border-slate-200' : 'border-sky-300 bg-sky-50'}`}>
+      <p className="mb-2 text-sm font-medium text-slate-700">
+        De onde vem este paciente?
+        {!definida && <span className="ml-2 text-xs font-normal text-sky-700">defina antes de liberar</span>}
+      </p>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {ORIGIN_KINDS.map((kind) => {
+          const r = REGRAS[kind];
+          const ativo = atual === kind && definida;
+          return (
+            <button
+              key={kind}
+              type="button"
+              disabled={disabled}
+              onClick={() => onSelect(kind)}
+              className={`flex flex-col items-center gap-1 rounded-lg border-2 p-2 text-center transition disabled:opacity-50 ${
+                ativo ? 'text-white' : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+              style={ativo ? { backgroundColor: r.color, borderColor: r.color } : undefined}
+            >
+              <span className="text-lg leading-none font-bold">{r.letter}</span>
+              <span className="text-[11px] leading-tight">{r.short}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {definida && (
+        <p className="mt-2 text-xs text-slate-600">
+          <strong>{regra.label}</strong> — {regra.description}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ReceptionDetail({
   row,
   examTypes,
@@ -100,6 +177,16 @@ function ReceptionDetail({
 }) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Enquanto ninguem escolheu, a procedencia habitual do paciente entra
+  // como sugestao — quem volta pela segunda vez costuma vir pelo mesmo caminho.
+  const sugestao = regraDe(
+    row.origin_kind_set_at ? row.origin_kind : (row.patients?.default_origin_kind ?? 'particular'),
+  ).code;
+  const [originKind, setOriginKind] = useState<OriginKind>(sugestao);
+  const [procedenciaDefinida, setProcedenciaDefinida] = useState(Boolean(row.origin_kind_set_at));
+  const regra = REGRAS[originKind];
+
   const [needsTriage, setNeedsTriage] = useState(row.needs_triage);
   const [priority, setPriority] = useState(row.priority);
   const [notes, setNotes] = useState(row.notes ?? '');
@@ -112,6 +199,18 @@ function ReceptionDetail({
   const total = examTypes
     .filter((e) => selectedExams.includes(e.id))
     .reduce((soma, e) => soma + Number(e.price ?? 0), 0);
+
+  const temAutorizacao = (row.patient_signatures ?? []).some(
+    (a) => a.purpose === 'autorizacao_envio_resultados' && a.status === 'assinado',
+  );
+
+  // O rotulo diz para onde o paciente vai de verdade — antes prometia
+  // "liberar para exames" mesmo quando o destino era o consultorio.
+  const rotuloDoBotao = needsTriage
+    ? 'Enviar para triagem'
+    : regra.afterTriage === 'medico' || selectedExams.length === 0
+      ? 'Liberar para o médico'
+      : 'Liberar para exames';
 
   // Mudou a seleção: a cobrança anterior não vale mais.
   const alternarExame = (id: string, marcado: boolean) => {
@@ -162,8 +261,47 @@ function ReceptionDetail({
           </Button>
         )}
 
+        <SeletorProcedencia
+          atual={originKind}
+          definida={procedenciaDefinida}
+          disabled={pending}
+          onSelect={(kind) => {
+            setOriginKind(kind);
+            setNeedsTriage(REGRAS[kind].needsTriage);
+            startTransition(async () => {
+              const r = await definirProcedencia(row.id, kind);
+              if (r.ok) setProcedenciaDefinida(true);
+              setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Registrado.') : r.error });
+            });
+          }}
+        />
+
+        {regra.requiresAuthorization && procedenciaDefinida && (
+          <BlocoAutorizacao
+            attendanceId={row.id}
+            pacienteNome={row.patients?.full_name ?? ''}
+            pacienteRg={row.patients?.rg ?? null}
+            pacienteCpf={row.patients?.cpf ?? null}
+            empresaNome={row.companies?.trade_name ?? row.companies?.legal_name ?? null}
+            assinaturas={row.patient_signatures ?? []}
+          />
+        )}
+
+        {regra.fichaCompleta && (
+          <Alert variant="info" title="Ficha médica completa">
+            Ingresso escolar: o módulo médico exige a ficha com todos os selos preenchidos.
+          </Alert>
+        )}
+
         <div>
-          <p className="mb-2 text-sm font-medium text-slate-700">Exames confirmados</p>
+          <p className="mb-2 text-sm font-medium text-slate-700">
+            Exames confirmados
+            {regra.afterTriage === 'medico' && (
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                opcional para {regra.short} — o paciente segue direto ao médico
+              </span>
+            )}
+          </p>
           <div className="grid gap-2 sm:grid-cols-2">
             {examTypes.map((e) => (
               <label
@@ -347,7 +485,7 @@ function ReceptionDetail({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             loading={pending}
-            disabled={selectedExams.length === 0 && !needsTriage}
+            disabled={!procedenciaDefinida}
             onClick={() => {
               if (!pago && total > 0) {
                 const seguir = window.confirm(
@@ -356,10 +494,18 @@ function ReceptionDetail({
                 );
                 if (!seguir) return;
               }
+              if (regra.requiresAuthorization && !temAutorizacao) {
+                const seguir = window.confirm(
+                  'A autorização de envio de resultados à empresa ainda não foi assinada.\n\n' +
+                    'Liberar mesmo assim? Sem o termo, o prontuário não pode ser entregue ao RH.',
+                );
+                if (!seguir) return;
+              }
               run(() =>
                 finishReception({
                   attendanceId: row.id,
                   needsTriage,
+                  originKind,
                   priority: priority as 'normal' | 'prioritario' | 'encaixe',
                   examTypeIds: selectedExams,
                   notes,
@@ -367,14 +513,24 @@ function ReceptionDetail({
               );
             }}
           >
-            {needsTriage ? 'Enviar para triagem' : 'Liberar para exames'}
+            {rotuloDoBotao}
             <ArrowRight className="h-4 w-4" />
           </Button>
+
+          {!procedenciaDefinida && (
+            <span className="text-xs text-sky-700">
+              Escolha a procedência do paciente para liberar.
+            </span>
+          )}
 
           {!pago && total > 0 && (
             <span className="text-xs text-amber-700">
               Pagamento pendente — o sistema pede confirmação antes de liberar.
             </span>
+          )}
+
+          {regra.requiresAuthorization && !temAutorizacao && (
+            <span className="text-xs text-amber-700">Autorização da empresa ainda não assinada.</span>
           )}
         </div>
       </CardBody>

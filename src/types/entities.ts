@@ -78,7 +78,13 @@ export type DocumentKind =
   | 'documento_final'
   | 'comprovante_compra'
   | 'resumo_pedido'
-  | 'relatorio_empresarial';
+  | 'relatorio_empresarial'
+  | 'autorizacao_envio_resultados'
+  | 'comprovante_agendamento'
+  | 'contrato_empresa';
+
+/** Procedencia do paciente: P (particular), E (estado), S (SISPER), I (ingresso). */
+export type PatientOriginKind = 'particular' | 'estado' | 'sisper' | 'ingresso';
 
 export interface Tenant {
   id: UUID;
