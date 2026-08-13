@@ -19,9 +19,19 @@ const PUBLIC_PREFIXES = [
   '/manifest.webmanifest',
 ];
 
+/**
+ * Rotas publicas de caminho exato.
+ *
+ * A raiz precisa ficar aqui, e nao na lista de prefixos: `startsWith('/')`
+ * casa com tudo e abriria o sistema inteiro.
+ */
+const PUBLIC_EXACT = ['/'];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const isPublic =
+    PUBLIC_EXACT.includes(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   let response = NextResponse.next({ request });
   let user = null;
 
