@@ -4,8 +4,7 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
-import { publicEnv } from '@/lib/env';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 import { cpfSchema } from '@/lib/validators';
 import { onlyDigits } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
@@ -35,14 +34,17 @@ interface Unidade {
   trade_name: string;
 }
 
+/**
+ * Unidade do deploy.
+ *
+ * Lida com a chave de servico porque `tenants` esta sob RLS e o visitante
+ * anonimo nao passa por ela — era isso que fazia a pagina publica dizer
+ * "indisponivel". O slug vem da variavel de ambiente, nao do navegador.
+ */
 async function unidadePadrao(): Promise<Unidade | null> {
-  const anon = await createClient();
-  const { data } = await anon
-    .from('tenants')
-    .select('id, legal_name, trade_name')
-    .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
-    .maybeSingle<Unidade>();
-  return data ?? null;
+  const marca = await marcaPublica();
+  if (!marca) return null;
+  return { id: marca.tenantId, legal_name: marca.legalName, trade_name: marca.tradeName };
 }
 
 export interface OpcoesPublicas {

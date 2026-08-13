@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { CalendarCheck, FileSearch, LogIn } from 'lucide-react';
-import { createClient } from '@/lib/supabase/server';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,14 +14,9 @@ export const dynamic = 'force-dynamic';
  * Quem ja tem sessao nem passa por aqui: o proxy manda para o painel.
  */
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: branding } = await supabase
-    .from('tenant_branding')
-    .select('system_name, logo_url, color_primary')
-    .maybeSingle<{ system_name: string; logo_url: string | null; color_primary: string }>();
-
-  const nome = branding?.system_name ?? 'Medicina Ocupacional';
-  const cor = branding?.color_primary ?? '#0F766E';
+  const marca = await marcaPublica();
+  const nome = marca?.systemName ?? 'Medicina Ocupacional';
+  const cor = marca?.colorPrimary ?? '#0F766E';
 
   return (
     <div
@@ -30,9 +25,9 @@ export default async function Home() {
     >
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col justify-center px-4 py-12">
         <div className="text-center">
-          {branding?.logo_url ? (
+          {marca?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={branding.logo_url} alt={nome} className="mx-auto h-20 object-contain" />
+            <img src={marca.logoUrl} alt={nome} className="mx-auto h-20 object-contain" />
           ) : (
             <span
               className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-xl font-bold text-white"

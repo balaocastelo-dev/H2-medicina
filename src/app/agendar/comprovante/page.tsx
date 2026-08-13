@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 import { ConsultaDeComprovante } from './consulta';
 
 export const dynamic = 'force-dynamic';
@@ -10,13 +10,8 @@ export const metadata = {
 };
 
 export default async function ComprovantePage() {
-  const supabase = await createClient();
-  const { data: branding } = await supabase
-    .from('tenant_branding')
-    .select('system_name, logo_url, color_primary')
-    .maybeSingle<{ system_name: string; logo_url: string | null; color_primary: string }>();
-
-  const cor = branding?.color_primary ?? '#0F766E';
+  const marca = await marcaPublica();
+  const cor = marca?.colorPrimary ?? '#0F766E';
 
   return (
     <div
@@ -26,16 +21,12 @@ export default async function ComprovantePage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4 px-4 py-4">
           <Link href="/" className="flex items-center gap-3">
-            {branding?.logo_url ? (
+            {marca?.logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={branding.logo_url}
-                alt={branding.system_name}
-                className="h-10 object-contain"
-              />
+              <img src={marca.logoUrl} alt={marca.systemName} className="h-10 object-contain" />
             ) : (
               <span className="text-lg font-semibold text-slate-900">
-                {branding?.system_name ?? 'Clínica'}
+                {marca?.systemName ?? 'Clínica'}
               </span>
             )}
           </Link>

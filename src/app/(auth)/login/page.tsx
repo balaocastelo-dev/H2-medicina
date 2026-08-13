@@ -1,29 +1,7 @@
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/server';
-import { publicEnv } from '@/lib/env';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 import { LoginForm } from './login-form';
-import type { TenantBranding, Tenant } from '@/types/entities';
 
-/** O login e white label: busca a marca do tenant pelo dominio ou pelo slug padrao. */
-async function loadBranding(): Promise<{ tenant: Tenant | null; branding: TenantBranding | null }> {
-  try {
-    const supabase = await createClient();
-    const { data: tenant } = await supabase
-      .from('tenants')
-      .select('*')
-      .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
-      .maybeSingle<Tenant>();
-    if (!tenant) return { tenant: null, branding: null };
-    const { data: branding } = await supabase
-      .from('tenant_branding')
-      .select('*')
-      .eq('tenant_id', tenant.id)
-      .maybeSingle<TenantBranding>();
-    return { tenant, branding };
-  } catch {
-    return { tenant: null, branding: null };
-  }
-}
 
 export default async function LoginPage({
   searchParams,
@@ -31,17 +9,20 @@ export default async function LoginPage({
   searchParams: Promise<{ proximo?: string }>;
 }) {
   const { proximo } = await searchParams;
-  const { tenant, branding } = await loadBranding();
-  const systemName = branding?.system_name ?? tenant?.trade_name ?? 'Plataforma Clínica';
 
-  const cor = branding?.color_primary ?? '#0F766E';
+  // Lido com a chave de servico: `tenants` e `tenant_branding` estao sob
+  // RLS e o visitante da tela de login ainda nao tem sessao. Sem isso o
+  // logo nunca aparecia aqui.
+  const marca = await marcaPublica();
+  const systemName = marca?.systemName ?? 'Plataforma Clínica';
+  const cor = marca?.colorPrimary ?? '#0F766E';
 
   return (
     <div className="w-full max-w-md">
       <div className="mb-6 text-center">
-        {branding?.logo_url ? (
+        {marca?.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={branding.logo_url} alt={systemName} className="mx-auto h-14 object-contain" />
+          <img src={marca.logoUrl} alt={systemName} className="mx-auto h-14 object-contain" />
         ) : (
           <div
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-xl font-bold text-white"
@@ -62,8 +43,8 @@ export default async function LoginPage({
         </Link>
       </div>
 
-      {branding?.footer_text && (
-        <p className="mt-8 text-center text-xs text-slate-400">{branding.footer_text}</p>
+      {marca?.footerText && (
+        <p className="mt-8 text-center text-xs text-slate-400">{marca.footerText}</p>
       )}
     </div>
   );
