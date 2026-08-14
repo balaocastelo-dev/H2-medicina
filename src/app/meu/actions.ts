@@ -1,8 +1,7 @@
 'use server';
 
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
-import { publicEnv } from '@/lib/env';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 import { onlyDigits, todayISO } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
@@ -66,13 +65,14 @@ async function autenticar(cpfBruto: string, nascimento: string) {
   const cpf = onlyDigits(cpfBruto);
   if (cpf.length !== 11 || !nascimento) return null;
 
-  const anon = await createClient();
-  const { data: tenant } = await anon
-    .from('tenants')
-    .select('id, trade_name')
-    .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
-    .maybeSingle<{ id: string; trade_name: string }>();
-  if (!tenant) return null;
+  // A unidade e lida com a chave de servico: `tenants` esta sob RLS e o
+  // paciente nao tem sessao no Supabase — e justamente por isso que ele
+  // esta se identificando por CPF aqui. Lendo como anonimo, o tenant vinha
+  // nulo e o portal respondia "nao localizamos seu cadastro" para todo
+  // mundo, mesmo com CPF e nascimento corretos.
+  const marca = await marcaPublica();
+  if (!marca) return null;
+  const tenant = { id: marca.tenantId, trade_name: marca.tradeName };
 
   const admin = createAdminClient();
   const { data: paciente } = await admin
@@ -299,13 +299,9 @@ const GRADE = [
 /** Exames que o paciente pode escolher e o que ja esta tomado nos proximos 30 dias. */
 export async function opcoesDeAgendamento(): Promise<ActionResult<OpcoesAgendamento>> {
   try {
-    const anon = await createClient();
-    const { data: tenant } = await anon
-      .from('tenants')
-      .select('id')
-      .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
-      .maybeSingle<{ id: string }>();
-    if (!tenant) return fail('Unidade não configurada.');
+    const marca = await marcaPublica();
+    if (!marca) return fail('Unidade não configurada.');
+    const tenant = { id: marca.tenantId };
 
     const admin = createAdminClient();
 

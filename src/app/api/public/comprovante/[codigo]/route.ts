@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createClient } from '@/lib/supabase/server';
+import { marcaPublica } from '@/modules/settings/marca-publica';
 import { publicEnv } from '@/lib/env';
 import { formatCPF, formatDate, formatTime } from '@/lib/format';
 import { buildDocumentPdf, carregarLogo, type PdfBrand } from '@/modules/documents/pdf';
@@ -42,19 +42,21 @@ export async function GET(
   }
 
   try {
-    const anon = await createClient();
-    const { data: tenant } = await anon
-      .from('tenants')
-      .select('id, legal_name, trade_name')
-      .eq('slug', publicEnv.NEXT_PUBLIC_DEFAULT_TENANT_SLUG)
-      .maybeSingle<{ id: string; legal_name: string; trade_name: string }>();
-    if (!tenant) {
+    // `tenants` esta sob RLS e quem baixa o comprovante nao tem login: lido
+    // como anonimo, a unidade vinha nula e todo comprovante respondia 404.
+    const unidade = await marcaPublica();
+    if (!unidade) {
       return NextResponse.json({ erro: 'Unidade não configurada.' }, { status: 404 });
     }
+    const tenant = {
+      id: unidade.tenantId,
+      legal_name: unidade.legalName,
+      trade_name: unidade.tradeName,
+    };
 
     const admin = createAdminClient();
 
-    const [reservaRes, marcaRes, brandingRes] = await Promise.all([
+    const [reservaRes, marcaRes] = await Promise.all([
       admin
         .from('appointments')
         .select(
@@ -70,17 +72,6 @@ export async function GET(
         .eq('tenant_id', tenant.id)
         .in('group_key', ['empresa', 'contato', 'documentos'])
         .returns<{ group_key: string; settings: Record<string, string | null> }[]>(),
-      admin
-        .from('tenant_branding')
-        .select('system_name, logo_url, color_primary, footer_text, pdf_header_html')
-        .eq('tenant_id', tenant.id)
-        .maybeSingle<{
-          system_name: string;
-          logo_url: string | null;
-          color_primary: string;
-          footer_text: string | null;
-          pdf_header_html: string | null;
-        }>(),
     ]);
 
     const reserva = reservaRes.data;
@@ -94,10 +85,9 @@ export async function GET(
 
     const empresa = grupos.empresa ?? {};
     const contato = grupos.contato ?? {};
-    const branding = brandingRes.data;
 
     const marca: PdfBrand = {
-      systemName: branding?.system_name ?? tenant.trade_name,
+      systemName: unidade.systemName,
       legalName: empresa.razao_social ?? tenant.legal_name,
       document: empresa.cnpj ? `CNPJ ${empresa.cnpj}` : null,
       address:
@@ -105,10 +95,10 @@ export async function GET(
           .filter(Boolean)
           .join(', ') || null,
       contact: [contato.telefone, contato.email].filter(Boolean).join(' · ') || null,
-      headerText: branding?.pdf_header_html ?? null,
-      footerText: branding?.footer_text ?? null,
-      primaryColor: branding?.color_primary ?? '#0F766E',
-      logo: await carregarLogo(branding?.logo_url),
+      headerText: unidade.pdfHeaderHtml,
+      footerText: unidade.footerText,
+      primaryColor: unidade.colorPrimary,
+      logo: await carregarLogo(unidade.logoUrl),
     };
 
     const situacao = reserva.rejected_at
