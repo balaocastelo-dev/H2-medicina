@@ -5,11 +5,13 @@ import type { ContadorChave } from './nav-config';
 export type Contadores = Partial<Record<ContadorChave, number>>;
 
 /**
- * Quantas operações estão esperando alguém em cada etapa.
+ * Quantos pacientes estao em cada setor da clinica neste momento.
  *
- * Serve para o administrativo e a recepção enxergarem, sem abrir tela por
- * tela, onde ha trabalho parado. Contagens sao feitas com `head: true`:
- * o banco devolve so o numero, sem trafegar as linhas.
+ * Cada atendimento aberto esta em exatamente uma etapa, entao somar as
+ * bolinhas de recepcao, triagem, filas, medico, pagamentos e documentos da
+ * o total de gente dentro da clinica — que e justamente o numero mostrado
+ * na bolinha do CRM. Contagens usam `head: true`: o banco devolve so o
+ * numero, sem trafegar as linhas.
  */
 export async function carregarContadores(tenantId: string): Promise<Contadores> {
   try {
@@ -28,7 +30,10 @@ export async function carregarContadores(tenantId: string): Promise<Contadores> 
       abertos(['aguardando_recepcao', 'na_recepcao']),
       abertos(['aguardando_triagem', 'em_triagem']),
       abertos(['aguardando_exames', 'em_exames']),
-      abertos(['aguardando_medico']),
+      // 'em_consulta' entra aqui: o paciente esta na sala do medico agora.
+      // Sem isso ele sumia de todas as bolinhas e a soma nao batia com a
+      // quantidade de gente dentro da clinica.
+      abertos(['aguardando_medico', 'em_consulta']),
       abertos(['aguardando_pagamento']),
       abertos(['aguardando_documentos']),
       abertos([
