@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import type { ActionResult } from '@/lib/action-result';
 import type { Patient } from '@/types/entities';
+import { CamposEndereco } from './campos-endereco';
 
 export interface CompanyOption {
   id: string;
@@ -93,27 +94,7 @@ export function PatientForm({
           <Field label="E-mail" error={errors?.email}>
             <Input type="email" name="email" defaultValue={patient?.email ?? ''} />
           </Field>
-          <Field label="CEP" error={errors?.zip_code}>
-            <Input name="zip_code" defaultValue={patient?.zip_code ?? ''} />
-          </Field>
-          <Field label="Logradouro" error={errors?.street} className="md:col-span-2">
-            <Input name="street" defaultValue={patient?.street ?? ''} />
-          </Field>
-          <Field label="Numero" error={errors?.number}>
-            <Input name="number" defaultValue={patient?.number ?? ''} />
-          </Field>
-          <Field label="Complemento">
-            <Input name="complement" defaultValue={''} />
-          </Field>
-          <Field label="Bairro" error={errors?.district}>
-            <Input name="district" defaultValue={patient?.district ?? ''} />
-          </Field>
-          <Field label="Cidade" error={errors?.city}>
-            <Input name="city" defaultValue={patient?.city ?? ''} />
-          </Field>
-          <Field label="UF" error={errors?.state}>
-            <Input name="state" maxLength={2} defaultValue={patient?.state ?? ''} />
-          </Field>
+          <CamposEndereco valores={patient ?? undefined} erros={errors} />
         </CardBody>
       </Card>
 

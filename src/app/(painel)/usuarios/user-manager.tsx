@@ -2,13 +2,25 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Coins, KeyRound, Lock, PenLine, Plus, Stethoscope, Unlock, UserPlus } from 'lucide-react';
+import {
+  Coins,
+  KeyRound,
+  Lock,
+  PenLine,
+  Pencil,
+  Plus,
+  Stethoscope,
+  Trash2,
+  Unlock,
+  UserPlus,
+} from 'lucide-react';
 import {
   Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, Select, Table, Td, Th,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
 import { changeUserRole, createUser, resetUserPassword, toggleUserBlock } from '@/modules/users/actions';
-import { preCadastrarMedicos } from '@/modules/users/medicos-actions';
+import { excluirUsuario, preCadastrarMedicos } from '@/modules/users/medicos-actions';
+import { EditarUsuario } from './editar-usuario';
 import { MEDICOS_INICIAIS, acessoPendente } from '@/modules/users/medicos-iniciais';
 import type { ActionResult } from '@/lib/action-result';
 
@@ -24,6 +36,8 @@ export interface UserRow {
   blocked_at: string | null;
   last_sign_in_at: string | null;
   signature_path: string | null;
+  phone: string | null;
+  rqe: string | null;
   user_roles: { roles: { name: string; code: string } | null }[];
 }
 
@@ -63,6 +77,7 @@ export function UserManager({
     null,
   );
   const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [editando, setEditando] = useState<UserRow | null>(null);
   const [running, startTransition] = useTransition();
 
   const erros = state && !state.ok ? state.fieldErrors : undefined;
@@ -81,6 +96,14 @@ export function UserManager({
   return (
     <div className="space-y-4">
       {msg && <Alert variant={msg.ok ? 'success' : 'error'}>{msg.texto}</Alert>}
+
+      {editando && (
+        <EditarUsuario
+          key={editando.id}
+          usuario={editando}
+          aoFechar={() => setEditando(null)}
+        />
+      )}
 
       {podeGerenciarPapeis && faltamMedicos.length > 0 && (
         <Card>
@@ -326,6 +349,16 @@ export function UserManager({
                             <Coins className="h-4 w-4" />
                           </Link>
                         )}
+                        {podeGerenciarPapeis && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            title="Editar cadastro"
+                            onClick={() => setEditando(u)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         {!souEu && (
                           <Button
                             size="sm"
@@ -338,6 +371,27 @@ export function UserManager({
                             }}
                           >
                             {bloqueado ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                          </Button>
+                        )}
+                        {podeGerenciarPapeis && !souEu && (
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            loading={running}
+                            title="Excluir do sistema"
+                            onClick={() => {
+                              if (
+                                !window.confirm(
+                                  `Excluir ${u.full_name || 'este usuário'}? O acesso é cortado na hora.`,
+                                )
+                              ) {
+                                return;
+                              }
+                              const motivo = window.prompt('Motivo (opcional):') ?? undefined;
+                              rodar(() => excluirUsuario(u.id, motivo || undefined));
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
                       </div>

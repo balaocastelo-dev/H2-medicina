@@ -230,3 +230,171 @@ export async function removerAssinatura(): Promise<ActionResult> {
     return fail(toFriendlyError(error));
   }
 }
+
+const edicaoSchema = z.object({
+  id: z.string().uuid(),
+  full_name: z.string().trim().min(3, 'Informe o nome'),
+  email: z.email('E-mail inválido'),
+  phone: z.string().trim().nullable().optional(),
+  job_title: z.string().trim().nullable().optional(),
+  council_type: z.string().trim().nullable().optional(),
+  council_number: z.string().trim().nullable().optional(),
+  council_state: z.string().trim().max(2).nullable().optional(),
+  rqe: z.string().trim().nullable().optional(),
+});
+
+/**
+ * Edita os dados de um usuario.
+ *
+ * O e-mail e a identidade de login, entao mudar aqui muda no Auth tambem —
+ * senao a pessoa veria um endereco na tela e entraria com outro. E o caso
+ * de quem foi pre-cadastrado: troca o provisorio pelo endereco real.
+ */
+export async function atualizarUsuario(
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const ctx = await assertPermission('usuarios.administrar');
+    const bruto = Object.fromEntries(formData.entries());
+    const parsed = edicaoSchema.safeParse({
+      ...bruto,
+      phone: bruto.phone || null,
+      job_title: bruto.job_title || null,
+      council_type: bruto.council_type || null,
+      council_number: bruto.council_number || null,
+      council_state: bruto.council_state || null,
+      rqe: bruto.rqe || null,
+    });
+    if (!parsed.success) {
+      return fail('Verifique os campos destacados.', z.flattenError(parsed.error).fieldErrors);
+    }
+    const dados = parsed.data;
+
+    const supabase = await createClient();
+    const { data: atual } = await supabase
+      .from('profiles')
+      .select('id, email')
+      .eq('id', dados.id)
+      .eq('tenant_id', ctx.tenant.id)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; email: string | null }>();
+    if (!atual) return fail('Usuário não encontrado nesta empresa.');
+
+    const admin = createAdminClient();
+
+    if (atual.email?.toLowerCase() !== dados.email.toLowerCase()) {
+      const { error: erroAuth } = await admin.auth.admin.updateUserById(dados.id, {
+        email: dados.email,
+        email_confirm: true,
+      });
+      if (erroAuth) {
+        return fail(
+          /already/i.test(erroAuth.message)
+            ? 'Já existe uma conta com este e-mail.'
+            : `Não consegui alterar o e-mail de acesso: ${erroAuth.message}`,
+        );
+      }
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: dados.full_name,
+        email: dados.email,
+        phone: dados.phone,
+        job_title: dados.job_title,
+        council_type: dados.council_type,
+        council_number: dados.council_number,
+        council_state: dados.council_state ? dados.council_state.toUpperCase() : null,
+        rqe: dados.rqe,
+        updated_by: ctx.userId,
+      })
+      .eq('id', dados.id)
+      .eq('tenant_id', ctx.tenant.id);
+    if (error) return fail(toFriendlyError(error));
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'profiles',
+      entityId: dados.id,
+      description: `Cadastro de ${dados.full_name} atualizado`,
+      previous: atual,
+      next: dados,
+    });
+
+    revalidatePath('/usuarios');
+    return ok(undefined, 'Usuário atualizado.');
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Exclui um usuario do sistema.
+ *
+ * O perfil sai por exclusao logica, nao apagado de vez: consulta assinada,
+ * documento emitido e registro de auditoria apontam para ele, e apagar a
+ * linha deixaria o historico clinico sem autor. O acesso, esse sim, e
+ * cortado de imediato no Auth.
+ */
+export async function excluirUsuario(userId: string, motivo?: string): Promise<ActionResult> {
+  try {
+    const ctx = await assertPermission('usuarios.administrar');
+    if (userId === ctx.userId) return fail('Você não pode excluir o próprio acesso.');
+
+    const supabase = await createClient();
+    const { data: alvo } = await supabase
+      .from('profiles')
+      .select('id, full_name, email')
+      .eq('id', userId)
+      .eq('tenant_id', ctx.tenant.id)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; full_name: string; email: string | null }>();
+    if (!alvo) return fail('Usuário não encontrado nesta empresa.');
+
+    const agora = new Date().toISOString();
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        deleted_at: agora,
+        is_active: false,
+        blocked_at: agora,
+        blocked_reason: motivo ?? 'Excluído do sistema',
+        updated_by: ctx.userId,
+      })
+      .eq('id', userId)
+      .eq('tenant_id', ctx.tenant.id);
+    if (error) return fail(toFriendlyError(error));
+
+    // Corta o acesso. Apagar a conta do Auth costuma falhar por causa das
+    // referencias no historico; o banimento tem o mesmo efeito pratico e
+    // nao deixa o perfil marcado como excluido com login ainda valendo.
+    const admin = createAdminClient();
+    const { error: erroAuth } = await admin.auth.admin.deleteUser(userId);
+    let aviso = '';
+    if (erroAuth) {
+      const { error: erroBan } = await admin.auth.admin.updateUserById(userId, {
+        ban_duration: '876000h',
+      });
+      if (erroBan) {
+        aviso = ' O acesso foi bloqueado no sistema, mas confira a conta no painel do Supabase.';
+      }
+    }
+
+    await supabase.from('user_roles').delete().eq('user_id', userId).eq('tenant_id', ctx.tenant.id);
+
+    await audit(ctx, {
+      action: 'delete',
+      entity: 'profiles',
+      entityId: userId,
+      description: `Usuário ${alvo.full_name} excluído${motivo ? `: ${motivo}` : ''}`,
+      previous: alvo,
+    });
+
+    revalidatePath('/usuarios');
+    return ok(undefined, `Usuário excluído.${aviso}`);
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}

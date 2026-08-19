@@ -14,7 +14,7 @@ export default async function UsuariosPage() {
     supabase
       .from('profiles')
       .select(
-        'id, full_name, email, job_title, council_type, council_number, council_state, is_active, blocked_at, last_sign_in_at, signature_path, user_roles(roles(name, code))',
+        'id, full_name, email, job_title, council_type, council_number, council_state, is_active, blocked_at, last_sign_in_at, signature_path, phone, rqe, user_roles(roles(name, code))',
       )
       .eq('tenant_id', ctx.tenant.id)
       .is('deleted_at', null)
