@@ -16,6 +16,15 @@ interface CallRow {
   called_at: string;
 }
 
+/**
+ * Reduz "Sala 7 — Eletrocardiograma e Espirometria" a "Sala 7".
+ * Se a sala nao seguir esse padrao, devolve o nome inteiro.
+ */
+function apenasNumeroDaSala(nome: string): string {
+  const m = nome.match(/sala\s*0*(\d+)/i);
+  return m ? `Sala ${m[1]}` : nome;
+}
+
 export function TvPanel({
   tenantId,
   initialCalls,
@@ -140,7 +149,10 @@ export function TvPanel({
       // inteira. Dividir em pedacos deixava a fala picada e sem melodia.
       const senhaSoletrada = chamada.ticket_code.split('').join(' ');
       const nome = showName && chamada.patient_label ? `${chamada.patient_label}. ` : '';
-      const sala = chamada.room_name ? `Compareça à ${chamada.room_name}.` : '';
+      // A sala e anunciada pelo numero. O nome cadastrado traz tambem o exame
+      // ("Sala 7 — Eletrocardiograma e Espirometria"), o que deixaria a
+      // chamada longa demais para quem esta na sala de espera.
+      const sala = chamada.room_name ? `Compareça à ${apenasNumeroDaSala(chamada.room_name)}.` : '';
       const texto = `Senha ${senhaSoletrada}. ${nome}${sala}`.trim();
 
       const escolhida = escolherVoz(sintese.getVoices(), null);

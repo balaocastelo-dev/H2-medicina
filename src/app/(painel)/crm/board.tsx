@@ -10,7 +10,7 @@ import {
   useDraggable,
   type DragEndEvent,
 } from '@dnd-kit/core';
-import { AlertTriangle, ShoppingBag } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { Alert, Badge } from '@/components/ui';
 import { elapsedFrom, formatTime } from '@/lib/format';
 import { moveAttendanceStage } from '@/modules/queue/actions';
@@ -230,11 +230,6 @@ function KanbanCard({
       </p>
 
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
-        {card.priority !== 'normal' && (
-          <Badge color="#EF4444">
-            <AlertTriangle className="h-3 w-3" /> {card.priority}
-          </Badge>
-        )}
         {card.order_id && (
           <Badge color="#0EA5E9">
             <ShoppingBag className="h-3 w-3" /> pedido

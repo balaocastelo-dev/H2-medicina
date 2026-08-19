@@ -147,11 +147,15 @@ export const triageSchema = z.object({
   heart_rate: z.coerce.number().int().min(20).max(250).nullable().optional(),
   respiratory_rate: z.coerce.number().int().min(4).max(80).nullable().optional(),
   oxygen_saturation: z.coerce.number().int().min(30).max(100).nullable().optional(),
-  symptoms: optionalText,
-  alerts: optionalText,
-  restrictions: optionalText,
+  // Acuidade visual anotada por olho, no formato usado na clinica (20/20).
+  acuidade_od: optionalText,
+  acuidade_oe: optionalText,
+  // Condicoes que mudam a conduta do exame ocupacional.
+  diabetes: z.boolean().nullable().optional(),
+  hipertenso: z.boolean().nullable().optional(),
   observations: optionalText,
 });
+
 export type TriageInput = z.infer<typeof triageSchema>;
 
 export const consultationSchema = z.object({

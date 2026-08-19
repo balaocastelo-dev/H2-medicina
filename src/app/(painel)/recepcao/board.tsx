@@ -9,7 +9,6 @@ import {
   Card,
   CardBody,
   CardHeader,
-  Select,
   Textarea,
 } from '@/components/ui';
 import { elapsedFrom, formatCPF, formatTime } from '@/lib/format';
@@ -66,11 +65,7 @@ export function ReceptionBoard({
                 <span className="font-mono text-lg font-bold">
                   {r.queue_tickets[0]?.code ?? '—'}
                 </span>
-                {r.priority !== 'normal' && (
-                  <Badge className="block" color="#EF4444">
-                    {r.priority}
-                  </Badge>
-                )}
+
               </div>
             </button>
           ))}
@@ -191,7 +186,8 @@ function ReceptionDetail({
   const regra = REGRAS[originKind];
 
   const [needsTriage, setNeedsTriage] = useState(row.needs_triage);
-  const [priority, setPriority] = useState(row.priority);
+  // A clinica deixou de usar preferencia: todo atendimento entra como normal.
+  const priority = 'normal';
   const [notes, setNotes] = useState(row.notes ?? '');
   const [selectedExams, setSelectedExams] = useState<string[]>(
     row.patient_exams.map((e) => e.exam_type_id),
@@ -335,14 +331,6 @@ function ReceptionDetail({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Prioridade</span>
-            <Select value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="normal">Normal</option>
-              <option value="prioritario">Prioritário</option>
-              <option value="encaixe">Encaixe</option>
-            </Select>
-          </label>
           <label className="flex items-end gap-2 text-sm">
             <input
               type="checkbox"

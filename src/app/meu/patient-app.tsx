@@ -130,7 +130,7 @@ export function PatientApp({
     { id: 'exames', icone: <Stethoscope className="h-4 w-4" />, texto: 'Exames', n: portal.exames.length },
     { id: 'recibos', icone: <Receipt className="h-4 w-4" />, texto: 'Recibos', n: portal.recibos.length },
     { id: 'documentos', icone: <FileText className="h-4 w-4" />, texto: 'Documentos', n: portal.documentos.length },
-    { id: 'agendar', icone: <CalendarPlus className="h-4 w-4" />, texto: 'Agendar' },
+    { id: 'agendar', icone: <CalendarPlus className="h-4 w-4" />, texto: 'Agendamento' },
   ];
 
   return (
@@ -437,7 +437,7 @@ function Agendar({
         </Cartao>
       )}
 
-      <Cartao titulo="Agendar atendimento">
+      <Cartao titulo="Agendamento">
         {erro && <p className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{erro}</p>}
 
         <p className="mb-2 text-xs font-medium text-slate-600">1. Escolha os exames</p>

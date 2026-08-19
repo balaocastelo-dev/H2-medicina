@@ -81,7 +81,6 @@ export default async function MedicoAtendimentoPage({
         ]
           .filter(Boolean)
           .join(' · ')}
-        actions={data.priority !== 'normal' ? <Badge color="#EF4444">{data.priority}</Badge> : null}
       />
 
       <div className="grid gap-4 xl:grid-cols-3">

@@ -267,11 +267,6 @@ export default async function DashboardPage() {
                   <tr key={a.id} className="hover:bg-slate-50">
                     <Td className="font-medium">
                       {a.patients?.full_name ?? '—'}
-                      {a.priority !== 'normal' && (
-                        <Badge className="ml-2" color="#EF4444">
-                          {a.priority}
-                        </Badge>
-                      )}
                     </Td>
                     <Td className="text-slate-600">
                       {a.companies?.trade_name ?? a.companies?.legal_name ?? '—'}

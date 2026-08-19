@@ -33,9 +33,8 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
           const active = roomExams.find((e) => ['chamado', 'em_andamento'].includes(e.status));
           const queue = roomExams
             .filter((e) => ['pendente', 'em_fila'].includes(e.status))
+            // Ordem de chegada, pura. A clinica deixou de usar preferencia.
             .sort((a, b) => {
-              const w = (p: string) => (p === 'prioritario' ? 0 : p === 'encaixe' ? 1 : 2);
-              if (w(a.priority) !== w(b.priority)) return w(a.priority) - w(b.priority);
               return (
                 new Date(a.queued_at ?? a.attendances?.checkin_at ?? 0).getTime() -
                 new Date(b.queued_at ?? b.attendances?.checkin_at ?? 0).getTime()
@@ -150,7 +149,6 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                           <p className="text-xs text-slate-500">{e.exam_types?.name}</p>
                         </div>
                         <div className="text-right">
-                          {e.priority !== 'normal' && <Badge color="#EF4444">{e.priority}</Badge>}
                           <p className="text-xs text-slate-500">
                             {elapsedFrom(e.queued_at ?? e.attendances?.checkin_at)}
                           </p>

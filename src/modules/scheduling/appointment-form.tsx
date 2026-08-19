@@ -149,10 +149,7 @@ export function AppointmentForm({
       </Card>
 
       <Card>
-        <CardHeader
-          title="Exames previstos"
-          description={estimated ? `Tempo estimado: ${estimated} minutos` : undefined}
-        />
+        <CardHeader title="Exames previstos" />
         <CardBody className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {examTypes.length === 0 && (
             <p className="text-sm text-slate-500">Nenhum tipo de exame cadastrado.</p>
@@ -175,7 +172,6 @@ export function AppointmentForm({
               />
               <span>
                 {e.name}
-                <span className="ml-1 text-xs text-slate-400">{e.average_minutes}min</span>
               </span>
             </label>
           ))}

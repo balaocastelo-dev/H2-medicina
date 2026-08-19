@@ -353,9 +353,15 @@ export interface Triage {
   heart_rate: number | null;
   respiratory_rate: number | null;
   oxygen_saturation: number | null;
+  /** Campos descontinuados; mantidos para leitura do historico. */
   symptoms: string | null;
   alerts: string | null;
   restrictions: string | null;
+  /** Acuidade visual por olho, anotada na triagem. */
+  acuidade_od: string | null;
+  acuidade_oe: string | null;
+  diabetes: boolean | null;
+  hipertenso: boolean | null;
   observations: string | null;
   started_at: string;
   finished_at: string | null;

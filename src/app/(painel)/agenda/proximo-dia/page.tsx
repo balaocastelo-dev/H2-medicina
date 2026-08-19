@@ -87,8 +87,8 @@ export default async function ProximoDiaPage({
         <StatCard label="Total previsto" value={rows.length} />
         <StatCard label="Empresas" value={groups.size} />
         <StatCard
-          label="Prioritarios"
-          value={rows.filter((r) => r.priority !== 'normal').length}
+          label="Agendados pelo app"
+          value={rows.filter((r) => r.origin === 'api').length}
           color="#EF4444"
         />
         <StatCard

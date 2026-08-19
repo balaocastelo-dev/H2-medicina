@@ -29,9 +29,10 @@ export async function saveTriage(_prev: unknown, formData: FormData): Promise<Ac
       heart_rate: num(formData.get('heart_rate')),
       respiratory_rate: num(formData.get('respiratory_rate')),
       oxygen_saturation: num(formData.get('oxygen_saturation')),
-      symptoms: formData.get('symptoms') ?? '',
-      alerts: formData.get('alerts') ?? '',
-      restrictions: formData.get('restrictions') ?? '',
+      acuidade_od: formData.get('acuidade_od') ?? '',
+      acuidade_oe: formData.get('acuidade_oe') ?? '',
+      diabetes: formData.get('diabetes') === 'sim',
+      hipertenso: formData.get('hipertenso') === 'sim',
       observations: formData.get('observations') ?? '',
     });
     if (!parsed.success) {

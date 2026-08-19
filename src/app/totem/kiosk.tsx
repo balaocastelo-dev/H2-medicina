@@ -111,7 +111,10 @@ export function TotemKiosk({
       {step === 'cpf' && (
         <section className="w-full max-w-md text-center">
           <h2 className="mb-1 text-2xl font-semibold">Bem-vindo</h2>
-          <p className="mb-6 text-slate-300">{instructions ?? 'Informe seu CPF para continuar.'}</p>
+          <p className="mb-3 text-slate-300">{instructions ?? 'Informe seu CPF para continuar.'}</p>
+          <p className="mb-5 inline-block rounded-full bg-white/10 px-4 py-1.5 text-sm text-slate-200">
+            Atendimento por ordem de chegada
+          </p>
 
           <div className="mb-6 rounded-2xl bg-white/10 p-6 font-mono text-3xl tracking-widest">
             {cpf ? formatCPF(cpf.padEnd(11, '_')).replace(/_/g, '•') : '•••.•••.•••-••'}
@@ -212,38 +215,11 @@ export function TotemKiosk({
             </button>
             <button
               type="button"
-              onClick={() => setStep('prioridade')}
+              onClick={() => confirm('normal')}
               className="rounded-2xl py-5 text-lg font-semibold"
               style={{ backgroundColor: primaryColor }}
             >
               Confirmar
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === 'prioridade' && (
-        <section className="w-full max-w-lg text-center">
-          <h2 className="mb-2 text-2xl font-semibold">Atendimento prioritário?</h2>
-          <p className="mb-6 text-slate-300">
-            Idosos, gestantes, lactantes, pessoas com deficiencia ou com crianca de colo.
-          </p>
-          <div className="grid gap-3">
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => confirm('prioritario')}
-              className="rounded-2xl bg-red-500 py-6 text-xl font-semibold"
-            >
-              Sim, tenho prioridade
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={() => confirm(selected?.appointmentId ? 'normal' : 'encaixe')}
-              className="rounded-2xl bg-white/10 py-6 text-xl font-semibold"
-            >
-              Nao, atendimento normal
             </button>
           </div>
         </section>

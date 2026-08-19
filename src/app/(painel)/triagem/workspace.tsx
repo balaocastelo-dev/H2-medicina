@@ -3,7 +3,6 @@
 import { useActionState, useState } from 'react';
 import {
   Alert,
-  Badge,
   Button,
   Card,
   CardBody,
@@ -74,7 +73,6 @@ function TriageForm({ row }: { row: TriageRow }) {
         ]
           .filter(Boolean)
           .join(' · ')}
-        action={row.priority !== 'normal' ? <Badge color="#EF4444">{row.priority}</Badge> : null}
       />
       <CardBody>
         <form action={formAction} className="space-y-4" data-guia="formulario-triagem">
@@ -147,20 +145,44 @@ function TriageForm({ row }: { row: TriageRow }) {
             </Alert>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Sintomas">
-              <Textarea name="symptoms" defaultValue={triage?.symptoms ?? ''} rows={2} />
+          <div className="grid gap-4 sm:grid-cols-4">
+            <Field label="Acuidade O.D." hint="Olho direito" error={errors?.acuidade_od}>
+              <Input name="acuidade_od" defaultValue={triage?.acuidade_od ?? ''} placeholder="20/20" />
             </Field>
-            <Field label="Alertas">
-              <Textarea name="alerts" defaultValue={triage?.alerts ?? ''} rows={2} />
+            <Field label="Acuidade O.E." hint="Olho esquerdo" error={errors?.acuidade_oe}>
+              <Input name="acuidade_oe" defaultValue={triage?.acuidade_oe ?? ''} placeholder="20/20" />
             </Field>
-            <Field label="Restricoes">
-              <Textarea name="restrictions" defaultValue={triage?.restrictions ?? ''} rows={2} />
+
+            <Field label="Diabetes">
+              <div className="flex h-10 items-center gap-4">
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input type="radio" name="diabetes" value="sim" defaultChecked={triage?.diabetes === true} />
+                  Sim
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input type="radio" name="diabetes" value="nao" defaultChecked={triage?.diabetes !== true} />
+                  Não
+                </label>
+              </div>
             </Field>
-            <Field label="Observacoes">
-              <Textarea name="observations" defaultValue={triage?.observations ?? ''} rows={2} />
+
+            <Field label="Hipertenso">
+              <div className="flex h-10 items-center gap-4">
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input type="radio" name="hipertenso" value="sim" defaultChecked={triage?.hipertenso === true} />
+                  Sim
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input type="radio" name="hipertenso" value="nao" defaultChecked={triage?.hipertenso !== true} />
+                  Não
+                </label>
+              </div>
             </Field>
           </div>
+
+          <Field label="Observações">
+            <Textarea name="observations" defaultValue={triage?.observations ?? ''} rows={2} />
+          </Field>
 
           <div className="flex gap-2">
             <Button type="submit" variant="outline" loading={pending}>

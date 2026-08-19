@@ -78,3 +78,22 @@ describe('preparacao do texto falado', () => {
     expect(trechos).toHaveLength(3);
   });
 });
+
+describe('anúncio da sala no painel', () => {
+  // Espelha a regra do painel: a chamada anuncia o número, não o nome inteiro.
+  const apenasNumero = (nome: string) => {
+    const m = nome.match(/sala\s*0*(\d+)/i);
+    return m ? `Sala ${m[1]}` : nome;
+  };
+
+  it('reduz o nome da sala ao número', () => {
+    expect(apenasNumero('Sala 7 — Eletrocardiograma e Espirometria')).toBe('Sala 7');
+    expect(apenasNumero('Sala 1 — Triagem')).toBe('Sala 1');
+    expect(apenasNumero('Sala 06 — Audiometria')).toBe('Sala 6');
+  });
+
+  it('mantém o nome quando não há número', () => {
+    expect(apenasNumero('Recepção')).toBe('Recepção');
+    expect(apenasNumero('Consultório Médico')).toBe('Consultório Médico');
+  });
+});
