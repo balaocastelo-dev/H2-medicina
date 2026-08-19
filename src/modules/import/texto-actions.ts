@@ -30,6 +30,8 @@ const registroSchema = z.object({
   cargo: z.string().trim().nullable().optional(),
   setor: z.string().trim().nullable().optional(),
   matricula: z.string().trim().nullable().optional(),
+  protocolo: z.string().trim().nullable().optional(),
+  tipoAtendimento: z.string().trim().nullable().optional(),
   hora: z.string().trim().nullable().optional(),
   observacoes: z.string().trim().nullable().optional(),
 });
@@ -40,6 +42,12 @@ const entradaSchema = z.object({
   criarEmpresas: z.boolean().default(true),
   registros: z.array(registroSchema).min(1, 'Nada para agendar'),
 });
+
+/** Valores aceitos em appointments.attendance_kind. */
+const TIPOS_VALIDOS = new Set([
+  'admissional', 'periodico', 'demissional', 'mudanca_funcao',
+  'retorno_trabalho', 'consulta', 'outro',
+]);
 
 export interface ResultadoTexto {
   pacientesCriados: number;
@@ -201,9 +209,13 @@ export async function aplicarTextoColado(
           patient_id: patientId,
           company_id: companyId,
           scheduled_at: new Date(`${data}T${hora}:00-03:00`).toISOString(),
-          attendance_kind: 'consulta',
+          attendance_kind: TIPOS_VALIDOS.has(reg.tipoAtendimento ?? '')
+            ? reg.tipoAtendimento!
+            : 'consulta',
           origin: 'importacao_excel',
-          notes: reg.observacoes ?? null,
+          notes: [reg.observacoes, reg.protocolo ? `Protocolo ${reg.protocolo}` : null]
+            .filter(Boolean)
+            .join(' · ') || null,
           created_by: ctx.userId,
           updated_by: ctx.userId,
         });

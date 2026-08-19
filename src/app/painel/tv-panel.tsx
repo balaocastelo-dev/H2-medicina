@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { apareceNoPainel, TITULO_PAINEL, type PainelTv } from '@/modules/queue/tv-destino';
 import { createClient } from '@/lib/supabase/client';
 import { formatTime } from '@/lib/format';
 import { escolherVoz, prepararParaFala } from '@/modules/greeting/voice';
@@ -27,6 +28,7 @@ function apenasNumeroDaSala(nome: string): string {
 
 export function TvPanel({
   tenantId,
+  painel,
   initialCalls,
   systemName,
   logoUrl,
@@ -37,6 +39,8 @@ export function TvPanel({
   showName,
 }: {
   tenantId: string;
+  /** Qual TV e esta: a da entrada ou a do corredor. */
+  painel: PainelTv;
   initialCalls: CallRow[];
   systemName: string;
   logoUrl: string | null;
@@ -57,22 +61,28 @@ export function TvPanel({
 
   const syncCalls = useCallback(async () => {
     const supabase = createClient();
+    // Busca folgada e filtra no cliente: chamada antiga pode estar sem
+    // destino gravado, e o filtro do banco a deixaria de fora.
     const { data, error } = await supabase
       .from('tv_calls')
       .select('*')
       .eq('tenant_id', tenantId)
       .order('called_at', { ascending: false })
-      .limit(historySize + 1)
+      .limit((historySize + 1) * 4)
       .returns<CallRow[]>();
 
     if (error || !data) return;
 
-    const nextSignature = data.map((call) => call.id).join('|');
+    const minhas = data
+      .filter((call) => apareceNoPainel(call.destination, painel))
+      .slice(0, historySize + 1);
+
+    const nextSignature = minhas.map((call) => call.id).join('|');
     if (nextSignature === signatureRef.current) return;
 
     signatureRef.current = nextSignature;
-    setCalls(data);
-  }, [historySize, tenantId]);
+    setCalls(minhas);
+  }, [historySize, painel, tenantId]);
 
   useEffect(() => {
     const timer = setInterval(() => setClock(new Date()), 1000);
@@ -82,7 +92,7 @@ export function TvPanel({
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
-      .channel(`tv-${tenantId}`)
+      .channel(`tv-${tenantId}-${painel}`)
       .on(
         'postgres_changes',
         {
@@ -105,7 +115,7 @@ export function TvPanel({
       window.clearInterval(timer);
       void supabase.removeChannel(channel);
     };
-  }, [syncCalls, tenantId]);
+  }, [painel, syncCalls, tenantId]);
 
   /** Gongo curto antes da chamada, sintetizado na hora (sem arquivo). */
   const tocarGongo = useCallback(() => {
@@ -232,6 +242,9 @@ export function TvPanel({
           ) : (
             <span className="text-2xl font-bold">{systemName}</span>
           )}
+          <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-slate-200">
+            {TITULO_PAINEL[painel]}
+          </span>
         </div>
         <div className="text-right">
           <p className="text-3xl font-semibold tabular-nums">

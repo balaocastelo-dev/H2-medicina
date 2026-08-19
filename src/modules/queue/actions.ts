@@ -8,6 +8,7 @@ import { onlyDigits, startOfTodayISO, todayISO } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Priority, QueueTicket } from '@/types/entities';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
+import { destinoDaSala } from '@/modules/queue/tv-destino';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -332,7 +333,11 @@ async function explicarFilaVazia(tenantId: string, roomId: string): Promise<stri
 
     const [{ data: sala }, { data: emServico }, { data: naRecepcao }, { data: naTriagem }] =
       await Promise.all([
-        supabase.from('rooms').select('name').eq('id', roomId).maybeSingle<{ name: string }>(),
+        supabase
+          .from('rooms')
+          .select('name, kind')
+          .eq('id', roomId)
+          .maybeSingle<{ name: string; kind: string }>(),
         supabase
           .from('patient_exams')
           .select('id')
@@ -453,7 +458,11 @@ export async function recallTicket(attendanceId: string, roomId: string): Promis
         .select('id, code')
         .eq('attendance_id', attendanceId)
         .maybeSingle<{ id: string; code: string }>(),
-      supabase.from('rooms').select('name').eq('id', roomId).maybeSingle<{ name: string }>(),
+      supabase
+        .from('rooms')
+        .select('name, kind')
+        .eq('id', roomId)
+        .maybeSingle<{ name: string; kind: string }>(),
       supabase
         .from('attendances')
         .select('patient_id, priority')
@@ -467,7 +476,7 @@ export async function recallTicket(attendanceId: string, roomId: string): Promis
       attendance_id: attendanceId,
       room_id: roomId,
       event: 'rechamada',
-      destination: 'sala',
+      destination: destinoDaSala(room?.kind),
       called_by: ctx.userId,
       is_manual: true,
     });
@@ -483,7 +492,7 @@ export async function recallTicket(attendanceId: string, roomId: string): Promis
       ticket_code: ticket?.code ?? '---',
       patient_label: paciente?.social_name ?? paciente?.full_name ?? null,
       room_name: room?.name ?? null,
-      destination: 'sala',
+      destination: destinoDaSala(room?.kind),
       priority: attendance?.priority ?? 'normal',
       is_recall: true,
     });

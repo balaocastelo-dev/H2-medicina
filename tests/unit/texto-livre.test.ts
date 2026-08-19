@@ -7,8 +7,10 @@ import {
   acharTelefone,
   classificarDatas,
   detectarFormato,
+  dataDoCabecalhoPericias,
   dividirRegistros,
   extrairRegistro,
+  lerLinhaPericia,
   lerTextoColado,
   tituloDeNome,
 } from '@/modules/import/texto-livre';
@@ -264,5 +266,121 @@ describe('lerTextoColado', () => {
     const r = lerTextoColado(texto, HOJE);
     expect(r.registros).toHaveLength(2);
     expect(r.comAviso).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------
+// Formatos reais da clinica
+// ---------------------------------------------------------------------
+
+const PERICIAS = `Perícias Agendadas Clinicas
+Perícias Agendadas para: 19/08/2026
+
+Emissão: 19/08/2026 10:05
+
+Local: EXTERNO CAMPINAS - POLI LEM SERVIÇOS MEDICOS E HOSPITALARES
+
+Periciado Hora Tipo Protocolo Seq Read Pessoa NI Nome Compareceu Observação
+07:30 LICENCA 954359643 1 818833 MARLENE DIAS SABINO ............................
+08:00 LICENCA 954359631 1 S 1019446 MONICA DANIELA TOANI M PEREIRA ............................
+08:30 LICENCA 954359769 1 X 1513810 NATALIA PALMEIRA PIRES DE OLIV ............................
+13:42 LICENCA 954359708 1 1008875 FATIMA CATARINA FERNANDES ............................`;
+
+describe('lista de pericias do SisPer', () => {
+  it('reconhece o formato mesmo com cabecalho e rodape junto', () => {
+    expect(detectarFormato(PERICIAS).formato).toBe('pericias');
+  });
+
+  it('le so as linhas de paciente, ignorando cabecalho', () => {
+    const r = lerTextoColado(PERICIAS, HOJE);
+    expect(r.registros).toHaveLength(4);
+    expect(r.registros.map((x) => x.nome)).toEqual([
+      'Marlene Dias Sabino',
+      'Monica Daniela Toani M Pereira',
+      'Natalia Palmeira Pires de Oliv',
+      'Fatima Catarina Fernandes',
+    ]);
+  });
+
+  it('separa hora, protocolo e matricula', () => {
+    const reg = lerLinhaPericia('07:30 LICENCA 954359643 1 818833 MARLENE DIAS SABINO .........');
+    expect(reg?.hora).toBe('07:30');
+    expect(reg?.protocolo).toBe('954359643');
+    expect(reg?.matricula).toBe('818833');
+    expect(reg?.tipoAtendimento).toBe('consulta');
+  });
+
+  it('nao confunde a coluna Read com a matricula', () => {
+    const reg = lerLinhaPericia('08:00 LICENCA 954359631 1 S 1019446 MONICA DANIELA T P ........');
+    expect(reg?.matricula).toBe('1019446');
+    expect(reg?.nome).toBe('Monica Daniela T P');
+  });
+
+  it('avisa que a origem nao traz CPF', () => {
+    const r = lerTextoColado(PERICIAS, HOJE);
+    expect(r.comAviso).toBe(4);
+    expect(r.registros[0]?.avisos[0]).toContain('Sem CPF');
+  });
+
+  it('recusa linha que nao e de paciente', () => {
+    expect(lerLinhaPericia('Emissão: 19/08/2026 10:05')).toBeNull();
+    expect(lerLinhaPericia('Periciado Hora Tipo Protocolo Seq Read Pessoa NI Nome')).toBeNull();
+  });
+
+  it('le a data do cabecalho', () => {
+    expect(dataDoCabecalhoPericias(PERICIAS)).toBe('2026-08-19');
+  });
+});
+
+describe('planilha de agendamentos do SisPer', () => {
+  const TABELA = [
+    'ID\tREF\tCONTRATO\tNOME\tNOME SOCIAL\tCPF\tTIPO DE ATENDIMENTO\tDATA\tHORA',
+    '736170\t261027\tSEDUC\tELAINE DE CASSIA CAMILO\t\t099.686.008-81\tPERIÓDICO\t2026-08-20 07:30:00\t2026-08-20 07:30:00',
+    '736171\t261569\tSEDUC\tELIANA DE SOUZA DA SILVA\t\t108.097.968-99\tADMISSIONAL\t2026-08-20 08:00:00\t2026-08-20 08:00:00',
+    '736898\t262315\tSEDUC\tJUDITH PEREIRA DA SILVA\t\t327.160.478-98\tDEMISSIONAL\t2026-08-20 08:00:00\t2026-08-20 08:00:00',
+  ].join('\n');
+
+  const r = lerTextoColado(TABELA, HOJE);
+
+  it('le as tres linhas', () => {
+    expect(r.formato).toBe('tabela');
+    expect(r.registros).toHaveLength(3);
+  });
+
+  it('le nome, CPF e empresa da coluna contrato', () => {
+    expect(r.registros[0]?.nome).toBe('Elaine de Cassia Camilo');
+    expect(r.registros[0]?.cpf).toBe('09968600881');
+    expect(r.registros[0]?.empresa).toBe('SEDUC');
+  });
+
+  it('traduz o tipo de atendimento', () => {
+    expect(r.registros[0]?.tipoAtendimento).toBe('periodico');
+    expect(r.registros[1]?.tipoAtendimento).toBe('admissional');
+    expect(r.registros[2]?.tipoAtendimento).toBe('demissional');
+  });
+
+  it('le data e hora do carimbo completo', () => {
+    expect(r.registros[0]?.data).toBe('2026-08-20');
+    expect(r.registros[0]?.hora).toBe('07:30');
+  });
+
+  it('nao gera aviso: essa origem traz CPF', () => {
+    expect(r.comAviso).toBe(0);
+  });
+});
+
+describe('data ambigua vinda de planilha americana', () => {
+  it('troca dia e mes quando o segundo numero passa de 12', () => {
+    // "08-20-26" so pode ser 20 de agosto: nao existe mes 20.
+    expect(acharDatas('08-20-26')).toContain('2026-08-20');
+  });
+
+  it('mantem a leitura brasileira quando as duas ordens sao possiveis', () => {
+    expect(acharDatas('08/09/2026')).toContain('2026-09-08');
+  });
+
+  it('recusa data que nao existe no calendario', () => {
+    expect(acharDatas('31/02/2026')).toEqual([]);
+    expect(acharDatas('45/45/2026')).toEqual([]);
   });
 });

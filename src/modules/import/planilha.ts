@@ -124,14 +124,23 @@ export function paraDataISO(valor: unknown): string | null {
 
   const brasileiro = texto.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
   if (brasileiro) {
-    const d = brasileiro[1] ?? '';
-    const m = brasileiro[2] ?? '';
+    let dia = Number(brasileiro[1]);
+    let mes = Number(brasileiro[2]);
     const a = brasileiro[3] ?? '';
+
+    // Planilha exportada com formato americano manda mm-dd-aa. Quando o
+    // segundo numero passa de 12 ele so pode ser dia, entao os dois trocam
+    // de lugar. Sem isso "08-20-26" virava agosto de 2027 calado.
+    if (mes > 12 && dia <= 12) [dia, mes] = [mes, dia];
+    if (mes < 1 || mes > 12 || dia < 1 || dia > 31) return null;
+
     // Ano de dois digitos: acima de 50 e seculo passado (data de nascimento),
     // abaixo e este seculo.
     const ano = a.length === 2 ? Number(a) + (Number(a) > 50 ? 1900 : 2000) : Number(a);
-    const data = new Date(Date.UTC(ano, Number(m) - 1, Number(d)));
+    const data = new Date(Date.UTC(ano, mes - 1, dia));
     if (Number.isNaN(data.getTime())) return null;
+    // 31/02 existe no construtor do Date, mas nao no calendario.
+    if (data.getUTCDate() !== dia || data.getUTCMonth() !== mes - 1) return null;
     return data.toISOString().slice(0, 10);
   }
 

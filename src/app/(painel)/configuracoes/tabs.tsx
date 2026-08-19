@@ -142,6 +142,7 @@ export function SettingsTabs({
         {tab === 'saudacao' && (
           <GreetingSettings valores={settings.saudacao ?? {}} nomeExemplo={tenantName} />
         )}
+        {tab === 'painel_tv' && <EnderecosDasTvs />}
         {FIELDS[tab] && (
           <GroupForm
             key={tab}
@@ -153,6 +154,51 @@ export function SettingsTabs({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Cada TV tem seu endereco.
+ *
+ * Sao duas telas em lugares diferentes da clinica, e quem instala precisa
+ * saber qual link abrir em cada uma. Deixar isso escrito aqui evita a
+ * ligacao perguntando qual e qual.
+ */
+function EnderecosDasTvs() {
+  const telas = [
+    {
+      titulo: 'TV 1 — sala de espera',
+      caminho: '/painel/recepcao',
+      descricao: 'Chama a senha para a recepção e para a triagem. É a tela que o paciente vê ao chegar.',
+    },
+    {
+      titulo: 'TV 2 — corredor interno',
+      caminho: '/painel/salas',
+      descricao: 'Chama para as salas de exame e para os consultórios.',
+    },
+  ];
+
+  return (
+    <Card className="mb-4">
+      <CardHeader
+        title="Endereço de cada TV"
+        description="Abra o link correspondente em cada tela, em tela cheia"
+      />
+      <CardBody className="space-y-3">
+        {telas.map((t) => (
+          <div key={t.caminho} className="rounded-lg border border-slate-200 p-3">
+            <p className="text-sm font-semibold">{t.titulo}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{t.descricao}</p>
+            <code className="mt-2 block rounded bg-slate-100 px-2 py-1.5 font-mono text-xs">
+              {t.caminho}
+            </code>
+          </div>
+        ))}
+        <p className="text-xs text-slate-400">
+          O endereço curto /painel abre a tela da recepção.
+        </p>
+      </CardBody>
+    </Card>
   );
 }
 

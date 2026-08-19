@@ -31,6 +31,10 @@ export async function startReception(attendanceId: string): Promise<ActionResult
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
 
+    // Quem espera na entrada precisa ver a propria senha ser chamada. Ate
+    // aqui a chamada da recepcao nao ia para TV nenhuma, so as das salas.
+    await anunciarNaRecepcao(ctx, attendanceId);
+
     await sincronizarAgendamento(ctx.tenant.id, attendanceId);
 
     await audit(ctx, {
@@ -522,5 +526,51 @@ export async function confirmarPagamentoRecepcao(
     return ok(undefined, 'Pagamento confirmado.');
   } catch (error) {
     return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Publica a chamada da recepcao no painel da sala de espera.
+ *
+ * Nunca lanca: o atendimento ja comecou quando esta funcao roda, e falhar
+ * em avisar a TV nao pode desfazer isso.
+ */
+async function anunciarNaRecepcao(
+  ctx: { tenant: { id: string }; userId: string },
+  attendanceId: string,
+): Promise<void> {
+  try {
+    const supabase = await createClient();
+
+    const [{ data: senha }, { data: atendimento }] = await Promise.all([
+      supabase
+        .from('queue_tickets')
+        .select('code')
+        .eq('attendance_id', attendanceId)
+        .maybeSingle<{ code: string }>(),
+      supabase
+        .from('attendances')
+        .select('priority, patients(full_name, social_name)')
+        .eq('id', attendanceId)
+        .maybeSingle<{
+          priority: string;
+          patients: { full_name: string; social_name: string | null } | null;
+        }>(),
+    ]);
+
+    if (!senha?.code) return;
+
+    const nome = atendimento?.patients?.social_name ?? atendimento?.patients?.full_name ?? null;
+
+    await supabase.from('tv_calls').insert({
+      tenant_id: ctx.tenant.id,
+      ticket_code: senha.code,
+      patient_label: nome,
+      room_name: 'Recepção',
+      destination: 'recepcao',
+      priority: atendimento?.priority ?? 'normal',
+    });
+  } catch (error) {
+    console.error('[recepcao] não consegui anunciar a chamada no painel:', error);
   }
 }

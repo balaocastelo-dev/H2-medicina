@@ -35,6 +35,10 @@ export interface RegistroExtraido {
   cargo: string | null;
   setor: string | null;
   matricula: string | null;
+  /** Protocolo/senha da origem, quando houver. */
+  protocolo: string | null;
+  /** admissional | periodico | demissional | ... conforme a lista da agenda. */
+  tipoAtendimento: string | null;
   data: string | null;
   hora: string | null;
   observacoes: string | null;
@@ -77,6 +81,12 @@ const ROTULOS: Record<string, keyof RegistroExtraido> = {
   'funcao exercida': 'cargo',
   setor: 'setor', lotacao: 'setor', departamento: 'setor', unidade: 'setor', escola: 'setor',
   matricula: 'matricula', rgf: 'matricula', registro: 'matricula', re: 'matricula',
+  ni: 'matricula', 'pessoa ni': 'matricula', prontuario: 'matricula', ref: 'matricula',
+  protocolo: 'protocolo', senha: 'protocolo', 'id': 'protocolo',
+  contrato: 'empresa', convenio: 'empresa', cliente: 'empresa',
+  'tipo de atendimento': 'tipoAtendimento', 'tipo atendimento': 'tipoAtendimento',
+  tipo: 'tipoAtendimento', exame: 'tipoAtendimento', 'tipo de exame': 'tipoAtendimento',
+  'nome social': 'nome',
   data: 'data', 'data do agendamento': 'data', 'data agendamento': 'data', 'data exame': 'data',
   dia: 'data',
   hora: 'hora', horario: 'hora', 'hora do agendamento': 'hora',
@@ -91,8 +101,8 @@ function vazio(bruto: string): RegistroExtraido {
     nome: null, cpf: null, rg: null, nascimento: null, sexo: null, mae: null,
     telefone: null, email: null, cep: null, logradouro: null, numero: null,
     complemento: null, bairro: null, cidade: null, uf: null, empresa: null,
-    cnpjEmpresa: null, cargo: null, setor: null, matricula: null, data: null,
-    hora: null, observacoes: null, bruto, avisos: [],
+    cnpjEmpresa: null, cargo: null, setor: null, matricula: null, protocolo: null,
+    tipoAtendimento: null, data: null, hora: null, observacoes: null, bruto, avisos: [],
   };
 }
 
@@ -109,7 +119,7 @@ function digitos(valor: string): string {
 // Separacao em registros
 // ---------------------------------------------------------------------
 
-export type Formato = 'tabela' | 'blocos' | 'linhas' | 'unico';
+export type Formato = 'pericias' | 'tabela' | 'blocos' | 'linhas' | 'unico';
 
 export interface Deteccao {
   formato: Formato;
@@ -119,10 +129,52 @@ export interface Deteccao {
   temCabecalho?: boolean;
 }
 
+/**
+ * Linha da lista de pericias agendadas.
+ *
+ *   13:42 LICENCA 954359708 1 1008875 FATIMA CATARINA FERNANDES .........
+ *   08:00 LICENCA 954359631 1 S 1019446 MONICA DANIELA TOANI M PEREIRA ...
+ *
+ * Hora, tipo, protocolo, sequencia, uma letra opcional na coluna "Read",
+ * a matricula da pessoa e o nome ate o pontilhado da coluna "Compareceu".
+ * Nao ha CPF nessa origem — a identidade e a matricula.
+ */
+const RE_PERICIA =
+  /^\s*([0-2]?\d:[0-5]\d)\s+([A-ZÀ-Ÿ]{3,})\s+(\d{6,})\s+(\d{1,2})\s+(?:([A-Z])\s+)?(\d{4,9})\s+(.+?)\s*\.{4,}\s*$/;
+
+/** Le uma linha da lista de pericias. Devolve null se a linha nao encaixar. */
+export function lerLinhaPericia(linha: string): RegistroExtraido | null {
+  const casa = RE_PERICIA.exec(linha);
+  if (!casa) return null;
+
+  const reg = vazio(linha.trim());
+  reg.hora = casa[1]!.padStart(5, '0');
+  reg.tipoAtendimento = normalizarTipoAtendimento(casa[2]!);
+  reg.protocolo = casa[3]!;
+  reg.matricula = casa[6]!;
+  reg.nome = tituloDeNome(casa[7]!);
+  reg.observacoes = `${casa[2]} · protocolo ${casa[3]}`;
+
+  // Sem CPF a recepcao precisa conferir na chegada — o aviso deixa isso claro.
+  reg.avisos.push('Sem CPF: conferir documento na recepção');
+  return reg;
+}
+
+/** Data do cabecalho "Perícias Agendadas para: 19/08/2026". */
+export function dataDoCabecalhoPericias(texto: string): string | null {
+  const casa = texto.match(/agendadas?\s+para\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+  return casa ? (acharDatas(casa[1]!)[0] ?? null) : null;
+}
+
 /** Descobre como o texto esta organizado antes de tentar ler os campos. */
 export function detectarFormato(texto: string): Deteccao {
   const linhas = texto.split(/\r?\n/).map((l) => l.trimEnd()).filter((l) => l.trim() !== '');
   if (linhas.length === 0) return { formato: 'unico' };
+
+  // Lista de pericias: linha posicional que termina em pontilhado. Vem antes
+  // dos outros testes porque nao tem delimitador nenhum e seria confundida
+  // com texto corrido.
+  if (linhas.filter((l) => RE_PERICIA.test(l)).length >= 2) return { formato: 'pericias' };
 
   // Tabela: o mesmo delimitador aparece em quase toda linha, sempre a mesma
   // quantidade de vezes. Virgula fica de fora porque texto corrido tem virgula.
@@ -172,6 +224,9 @@ export function dividirRegistros(texto: string): string[] {
   const det = detectarFormato(texto);
   const linhas = texto.split(/\r?\n/).filter((l) => l.trim() !== '');
 
+  if (det.formato === 'pericias') {
+    return linhas.filter((l) => RE_PERICIA.test(l));
+  }
   if (det.formato === 'tabela') {
     return det.temCabecalho ? linhas : linhas.slice();
   }
@@ -255,6 +310,22 @@ export function acharEmail(texto: string): string | null {
   return achado ? achado[0].toLowerCase() : null;
 }
 
+/**
+ * "PERIÓDICO", "Exame admissional", "LICENCA" -> o codigo usado na agenda.
+ * O que nao se encaixa vira consulta, que e o caso geral.
+ */
+export function normalizarTipoAtendimento(valor: string): string | null {
+  const t = normalizar(valor);
+  if (!t) return null;
+  if (/admissional/.test(t)) return 'admissional';
+  if (/demissional/.test(t)) return 'demissional';
+  if (/periodic/.test(t)) return 'periodico';
+  if (/mudanca/.test(t)) return 'mudanca_funcao';
+  if (/retorno/.test(t)) return 'retorno_trabalho';
+  if (/(pericia|licenca|avaliacao|capacidade|assistencia)/.test(t)) return 'consulta';
+  return 'consulta';
+}
+
 function acharSexo(texto: string): 'masculino' | 'feminino' | null {
   const t = normalizar(texto);
   if (/\b(feminino|fem|mulher)\b/.test(t)) return 'feminino';
@@ -284,7 +355,7 @@ function pareceNome(trecho: string): boolean {
 
 const CAMPOS_TEXTO = new Set<keyof RegistroExtraido>([
   'nome','rg','mae','logradouro','numero','complemento','bairro','cidade','uf',
-  'empresa','cargo','setor','matricula','observacoes','hora',
+  'empresa','cargo','setor','matricula','protocolo','observacoes','hora',
 ]);
 
 /**
@@ -385,6 +456,12 @@ function aplicarCampo(
   } else if (campo === 'logradouro') {
     // "Endereco: Rua X, 100 - Centro - Cidade/UF" traz varios campos juntos.
     lerEndereco(valor, reg);
+  } else if (campo === 'hora') {
+    // O valor pode vir como carimbo inteiro ("2026-08-20 07:30:00").
+    const h = valor.match(/\b([01]?\d|2[0-3])[:h]([0-5]\d)\b/);
+    if (h) reg.hora = `${h[1]!.padStart(2, '0')}:${h[2]}`;
+  } else if (campo === 'tipoAtendimento') {
+    reg.tipoAtendimento = normalizarTipoAtendimento(valor) ?? reg.tipoAtendimento;
   } else if (campo === 'uf') {
     const uf = valor.toUpperCase().slice(0, 2);
     if (UFS.includes(uf)) reg.uf = uf;
@@ -543,7 +620,12 @@ export function lerTextoColado(texto: string, hoje = new Date()): ResultadoLeitu
   const det = detectarFormato(limpo);
 
   let registros: RegistroExtraido[];
-  if (det.formato === 'tabela' && det.delimitador) {
+  if (det.formato === 'pericias') {
+    registros = limpo
+      .split(/\r?\n/)
+      .map((l) => lerLinhaPericia(l))
+      .filter((r): r is RegistroExtraido => r !== null);
+  } else if (det.formato === 'tabela' && det.delimitador) {
     registros = lerTabela(limpo, det.delimitador, det.temCabecalho ?? false, hoje);
   } else {
     registros = dividirRegistros(limpo).map((bloco) => extrairRegistro(bloco, hoje));

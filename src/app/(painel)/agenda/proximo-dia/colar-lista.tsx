@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ClipboardPaste, Trash2, Wand2 } from 'lucide-react';
+import { ClipboardPaste, FileSpreadsheet, Trash2, Wand2 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, Field, Input } from '@/components/ui';
 import { lerTextoColado, type RegistroExtraido } from '@/modules/import/texto-livre';
 import { aplicarTextoColado, type ResultadoTexto } from '@/modules/import/texto-actions';
@@ -13,7 +14,9 @@ const COLUNAS: { chave: keyof RegistroExtraido; rotulo: string; largura: string 
   { chave: 'nascimento', rotulo: 'Nascimento', largura: 'w-32' },
   { chave: 'rg', rotulo: 'RG', largura: 'w-28' },
   { chave: 'telefone', rotulo: 'Telefone', largura: 'w-32' },
+  { chave: 'matricula', rotulo: 'Matrícula', largura: 'w-28' },
   { chave: 'empresa', rotulo: 'Empresa', largura: 'min-w-40' },
+  { chave: 'tipoAtendimento', rotulo: 'Tipo', largura: 'w-32' },
   { chave: 'cargo', rotulo: 'Profissão', largura: 'min-w-32' },
   { chave: 'setor', rotulo: 'Setor', largura: 'min-w-28' },
   { chave: 'cep', rotulo: 'CEP', largura: 'w-28' },
@@ -26,11 +29,38 @@ const COLUNAS: { chave: keyof RegistroExtraido; rotulo: string; largura: string 
 ];
 
 const NOME_FORMATO: Record<string, string> = {
+  pericias: 'lista de perícias agendadas',
   tabela: 'tabela com colunas',
   blocos: 'blocos separados por linha em branco',
   linhas: 'uma pessoa por linha',
   unico: 'texto corrido',
 };
+
+/**
+ * Celula de data vira texto ISO antes de gerar o TSV.
+ *
+ * O Excel guarda o formato de exibicao junto com o valor, e a planilha do
+ * SisPer vem com "mm-dd-yy". Exportado assim, 20/08/2026 sai como
+ * "08-20-26" e seria lido de tras para frente. Reescrevendo aqui, a data
+ * chega ao leitor sem ambiguidade nenhuma.
+ */
+function normalizarDatasDaAba(aba: XLSX.WorkSheet): void {
+  for (const endereco of Object.keys(aba)) {
+    if (endereco.startsWith('!')) continue;
+    const celula = aba[endereco] as XLSX.CellObject | undefined;
+    if (!celula || celula.t !== 'd' || !(celula.v instanceof Date)) continue;
+
+    const d = celula.v;
+    const p = (n: number) => String(n).padStart(2, '0');
+    const iso = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+    const hora = `${p(d.getHours())}:${p(d.getMinutes())}`;
+
+    celula.t = 's';
+    celula.v = d.getHours() || d.getMinutes() ? `${iso} ${hora}` : iso;
+    celula.w = celula.v;
+    delete celula.z;
+  }
+}
 
 export function ColarLista({ data }: { data: string }) {
   const [texto, setTexto] = useState('');
@@ -59,6 +89,46 @@ export function ColarLista({ data }: { data: string }) {
                 : ''),
           },
     );
+  };
+
+  /**
+   * Planilha vira texto com tabulacao e cai no mesmo leitor do texto colado.
+   * Assim so existe um caminho de leitura para manter — a planilha nao ganha
+   * regras proprias que possam divergir das do texto.
+   */
+  const abrirPlanilha = (arquivo: File) => {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      try {
+        const pasta = XLSX.read(leitor.result, { type: 'array', cellDates: true });
+        const nomeAba = pasta.SheetNames[0];
+        const aba = nomeAba ? pasta.Sheets[nomeAba] : undefined;
+        if (!aba) {
+          setAviso({ tipo: 'error', texto: 'A planilha está vazia.' });
+          return;
+        }
+        normalizarDatasDaAba(aba);
+        const tsv = XLSX.utils.sheet_to_csv(aba, { FS: '\t', blankrows: false });
+        setTexto(tsv);
+        const lido = lerTextoColado(tsv);
+        setFormato(lido.formato);
+        setRegistros(lido.registros);
+        setAviso(
+          lido.registros.length === 0
+            ? { tipo: 'error', texto: `Li a planilha "${arquivo.name}" mas não reconheci nenhuma pessoa. Confira se a primeira aba é a da lista.` }
+            : {
+                tipo: 'info',
+                texto:
+                  `Planilha "${arquivo.name}": ${lido.registros.length} pessoa(s).` +
+                  (lido.comAviso > 0 ? ` ${lido.comAviso} precisa(m) de conferência.` : ''),
+              },
+        );
+      } catch {
+        setAviso({ tipo: 'error', texto: 'Não consegui abrir esse arquivo. Se for .xls antigo, salve como .xlsx.' });
+      }
+    };
+    leitor.onerror = () => setAviso({ tipo: 'error', texto: 'Falha ao ler o arquivo.' });
+    leitor.readAsArrayBuffer(arquivo);
   };
 
   const editar = (indice: number, chave: keyof RegistroExtraido, valor: string) => {
@@ -98,6 +168,8 @@ export function ColarLista({ data }: { data: string }) {
           cargo: reg.cargo,
           setor: reg.setor,
           matricula: reg.matricula,
+          protocolo: reg.protocolo,
+          tipoAtendimento: reg.tipoAtendimento,
           hora: reg.hora,
           observacoes: reg.observacoes,
         })),
@@ -150,7 +222,8 @@ export function ColarLista({ data }: { data: string }) {
               rows={8}
               placeholder={
                 'Cole aqui a lista de pacientes do próximo dia.\n\n' +
-                'Aceita planilha copiada, blocos com "Nome: ... CPF: ...", uma pessoa por linha ou texto corrido.'
+                'Aceita a lista de perícias do SisPer, planilha copiada, blocos com "Nome: ... CPF: ...", uma pessoa por linha ou texto corrido.\n' +
+                'Para arquivo .xlsx, use o botão Abrir planilha.'
               }
               className="w-full rounded-lg border border-slate-300 p-3 font-mono text-xs focus:border-slate-500 focus:outline-none"
             />
@@ -158,6 +231,19 @@ export function ColarLista({ data }: { data: string }) {
               <Button onClick={analisar} disabled={!texto.trim()}>
                 <Wand2 className="h-4 w-4" /> Analisar texto
               </Button>
+              <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-medium hover:bg-slate-50">
+                <FileSpreadsheet className="h-4 w-4" /> Abrir planilha
+                <input
+                  type="file"
+                  accept=".xlsx,.xls,.csv,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="hidden"
+                  onChange={(e) => {
+                    const arquivo = e.target.files?.[0];
+                    if (arquivo) abrirPlanilha(arquivo);
+                    e.target.value = '';
+                  }}
+                />
+              </label>
               {texto && (
                 <Button variant="outline" onClick={() => setTexto('')}>
                   Limpar

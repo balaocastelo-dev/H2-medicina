@@ -428,10 +428,17 @@ begin
   insert into public.queue_events (tenant_id, ticket_id, attendance_id, room_id, exam_id, event, destination, called_by)
   values (p_tenant, v_ticket.id, v_exam.attendance_id, p_room, v_exam.id, 'chamada', 'sala', auth.uid());
 
+  -- O destino separa as duas TVs: entrada (recepcao/triagem) e corredor.
   insert into public.tv_calls (tenant_id, ticket_code, patient_label, room_name, destination, priority)
   values (p_tenant, coalesce(v_ticket.code, '---'),
           split_part(coalesce(v_patient_name,''), ' ', 1),
-          v_room.name, 'sala', v_exam.priority);
+          v_room.name,
+          case
+            when v_room.kind in ('recepcao', 'guiche') then 'recepcao'
+            when v_room.kind = 'triagem'               then 'triagem'
+            else 'sala'
+          end,
+          v_exam.priority);
 
   return jsonb_build_object('found', true, 'exam', to_jsonb(v_exam), 'ticket', to_jsonb(v_ticket));
 end$$;
