@@ -9,6 +9,12 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 import type { Priority, QueueTicket } from '@/types/entities';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import { destinoDaSala } from '@/modules/queue/tv-destino';
+import {
+  MINIMO_LETRAS,
+  ordenarSugestoes,
+  termoValido,
+  type SugestaoBusca,
+} from '@/modules/queue/busca-nome';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -90,6 +96,116 @@ export async function lookupForCheckin(cpfRaw: string): Promise<ActionResult<Tot
     }
 
     return ok(results);
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Busca o agendamento do dia pelo nome (totem, para quem nao tem CPF).
+ *
+ * So enxerga quem tem agendamento hoje. Isso nao e detalhe de desempenho:
+ * o totem fica numa area publica, e uma busca livre na tabela de pacientes
+ * viraria consulta aberta ao cadastro da clinica. Quem nao esta na agenda
+ * do dia nao existe para esta tela.
+ *
+ * O nome completo nunca sai daqui — a lista devolve so a forma abreviada.
+ */
+export async function buscarAgendamentoPorNome(
+  termo: string,
+): Promise<ActionResult<SugestaoBusca[]>> {
+  try {
+    const ctx = await assertPermission('totem.operar');
+    if (!termoValido(termo)) {
+      return fail(`Digite ao menos ${MINIMO_LETRAS} letras do nome.`);
+    }
+
+    const supabase = await createClient();
+    const today = todayISO();
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('scheduled_at, patients!inner(id, full_name)')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('scheduled_date', today)
+      .not('status', 'in', '("cancelado","remarcado")')
+      .is('deleted_at', null)
+      .returns<{ scheduled_at: string; patients: { id: string; full_name: string } | null }[]>();
+
+    if (error) return fail(toFriendlyError(error));
+
+    const candidatos = (data ?? [])
+      .filter((a) => a.patients)
+      .map((a) => ({
+        patientId: a.patients!.id,
+        nomeCompleto: a.patients!.full_name,
+        scheduledAt: a.scheduled_at,
+      }));
+
+    return ok(ordenarSugestoes(candidatos, termo));
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Carrega o agendamento escolhido na busca por nome.
+ *
+ * A tela manda so o id que ela mesma recebeu da busca, e a confirmacao dos
+ * dados acontece no passo seguinte, igual ao caminho do CPF.
+ */
+export async function lookupPorPaciente(
+  patientId: string,
+): Promise<ActionResult<TotemLookupResult[]>> {
+  try {
+    const ctx = await assertPermission('totem.operar');
+    const supabase = await createClient();
+    const today = todayISO();
+
+    const { data: paciente } = await supabase
+      .from('patients')
+      .select('id, full_name, birth_date')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('id', patientId)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; full_name: string; birth_date: string | null }>();
+    if (!paciente) return fail('Cadastro não localizado. Procure a recepção.');
+
+    const { data: agendamentos } = await supabase
+      .from('appointments')
+      .select(
+        'id, scheduled_at, status, companies(trade_name, legal_name), appointment_exams(exam_types(name))',
+      )
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('patient_id', paciente.id)
+      .eq('scheduled_date', today)
+      .not('status', 'in', '("cancelado","remarcado")')
+      .is('deleted_at', null)
+      .returns<
+        {
+          id: string;
+          scheduled_at: string;
+          status: string;
+          companies: { trade_name: string | null; legal_name: string } | null;
+          appointment_exams: { exam_types: { name: string } | null }[];
+        }[]
+      >();
+
+    if (!agendamentos || agendamentos.length === 0) {
+      return fail('Não encontrei agendamento para hoje. Procure a recepção.');
+    }
+
+    return ok(
+      agendamentos.map((a) => ({
+        appointmentId: a.id,
+        patientId: paciente.id,
+        patientName: paciente.full_name,
+        birthDate: paciente.birth_date,
+        companyName: a.companies?.trade_name ?? a.companies?.legal_name ?? null,
+        scheduledAt: a.scheduled_at,
+        exams: a.appointment_exams.map((e) => e.exam_types?.name).filter(Boolean) as string[],
+      })),
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }

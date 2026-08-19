@@ -1,12 +1,26 @@
 'use client';
 
 import { useEffect, useState, useTransition, useCallback } from 'react';
-import { CheckCircle2, Delete, Printer, RotateCcw } from 'lucide-react';
-import { lookupForCheckin, performCheckin, type TotemLookupResult } from '@/modules/queue/actions';
+import { CheckCircle2, Delete, Printer, RotateCcw, Search, UserSearch } from 'lucide-react';
+import {
+  buscarAgendamentoPorNome,
+  lookupForCheckin,
+  lookupPorPaciente,
+  performCheckin,
+  type TotemLookupResult,
+} from '@/modules/queue/actions';
+import {
+  MINIMO_LETRAS,
+  nomeAbreviado,
+  termoValido,
+  type SugestaoBusca,
+} from '@/modules/queue/busca-nome';
 import { formatCPF, formatDate, formatTime } from '@/lib/format';
 import type { Priority, QueueTicket } from '@/types/entities';
 
-type Step = 'cpf' | 'confirma' | 'prioridade' | 'senha' | 'erro';
+type Step = 'cpf' | 'nome' | 'confirma' | 'prioridade' | 'senha' | 'erro';
+
+const TECLADO = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 
 export function TotemKiosk({
   systemName,
@@ -31,11 +45,19 @@ export function TotemKiosk({
   const [selected, setSelected] = useState<TotemLookupResult | null>(null);
   const [ticket, setTicket] = useState<QueueTicket | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [nome, setNome] = useState('');
+  const [sugestoes, setSugestoes] = useState<SugestaoBusca[] | null>(null);
+  // Quem chegou pela busca por nome nao provou identidade: a tela publica
+  // continua mostrando so o nome abreviado, sem data de nascimento.
+  const [viaBusca, setViaBusca] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const reset = useCallback(() => {
     setStep('cpf');
     setCpf('');
+    setNome('');
+    setSugestoes(null);
+    setViaBusca(false);
     setMatches([]);
     setSelected(null);
     setTicket(null);
@@ -56,6 +78,7 @@ export function TotemKiosk({
 
   const search = () => {
     startTransition(async () => {
+      setViaBusca(false);
       const result = await lookupForCheckin(cpf);
       if (!result.ok) {
         setMessage(result.error);
@@ -63,6 +86,37 @@ export function TotemKiosk({
         return;
       }
       const data = result.data ?? [];
+      setMatches(data);
+      setSelected(data[0] ?? null);
+      setStep('confirma');
+    });
+  };
+
+  /** Busca conforme a pessoa digita, a partir do minimo de letras. */
+  const buscarNome = useCallback((texto: string) => {
+    setNome(texto);
+    setMessage(null);
+    if (!termoValido(texto)) {
+      setSugestoes(null);
+      return;
+    }
+    startTransition(async () => {
+      const r = await buscarAgendamentoPorNome(texto);
+      setSugestoes(r.ok ? (r.data ?? []) : []);
+      if (!r.ok) setMessage(r.error);
+    });
+  }, []);
+
+  const escolherSugestao = (patientId: string) => {
+    startTransition(async () => {
+      const r = await lookupPorPaciente(patientId);
+      if (!r.ok) {
+        setMessage(r.error);
+        setStep('erro');
+        return;
+      }
+      const data = r.data ?? [];
+      setViaBusca(true);
       setMatches(data);
       setSelected(data[0] ?? null);
       setStep('confirma');
@@ -163,22 +217,145 @@ export function TotemKiosk({
           >
             {pending ? 'Consultando...' : 'Continuar'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setStep('nome');
+              setMessage(null);
+            }}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/20 py-4 text-lg font-medium text-slate-200 transition hover:bg-white/10"
+          >
+            <UserSearch className="h-5 w-5" /> Não tenho CPF — buscar pelo nome
+          </button>
+        </section>
+      )}
+
+      {step === 'nome' && (
+        <section className="w-full max-w-2xl text-center">
+          <h2 className="mb-1 text-2xl font-semibold">Digite seu nome</h2>
+          <p className="mb-5 text-slate-300">
+            Ao menos {MINIMO_LETRAS} letras. Mostramos apenas quem tem horário marcado para hoje.
+          </p>
+
+          <div className="mb-4 flex items-center gap-3 rounded-2xl bg-white/10 p-4">
+            <Search className="h-6 w-6 shrink-0 text-slate-400" />
+            <input
+              value={nome}
+              onChange={(e) => buscarNome(e.target.value)}
+              autoFocus
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="NOME"
+              aria-label="Seu nome"
+              className="w-full bg-transparent text-2xl tracking-wide uppercase outline-none placeholder:text-slate-500"
+            />
+          </div>
+
+          <div className="mb-4 min-h-56">
+            {message && <p className="rounded-xl bg-red-500/20 p-4 text-lg">{message}</p>}
+
+            {!message && sugestoes === null && (
+              <p className="p-6 text-slate-400">Comece a digitar seu nome.</p>
+            )}
+
+            {!message && sugestoes?.length === 0 && (
+              <p className="p-6 text-slate-300">
+                Nenhum horário encontrado com esse nome. Confira a grafia ou procure a recepção.
+              </p>
+            )}
+
+            <div className="space-y-2">
+              {sugestoes?.map((sug) => (
+                <button
+                  key={sug.patientId}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => escolherSugestao(sug.patientId)}
+                  className="flex w-full items-center justify-between rounded-2xl bg-white/10 px-5 py-4 text-left transition hover:bg-white/20 disabled:opacity-50"
+                >
+                  <span className="text-2xl font-semibold">{sug.nome}</span>
+                  {sug.scheduledAt && (
+                    <span className="rounded-full bg-white/15 px-4 py-1.5 font-mono text-xl">
+                      {formatTime(sug.scheduledAt)}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {TECLADO.map((linha) => (
+              <div key={linha} className="flex justify-center gap-1.5">
+                {linha.split('').map((letra) => (
+                  <button
+                    key={letra}
+                    type="button"
+                    onClick={() => buscarNome(nome + letra)}
+                    className="h-14 w-[9%] min-w-11 rounded-xl bg-white/10 text-xl font-semibold transition hover:bg-white/25"
+                  >
+                    {letra}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <div className="flex justify-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => buscarNome(nome + ' ')}
+                className="h-14 w-1/2 rounded-xl bg-white/10 text-base transition hover:bg-white/25"
+              >
+                espaço
+              </button>
+              <button
+                type="button"
+                onClick={() => buscarNome(nome.slice(0, -1))}
+                aria-label="Apagar"
+                className="h-14 w-1/5 rounded-xl bg-white/5 transition hover:bg-white/25"
+              >
+                <Delete className="mx-auto h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={() => buscarNome('')}
+                aria-label="Limpar"
+                className="h-14 w-1/5 rounded-xl bg-white/5 transition hover:bg-white/25"
+              >
+                <RotateCcw className="mx-auto h-6 w-6" />
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={reset}
+            className="mt-5 text-lg text-slate-400 underline hover:text-white"
+          >
+            Voltar e usar o CPF
+          </button>
         </section>
       )}
 
       {step === 'confirma' && selected && (
         <section className="w-full max-w-lg text-center">
-          <h2 className="mb-4 text-2xl font-semibold">Confirme seus dados</h2>
+          <h2 className="mb-4 text-2xl font-semibold">
+            {viaBusca ? 'Confirme seu horário' : 'Confirme seus dados'}
+          </h2>
           <div className="rounded-2xl bg-white/10 p-6 text-left">
-            <p className="text-3xl font-bold">{selected.patientName}</p>
-            {selected.birthDate && (
+            <p className="text-3xl font-bold">
+              {viaBusca ? nomeAbreviado(selected.patientName) : selected.patientName}
+            </p>
+            {!viaBusca && selected.birthDate && (
               <p className="mt-1 text-slate-300">Nascimento: {formatDate(selected.birthDate)}</p>
             )}
             {selected.companyName && (
               <p className="text-slate-300">Empresa: {selected.companyName}</p>
             )}
             {selected.scheduledAt && (
-              <p className="text-slate-300">Horario: {formatTime(selected.scheduledAt)}</p>
+              <p className={viaBusca ? 'mt-2 text-2xl font-semibold' : 'text-slate-300'}>
+                Horário: {formatTime(selected.scheduledAt)}
+              </p>
             )}
             {selected.exams.length > 0 && (
               <p className="mt-2 text-sm text-slate-400">Exames: {selected.exams.join(', ')}</p>
@@ -199,7 +376,8 @@ export function TotemKiosk({
                   onClick={() => setSelected(m)}
                   className={`w-full rounded-xl p-3 text-left ${m === selected ? 'bg-white/20' : 'bg-white/5'}`}
                 >
-                  {m.patientName} — {m.scheduledAt ? formatTime(m.scheduledAt) : 'sem horario'}
+                  {viaBusca ? nomeAbreviado(m.patientName) : m.patientName} —{' '}
+                  {m.scheduledAt ? formatTime(m.scheduledAt) : 'sem horario'}
                 </button>
               ))}
             </div>
