@@ -6,6 +6,9 @@ import { createClient } from '@/lib/supabase/server';
 import { assertPermission } from '@/lib/auth';
 import { audit, auditClinicalAccess } from '@/lib/audit';
 import { consultationSchema, triageSchema } from '@/lib/validators';
+import { lerBlocos } from './ficha-estrutura';
+import { gerarAso } from '@/modules/documents/aso';
+import { lancarRepasse } from '@/modules/finance/repasse-actions';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 
@@ -122,8 +125,13 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       .eq('attendance_id', parsed.data.attendance_id)
       .maybeSingle<{ id: string }>();
 
+    // Blocos de selecao da ficha clinica, remontados em jsonb.
+    const blocos = lerBlocos(formData);
+
     const payload = {
       ...parsed.data,
+      ...blocos,
+      alteracoes_exame_fisico: (formData.get('alteracoes_exame_fisico') as string) || null,
       tenant_id: ctx.tenant.id,
       patient_id: attendance.patient_id,
       doctor_id: ctx.userId,
@@ -156,6 +164,20 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
         .eq('tenant_id', ctx.tenant.id);
     }
 
+    // Ao finalizar, o A.S.O. sai sozinho: e o documento que a empresa espera.
+    let avisoAso = '';
+    if (finish) {
+      const aso = await gerarAso(ctx, parsed.data.attendance_id);
+      avisoAso = aso.ok ? ' O A.S.O. foi gerado.' : ` (${aso.error})`;
+
+      // O repasse do medico nasce do atendimento, nao de digitacao no financeiro.
+      await lancarRepasse(
+        ctx,
+        parsed.data.attendance_id,
+        (formData.get('procedure_code') as string) || null,
+      );
+    }
+
     await sincronizarAgendamento(ctx.tenant.id, parsed.data.attendance_id);
 
     await auditClinicalAccess(ctx, attendance.patient_id, 'consulta', existing?.id);
@@ -174,7 +196,9 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     revalidatePath('/crm');
     return ok(
       undefined,
-      finish ? 'Consulta finalizada. O paciente seguiu para o pagamento.' : 'Consulta salva.',
+      finish
+        ? `Consulta finalizada.${avisoAso} O paciente seguiu para o pagamento.`
+        : 'Consulta salva.',
     );
   } catch (error) {
     return fail(toFriendlyError(error));

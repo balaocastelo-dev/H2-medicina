@@ -51,6 +51,15 @@ export default async function MedicoAtendimentoPage({
   const ctx = await requirePermission('medico.atender');
   const supabase = await createClient();
 
+  // Catalogo de repasse: alimenta o campo de procedimento da consulta.
+  const { data: procedimentos } = await supabase
+    .from('procedure_types')
+    .select('code, name')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('is_active', true)
+    .order('sort_order')
+    .returns<{ code: string; name: string }[]>();
+
   const { data } = await supabase
     .from('attendances')
     .select(
@@ -167,7 +176,15 @@ export default async function MedicoAtendimentoPage({
         </div>
 
         <div className="xl:col-span-2">
-          <ConsultationForm attendanceId={id} consultation={consultation ?? null} />
+          <ConsultationForm
+            attendanceId={id}
+            consultation={consultation ?? null}
+            procedimentos={procedimentos ?? []}
+            procedimentoPadrao={
+              (ctx.settings.repasse?.procedimento_padrao as string | undefined) ??
+              'consulta_ocupacional'
+            }
+          />
         </div>
       </div>
     </div>

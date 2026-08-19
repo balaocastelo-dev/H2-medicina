@@ -1,7 +1,8 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
-import { KeyRound, Lock, Plus, Unlock, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { Coins, KeyRound, Lock, Plus, Unlock, UserPlus } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, Select, Table, Td, Th,
 } from '@/components/ui';
@@ -268,6 +269,15 @@ export function UserManager({
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
+                        {podeGerenciarPapeis && (
+                          <Link
+                            href={`/usuarios/${u.id}/repasse`}
+                            className="inline-flex h-8 items-center rounded-lg border border-slate-300 px-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                            title="Valores de repasse deste médico"
+                          >
+                            <Coins className="h-4 w-4" />
+                          </Link>
+                        )}
                         {!souEu && (
                           <Button
                             size="sm"

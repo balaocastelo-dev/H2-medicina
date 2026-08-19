@@ -389,6 +389,12 @@ export interface MedicalConsultation {
   restrictions: string | null;
   valid_until: string | null;
   observations: string | null;
+  /** Blocos de selecao da ficha clinica. */
+  antecedentes_profissionais: Record<string, string> | null;
+  antecedentes_pessoais: Record<string, string> | null;
+  estilo_vida: Record<string, string> | null;
+  exame_fisico: Record<string, string> | null;
+  alteracoes_exame_fisico: string | null;
   started_at: string;
   finished_at: string | null;
 }

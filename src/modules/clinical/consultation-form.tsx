@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import {
   Alert,
   Button,
@@ -15,13 +15,20 @@ import {
 import { saveConsultation } from './actions';
 import type { ActionResult } from '@/lib/action-result';
 import type { MedicalConsultation } from '@/types/entities';
+import { BlocosDaFicha } from './ficha-blocos';
+import { BLOCOS_FICHA, type RespostasBloco } from './ficha-estrutura';
 
 export function ConsultationForm({
   attendanceId,
   consultation,
+  procedimentos = [],
+  procedimentoPadrao,
 }: {
   attendanceId: string;
   consultation: MedicalConsultation | null;
+  /** Catalogo de repasse; vazio esconde o campo. */
+  procedimentos?: { code: string; name: string }[];
+  procedimentoPadrao?: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     saveConsultation,
@@ -29,6 +36,18 @@ export function ConsultationForm({
   );
   const errors = state && !state.ok ? state.fieldErrors : undefined;
   const finished = !!consultation?.finished_at;
+
+  // Blocos de selecao da ficha clinica. Comecam com o que ja foi gravado.
+  const [blocos, setBlocos] = useState<Record<string, RespostasBloco>>(() =>
+    Object.fromEntries(
+      BLOCOS_FICHA.map((b) => [
+        b.chave,
+        (consultation?.[b.chave] as RespostasBloco | undefined) ?? {},
+      ]),
+    ),
+  );
+  const marcar = (bloco: string, campo: string, valor: string) =>
+    setBlocos((atual) => ({ ...atual, [bloco]: { ...atual[bloco], [campo]: valor } }));
 
   return (
     <Card>
@@ -112,6 +131,14 @@ export function ConsultationForm({
             </Field>
           </div>
 
+          <div className="space-y-4">
+            <BlocosDaFicha
+              valores={blocos}
+              alteracoes={consultation?.alteracoes_exame_fisico ?? ''}
+              onChange={marcar}
+            />
+          </div>
+
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="Conclusão de aptidão" error={errors?.verdict} required>
               <Select name="verdict" defaultValue={consultation?.verdict ?? ''}>
@@ -133,6 +160,21 @@ export function ConsultationForm({
               <Input name="restrictions" defaultValue={consultation?.restrictions ?? ''} />
             </Field>
           </div>
+
+          {procedimentos.length > 0 && (
+            <Field
+              label="Procedimento"
+              hint="Define o valor do repasse lançado ao finalizar a consulta"
+            >
+              <Select name="procedure_code" defaultValue={procedimentoPadrao ?? ''}>
+                {procedimentos.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           <Field label="Observacoes">
             <Textarea
