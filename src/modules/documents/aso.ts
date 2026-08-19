@@ -71,6 +71,8 @@ const TIPO_EXAME: Record<string, string> = {
 export async function gerarAso(
   ctx: SessionContext,
   attendanceId: string,
+  /** Quem assina. Sem isso, assina quem esta emitindo. */
+  signatarioId?: string | null,
 ): Promise<ActionResult<{ documentId: string }>> {
   try {
     const supabase = await createClient();
@@ -94,6 +96,7 @@ export async function gerarAso(
     const empresaCfg = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
     const contatoCfg = (ctx.settings.contato ?? {}) as Record<string, string | null>;
     const respCfg = (ctx.settings.responsavel_tecnico ?? {}) as Record<string, string | null>;
+    const signatario = await carregarSignatario(ctx, signatarioId ?? ctx.userId, respCfg);
     const pcmsoCfg = (ctx.settings.pcmso ?? {}) as Record<string, string | null>;
     const docsCfg = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
 
@@ -155,11 +158,12 @@ export async function gerarAso(
         rqe: pcmsoCfg.rqe ?? null,
       },
       medicoExaminador: {
-        nome: ctx.profile.full_name || (respCfg.nome ?? ''),
-        conselho: ctx.profile.council_type ?? respCfg.conselho ?? 'CRM',
-        numero: ctx.profile.council_number ?? respCfg.numero ?? null,
-        uf: ctx.profile.council_state ?? respCfg.uf ?? null,
+        nome: signatario.nome,
+        conselho: signatario.conselho,
+        numero: signatario.numero,
+        uf: signatario.uf,
       },
+      assinaturaMedico: signatario.assinatura,
       tipoExame: TIPO_EXAME[at.appointments?.attendance_kind ?? ''] ?? 'Ocupacional',
       exames: at.patient_exams
         .filter((e) => e.status === 'concluido')
@@ -197,6 +201,11 @@ export async function gerarAso(
         size_bytes: pdf.byteLength,
         verification_code: codigo,
         is_patient_visible: true,
+        signed_by: signatario.id,
+        signer_name: signatario.nome,
+        signer_council: signatario.numero
+          ? `${signatario.conselho} ${signatario.numero}${signatario.uf ? '/' + signatario.uf : ''}`
+          : null,
         generated_by: ctx.userId,
       })
       .select('id')
@@ -225,4 +234,74 @@ async function patientIdDe(attendanceId: string, tenantId: string): Promise<stri
     .eq('tenant_id', tenantId)
     .maybeSingle<{ patient_id: string }>();
   return data?.patient_id ?? null;
+}
+
+interface Signatario {
+  id: string;
+  nome: string;
+  conselho: string;
+  numero: string | null;
+  uf: string | null;
+  /** PNG em data URI, ou null quando o profissional ainda nao registrou. */
+  assinatura: string | null;
+}
+
+/**
+ * Carrega quem assina o documento.
+ *
+ * O nome e o registro sao gravados no PDF no momento da emissao: se o
+ * cadastro mudar depois, o documento ja impresso continua dizendo a verdade
+ * sobre quem assinou.
+ */
+async function carregarSignatario(
+  ctx: SessionContext,
+  profileId: string,
+  respCfg: Record<string, string | null>,
+): Promise<Signatario> {
+  const supabase = await createClient();
+
+  const { data: perfil } = await supabase
+    .from('profiles')
+    .select('id, full_name, council_type, council_number, council_state, signature_path')
+    .eq('id', profileId)
+    .eq('tenant_id', ctx.tenant.id)
+    .is('deleted_at', null)
+    .maybeSingle<{
+      id: string;
+      full_name: string;
+      council_type: string | null;
+      council_number: string | null;
+      council_state: string | null;
+      signature_path: string | null;
+    }>();
+
+  const base: Signatario = {
+    id: perfil?.id ?? ctx.userId,
+    nome: perfil?.full_name || ctx.profile.full_name || (respCfg.nome ?? ''),
+    conselho: perfil?.council_type ?? ctx.profile.council_type ?? respCfg.conselho ?? 'CRM',
+    numero: perfil?.council_number ?? ctx.profile.council_number ?? respCfg.numero ?? null,
+    uf: perfil?.council_state ?? ctx.profile.council_state ?? respCfg.uf ?? null,
+    assinatura: null,
+  };
+
+  if (!perfil?.signature_path) return base;
+
+  // Assinatura ilegivel nao pode impedir a emissao: o documento sai com a
+  // linha e o nome, como sempre saiu.
+  try {
+    const { data } = await supabase.storage
+      .from('signatures')
+      .createSignedUrl(perfil.signature_path, 120);
+    if (data?.signedUrl) {
+      const resposta = await fetch(data.signedUrl);
+      if (resposta.ok) {
+        const buf = Buffer.from(await resposta.arrayBuffer());
+        base.assinatura = `data:image/png;base64,${buf.toString('base64')}`;
+      }
+    }
+  } catch (erro) {
+    console.error('[aso] não consegui carregar a assinatura do médico:', erro);
+  }
+
+  return base;
 }

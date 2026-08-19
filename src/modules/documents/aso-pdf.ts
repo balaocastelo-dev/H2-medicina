@@ -56,6 +56,8 @@ export interface DadosAso {
   observacoes: string | null;
   /** PNG em data URI, coletada na entrada. */
   assinaturaPaciente: string | null;
+  /** Assinatura manuscrita do medico examinador, quando registrada. */
+  assinaturaMedico?: string | null;
   codigoVerificacao: string;
   urlVerificacao: string | null;
   rodape: string | null;
@@ -232,12 +234,33 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const yAssinatura = 150;
   const meia = largura / 2;
 
-  pagina.drawText('Assinado eletronicamente', {
-    x: margem + 10, y: yAssinatura + 30, size: 7, font: fonte, color: cinza,
-  });
-  pagina.drawText(d.medicoExaminador.nome, {
-    x: margem + 10, y: yAssinatura + 18, size: 9.5, font: negrito, color: rgb(0.1, 0.1, 0.12),
-  });
+  // Assinatura manuscrita do medico, quando ele registrou a dele. Sem ela o
+  // documento sai como sempre saiu: linha, nome e registro.
+  let assinouAMao = false;
+  if (d.assinaturaMedico) {
+    try {
+      const png = await pdf.embedPng(d.assinaturaMedico);
+      const escala = Math.min((meia - 40) / png.width, 42 / png.height);
+      pagina.drawImage(png, {
+        x: margem + 10,
+        y: yAssinatura + 16,
+        width: png.width * escala,
+        height: png.height * escala,
+      });
+      assinouAMao = true;
+    } catch {
+      /* assinatura ilegivel nao pode impedir a emissao do documento */
+    }
+  }
+
+  if (!assinouAMao) {
+    pagina.drawText('Assinado eletronicamente', {
+      x: margem + 10, y: yAssinatura + 30, size: 7, font: fonte, color: cinza,
+    });
+    pagina.drawText(d.medicoExaminador.nome, {
+      x: margem + 10, y: yAssinatura + 18, size: 9.5, font: negrito, color: rgb(0.1, 0.1, 0.12),
+    });
+  }
   pagina.drawLine({
     start: { x: margem, y: yAssinatura + 12 }, end: { x: margem + meia - 20, y: yAssinatura + 12 },
     thickness: 0.8, color: rgb(0.3, 0.3, 0.3),
@@ -245,8 +268,11 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const registro = d.medicoExaminador.numero
     ? `${d.medicoExaminador.conselho} ${d.medicoExaminador.numero}${d.medicoExaminador.uf ? '/' + d.medicoExaminador.uf : ''}`
     : '';
+  pagina.drawText(d.medicoExaminador.nome, {
+    x: margem, y: yAssinatura, size: 8.5, font: negrito, color: rgb(0.1, 0.1, 0.12),
+  });
   pagina.drawText(`Médico examinador — ${registro}`, {
-    x: margem, y: yAssinatura, size: 8, font: fonte, color: cinza,
+    x: margem, y: yAssinatura - 10, size: 7.5, font: fonte, color: cinza,
   });
 
   if (d.assinaturaPaciente) {

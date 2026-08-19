@@ -2,12 +2,14 @@
 
 import { useActionState, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { Coins, KeyRound, Lock, Plus, Unlock, UserPlus } from 'lucide-react';
+import { Coins, KeyRound, Lock, PenLine, Plus, Stethoscope, Unlock, UserPlus } from 'lucide-react';
 import {
   Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, Select, Table, Td, Th,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/format';
 import { changeUserRole, createUser, resetUserPassword, toggleUserBlock } from '@/modules/users/actions';
+import { preCadastrarMedicos } from '@/modules/users/medicos-actions';
+import { MEDICOS_INICIAIS, acessoPendente } from '@/modules/users/medicos-iniciais';
 import type { ActionResult } from '@/lib/action-result';
 
 export interface UserRow {
@@ -21,6 +23,7 @@ export interface UserRow {
   is_active: boolean;
   blocked_at: string | null;
   last_sign_in_at: string | null;
+  signature_path: string | null;
   user_roles: { roles: { name: string; code: string } | null }[];
 }
 
@@ -65,15 +68,46 @@ export function UserManager({
   const erros = state && !state.ok ? state.fieldErrors : undefined;
   const ehMedico = papel === 'medico_examinador';
 
-  const rodar = (fn: () => Promise<ActionResult>) =>
+  const rodar = (fn: () => Promise<ActionResult<unknown>>) =>
     startTransition(async () => {
       const r = await fn();
       setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Feito.') : r.error });
     });
 
+  const faltamMedicos = MEDICOS_INICIAIS.filter(
+    (m) => !users.some((u) => u.council_number === m.numero),
+  );
+
   return (
     <div className="space-y-4">
       {msg && <Alert variant={msg.ok ? 'success' : 'error'}>{msg.texto}</Alert>}
+
+      {podeGerenciarPapeis && faltamMedicos.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Pré-cadastro do corpo clínico"
+            description={`${faltamMedicos.length} médico(s) da lista da clínica ainda não estão cadastrados`}
+            action={
+              <Button loading={running} onClick={() => rodar(preCadastrarMedicos)}>
+                <Stethoscope className="h-4 w-4" /> Pré-cadastrar {faltamMedicos.length}
+              </Button>
+            }
+          />
+          <CardBody>
+            <p className="mb-2 text-sm text-slate-600">
+              Entram com nome e registro no conselho. Cada um define o próprio e-mail e senha
+              depois — até lá aparecem como <strong>acesso pendente</strong>.
+            </p>
+            <ul className="grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
+              {faltamMedicos.map((m) => (
+                <li key={m.numero}>
+                  {m.nome} — {m.conselho} {m.numero}
+                </li>
+              ))}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <Card>
         <CardHeader
@@ -231,7 +265,13 @@ export function UserManager({
                           .join(' · ')}
                       </p>
                     </Td>
-                    <Td className="text-slate-600">{u.email ?? '—'}</Td>
+                    <Td className="text-slate-600">
+                      {acessoPendente(u.email) ? (
+                        <Badge color="#F59E0B">acesso pendente</Badge>
+                      ) : (
+                        (u.email ?? '—')
+                      )}
+                    </Td>
                     <Td>
                       {podeGerenciarPapeis && !souEu ? (
                         <Select
@@ -269,6 +309,14 @@ export function UserManager({
                         >
                           <KeyRound className="h-4 w-4" />
                         </Button>
+                        {u.signature_path && (
+                          <span
+                            title="Assinatura registrada"
+                            className="inline-flex h-8 items-center rounded-lg bg-emerald-50 px-2 text-emerald-700"
+                          >
+                            <PenLine className="h-4 w-4" />
+                          </span>
+                        )}
                         {podeGerenciarPapeis && (
                           <Link
                             href={`/usuarios/${u.id}/repasse`}

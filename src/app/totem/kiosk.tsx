@@ -144,6 +144,10 @@ export function TotemKiosk({
           : null,
       );
       setStep('senha');
+      // A caixa de dialogo do Windows nao pode ser fechada por codigo: quem
+      // decide isso e o navegador. O Chrome aberto com --kiosk-printing
+      // imprime direto na impressora padrao, sem perguntar nada. O atalho
+      // pronto esta em docs/TOTEM-IMPRESSORA.md.
       if (printLabel) setTimeout(() => window.print(), 400);
     });
   };
@@ -409,17 +413,32 @@ export function TotemKiosk({
           <h2 className="no-print mb-1 text-xl font-medium">Check-in realizado</h2>
           {message && <p className="no-print mb-3 text-sm text-amber-200">{message}</p>}
 
-          <div className="rounded-3xl bg-white p-8 text-slate-900">
+          {/* Na tela e um cartao; no papel de 80mm vira o ticket da bobina. */}
+          <div className="ticket-termico rounded-3xl bg-white p-8 text-slate-900">
             <p className="text-sm tracking-widest uppercase">{systemName}</p>
+            <p className="so-papel text-[10px]">SENHA DE ATENDIMENTO</p>
             <p className="my-3 text-7xl font-black tracking-tight">{ticket?.code ?? '—'}</p>
-            <p className="text-sm">{selected?.patientName}</p>
+            <p className="text-sm">
+              {viaBusca
+                ? nomeAbreviado(selected?.patientName ?? '')
+                : (selected?.patientName ?? '')}
+            </p>
             {selected?.companyName && (
               <p className="text-xs text-slate-500">{selected.companyName}</p>
+            )}
+            {selected?.scheduledAt && (
+              <p className="text-xs text-slate-500">
+                Horário marcado: {formatTime(selected.scheduledAt)}
+              </p>
             )}
             <p className="mt-2 text-xs text-slate-500">
               {formatDate(new Date())} · {formatTime(new Date())}
             </p>
             <p className="mt-3 text-xs text-slate-600">Aguarde ser chamado na recepção.</p>
+            <p className="so-papel mt-3 text-[9px]">Atendimento por ordem de chegada</p>
+            {/* Espaco antes do corte: a lamina fica alguns milimetros acima
+                da cabeca de impressao e comeria a ultima linha. */}
+            <p className="so-papel mt-6 text-[9px]">&nbsp;</p>
           </div>
 
           <div className="no-print mt-6 grid grid-cols-2 gap-3">

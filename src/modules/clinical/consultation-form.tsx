@@ -23,12 +23,17 @@ export function ConsultationForm({
   consultation,
   procedimentos = [],
   procedimentoPadrao,
+  medicos = [],
+  medicoPadrao,
 }: {
   attendanceId: string;
   consultation: MedicalConsultation | null;
   /** Catalogo de repasse; vazio esconde o campo. */
   procedimentos?: { code: string; name: string }[];
   procedimentoPadrao?: string;
+  /** Quem pode assinar o A.S.O.; vazio esconde o campo. */
+  medicos?: { id: string; nome: string; registro: string | null; temAssinatura: boolean }[];
+  medicoPadrao?: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     saveConsultation,
@@ -183,6 +188,23 @@ export function ConsultationForm({
               rows={2}
             />
           </Field>
+
+          {medicos.length > 0 && (
+            <Field
+              label="Médico que assina o A.S.O."
+              hint="O documento sai com o nome, o registro e a assinatura de quem for escolhido"
+            >
+              <Select name="signatario_id" defaultValue={medicoPadrao ?? ''}>
+                {medicos.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.nome}
+                    {m.registro ? ` — ${m.registro}` : ''}
+                    {m.temAssinatura ? '' : ' (sem assinatura registrada)'}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
 
           <div className="flex gap-2">
             <Button type="submit" variant="outline" loading={pending}>

@@ -60,6 +60,26 @@ export default async function MedicoAtendimentoPage({
     .order('sort_order')
     .returns<{ code: string; name: string }[]>();
 
+  // Quem pode assinar o A.S.O.: profissional ativo com registro no conselho.
+  const { data: medicos } = await supabase
+    .from('profiles')
+    .select('id, full_name, council_type, council_number, council_state, signature_path')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .not('council_number', 'is', null)
+    .order('full_name')
+    .returns<
+      {
+        id: string;
+        full_name: string;
+        council_type: string | null;
+        council_number: string | null;
+        council_state: string | null;
+        signature_path: string | null;
+      }[]
+    >();
+
   const { data } = await supabase
     .from('attendances')
     .select(
@@ -184,6 +204,15 @@ export default async function MedicoAtendimentoPage({
               (ctx.settings.repasse?.procedimento_padrao as string | undefined) ??
               'consulta_ocupacional'
             }
+            medicos={(medicos ?? []).map((m) => ({
+              id: m.id,
+              nome: m.full_name,
+              registro: m.council_number
+                ? `${m.council_type ?? 'CRM'} ${m.council_number}${m.council_state ? '/' + m.council_state : ''}`
+                : null,
+              temAssinatura: !!m.signature_path,
+            }))}
+            medicoPadrao={ctx.userId}
           />
         </div>
       </div>

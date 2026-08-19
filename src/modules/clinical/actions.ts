@@ -167,7 +167,11 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // Ao finalizar, o A.S.O. sai sozinho: e o documento que a empresa espera.
     let avisoAso = '';
     if (finish) {
-      const aso = await gerarAso(ctx, parsed.data.attendance_id);
+      const aso = await gerarAso(
+        ctx,
+        parsed.data.attendance_id,
+        (formData.get('signatario_id') as string) || null,
+      );
       avisoAso = aso.ok ? ' O A.S.O. foi gerado.' : ` (${aso.error})`;
 
       // O repasse do medico nasce do atendimento, nao de digitacao no financeiro.

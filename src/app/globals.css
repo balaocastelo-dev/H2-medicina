@@ -67,6 +67,60 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------
+   Ticket do totem em bobina termica de 80mm.
+
+   A area util da bobina de 80mm e de 72mm: os 4mm de cada lado sao a
+   margem mecanica do mecanismo de impressao. Altura automatica porque o
+   papel e continuo — fixar altura faria a impressora avancar bobina a
+   toa depois do corte.
+
+   Preto puro e sem fundo: cabeca termica so queima, nao imprime cinza,
+   entao fundo escuro sai como borrao e gasta papel.
+   --------------------------------------------------------------------- */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
+
+@media print {
+  html,
+  body {
+    width: 72mm;
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: #000;
+  }
+
+  .ticket-termico {
+    width: 72mm;
+    margin: 0;
+    padding: 3mm 2mm 8mm;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color: #000;
+    background: white;
+    text-align: center;
+    /* Corte no fim de cada ticket, se sair mais de um. */
+    page-break-after: always;
+  }
+
+  .ticket-termico * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  /* Fora da impressao o ticket aparece como cartao na tela do totem. */
+  .ticket-termico .so-papel {
+    display: block;
+  }
+}
+
+.ticket-termico .so-papel {
+  display: none;
+}
+
 .scrollbar-thin::-webkit-scrollbar {
   width: 8px;
   height: 8px;
