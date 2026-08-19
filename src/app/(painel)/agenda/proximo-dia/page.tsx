@@ -6,6 +6,7 @@ import { Badge, Card, CardHeader, EmptyState, StatCard, Table, Td, Th } from '@/
 import { daysAheadISO, formatCPF, formatDate, formatTime } from '@/lib/format';
 import { PrintButton, ExportCsvButton } from './actions-bar';
 import { ColarLista } from './colar-lista';
+import { AcoesDaLinha } from './acoes-linha';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,10 +42,14 @@ export default async function ProximoDiaPage({
     .eq('tenant_id', ctx.tenant.id)
     .eq('scheduled_date', date)
     .is('deleted_at', null)
+    // Cancelado e remarcado ja nao sao mais deste dia: manter na lista faria
+    // a recepcao chamar quem nao vem.
+    .not('status', 'in', '("cancelado","remarcado")')
     .order('scheduled_at')
     .returns<Row[]>();
 
   const rows = data ?? [];
+  const podeMexer = ctx.permissions.has('agenda.administrar');
 
   const groups = new Map<string, { label: string; rows: Row[] }>();
   for (const r of rows) {
@@ -84,7 +89,7 @@ export default async function ProximoDiaPage({
         }
       />
 
-      {ctx.permissions.has('agenda.administrar') && (
+      {podeMexer && (
         <div className="no-print">
           <ColarLista data={date} />
         </div>
@@ -127,11 +132,12 @@ export default async function ProximoDiaPage({
                     <Th>Exames previstos</Th>
                     <Th>Prioridade</Th>
                     <Th>Origem</Th>
+                    {podeMexer && <Th className="no-print">Ações</Th>}
                   </tr>
                 </thead>
                 <tbody>
                   {group.rows.map((r) => (
-                    <tr key={r.id}>
+                    <tr key={r.id} className={r.status === 'ausente' ? 'opacity-60' : undefined}>
                       <Td className="font-mono">{formatTime(r.scheduled_at)}</Td>
                       <Td className="font-medium">{r.patients?.full_name ?? '—'}</Td>
                       <Td className="font-mono text-xs">
@@ -152,6 +158,17 @@ export default async function ProximoDiaPage({
                         )}
                       </Td>
                       <Td className="text-xs text-slate-500">{r.origin}</Td>
+                      {podeMexer && (
+                        <Td className="no-print">
+                          <AcoesDaLinha
+                            appointmentId={r.id}
+                            paciente={r.patients?.full_name ?? 'este paciente'}
+                            status={r.status}
+                            dataAtual={date}
+                            horaAtual={formatTime(r.scheduled_at)}
+                          />
+                        </Td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

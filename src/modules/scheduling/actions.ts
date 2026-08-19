@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
+import { MOTIVO_NAO_PODE_EXCLUIR, podeExcluirDaLista } from './regras-lista';
 import { appointmentSchema } from '@/lib/validators';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Appointment } from '@/types/entities';
@@ -179,7 +180,62 @@ export async function rescheduleAppointment(
       description: `Remarcado para ${newDateTime}`,
     });
     revalidatePath('/agenda');
+    revalidatePath('/agenda/proximo-dia');
     return ok(undefined, 'Agendamento remarcado.');
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Tira o agendamento da lista.
+ *
+ * E exclusao logica: a linha continua no banco com a data de remocao, para
+ * a auditoria conseguir responder quem tirou quem da agenda. Lista importada
+ * errada acontece, e desfazer nao pode significar perder o rastro.
+ */
+export async function excluirAgendamento(id: string, motivo?: string): Promise<ActionResult> {
+  try {
+    const ctx = await assertPermission('agenda.administrar');
+    const supabase = await createClient();
+
+    const { data: original } = await supabase
+      .from('appointments')
+      .select('id, status, scheduled_at, patient_id')
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenant.id)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; status: string; scheduled_at: string; patient_id: string }>();
+    if (!original) return fail('Agendamento não encontrado.');
+
+    if (!podeExcluirDaLista(original.status)) return fail(MOTIVO_NAO_PODE_EXCLUIR);
+
+    const { error } = await supabase
+      .from('appointments')
+      .update({
+        deleted_at: new Date().toISOString(),
+        status: 'cancelado',
+        cancelled_at: new Date().toISOString(),
+        cancel_reason: motivo ?? 'Removido da lista',
+        updated_by: ctx.userId,
+      })
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenant.id);
+    if (error) return fail(toFriendlyError(error));
+
+    await audit(ctx, {
+      action: 'delete',
+      entity: 'appointments',
+      entityId: id,
+      patientId: original.patient_id,
+      description: motivo ? `Removido da agenda: ${motivo}` : 'Removido da agenda',
+      previous: original,
+    });
+
+    revalidatePath('/agenda');
+    revalidatePath('/agenda/proximo-dia');
+    revalidatePath('/crm');
+    return ok(undefined, 'Agendamento removido da lista.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }
