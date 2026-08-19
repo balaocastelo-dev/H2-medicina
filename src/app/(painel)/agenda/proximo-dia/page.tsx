@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, CardHeader, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
 import { daysAheadISO, formatCPF, formatDate, formatTime } from '@/lib/format';
 import { PrintButton, ExportCsvButton } from './actions-bar';
+import { ColarLista } from './colar-lista';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,6 +83,12 @@ export default async function ProximoDiaPage({
           </div>
         }
       />
+
+      {ctx.permissions.has('agenda.administrar') && (
+        <div className="no-print">
+          <ColarLista data={date} />
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Total previsto" value={rows.length} />

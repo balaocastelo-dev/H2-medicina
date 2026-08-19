@@ -134,6 +134,31 @@ function rel(f) {
   return f.replace(ROOT + '/', '');
 }
 
+// ---------------------------------------------------------------------
+// Permissao inventada trava a tela em producao e passa por tsc, lint e
+// teste sem reclamar. Aqui as strings usadas no codigo sao conferidas
+// contra o catalogo de permissoes do banco.
+// ---------------------------------------------------------------------
+const catalogo = new Set();
+const sqlCatalogo = join(ROOT, 'supabase/migrations/0011_permissions_catalog.sql');
+if (existsSync(sqlCatalogo)) {
+  const sql = readFileSync(sqlCatalogo, 'utf8');
+  for (const m of sql.matchAll(/\('([a-z_]+\.[a-z_]+)'/g)) catalogo.add(m[1]);
+}
+
+if (catalogo.size > 0) {
+  const chamadas =
+    /(?:assertPermission|requirePermission|permissions\.has|has_permission)\(\s*'([a-z_]+\.[a-z_]+)'/g;
+  for (const file of files) {
+    const src = readFileSync(file, 'utf8');
+    for (const m of src.matchAll(chamadas)) {
+      if (!catalogo.has(m[1])) {
+        problems.push(`${rel(file)}: permissao "${m[1]}" nao existe no catalogo`);
+      }
+    }
+  }
+}
+
 console.log(`Arquivos analisados: ${files.length} (${clientFiles.size} client components)`);
 if (problems.length) {
   console.error(`\n${problems.length} problema(s) que quebrariam o build:\n`);
