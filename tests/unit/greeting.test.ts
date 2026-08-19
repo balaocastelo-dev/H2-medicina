@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  falaAutomatica,
   montarSaudacao,
   periodoDoDia,
   primeiroNome,
@@ -71,5 +72,20 @@ describe('ativacao da saudacao', () => {
     expect(saudacaoAtiva('não')).toBe(false);
     expect(saudacaoAtiva('false')).toBe(false);
     expect(saudacaoAtiva(false)).toBe(false);
+  });
+});
+
+describe('falaAutomatica', () => {
+  it('fica desligada quando nada foi configurado', () => {
+    expect(falaAutomatica(undefined)).toBe(false);
+    expect(falaAutomatica(null)).toBe(false);
+    expect(falaAutomatica('')).toBe(false);
+  });
+
+  it('so liga com um sim explicito', () => {
+    expect(falaAutomatica('sim')).toBe(true);
+    expect(falaAutomatica(true)).toBe(true);
+    expect(falaAutomatica('nao')).toBe(false);
+    expect(falaAutomatica('qualquer coisa')).toBe(false);
   });
 });

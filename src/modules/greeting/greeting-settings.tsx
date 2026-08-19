@@ -67,7 +67,7 @@ export function GreetingSettings({
     <Card>
       <CardHeader
         title="Saudação de boas-vindas"
-        description="Frase falada quando a pessoa entra no sistema"
+        description="Cartao de boas-vindas ao entrar no sistema"
       />
       <CardBody>
         <form action={formAction} className="space-y-4">
@@ -79,6 +79,18 @@ export function GreetingSettings({
               <Select name="ativa" defaultValue={String(valores.ativa ?? 'sim')}>
                 <option value="sim">Sim</option>
                 <option value="nao">Não</option>
+              </Select>
+            </Field>
+            <Field
+              label="Falar ao entrar"
+              hint="Desligado, o cartao aparece em silencio e a fala fica no botao Ouvir"
+            >
+              <Select
+                name="falar_ao_entrar"
+                defaultValue={String(valores.falar_ao_entrar ?? 'nao')}
+              >
+                <option value="nao">Não</option>
+                <option value="sim">Sim</option>
               </Select>
             </Field>
             <Field

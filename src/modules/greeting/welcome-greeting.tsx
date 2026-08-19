@@ -8,16 +8,17 @@ import { dividirEmTrechos, escolherVoz } from './voice';
 /**
  * Saudacao de boas-vindas ao entrar no sistema.
  *
- * Fala a frase com a voz mais natural disponivel no dispositivo e mostra um
- * cartao animado. Aparece uma vez por sessao de navegacao.
+ * Por padrao o cartao e silencioso: a clinica pediu que o sistema nao fale
+ * sozinho ao abrir. A fala volta ligando "Falar ao entrar" em Configuracoes,
+ * e o botao de ouvir continua disponivel para quem quiser a frase em voz.
  *
- * Navegadores bloqueiam audio sem interacao do usuario; quando isso acontece,
- * o cartao continua visivel com um botao para ouvir.
+ * Aparece uma vez por sessao de navegacao.
  */
 export function WelcomeGreeting({
   nome,
   tratamento,
   ativa = true,
+  falarAoEntrar = false,
   corPrimaria,
   voz,
   velocidade,
@@ -25,6 +26,8 @@ export function WelcomeGreeting({
   nome: string;
   tratamento?: string | null;
   ativa?: boolean;
+  /** Fala sozinha ao abrir. Desligada por padrao a pedido da clinica. */
+  falarAoEntrar?: boolean;
   corPrimaria: string;
   /** Trecho do nome da voz preferida, definido em Configuracoes. */
   voz?: string | null;
@@ -98,6 +101,14 @@ export function WelcomeGreeting({
       return;
     }
     sessionStorage.setItem('saudacao-exibida', '1');
+
+    const sumir = window.setTimeout(() => setVisivel(false), 15000);
+
+    // Sem a fala automatica o cartao apenas aparece e some sozinho.
+    if (!falarAoEntrar) {
+      return () => window.clearTimeout(sumir);
+    }
+
     const texto = frase;
 
     // As vozes carregam de forma assincrona. Havia dois gatilhos concorrentes
@@ -119,13 +130,12 @@ export function WelcomeGreeting({
       sintese?.addEventListener('voiceschanged', falarUmaVezSo, { once: true });
     }
 
-    const sumir = window.setTimeout(() => setVisivel(false), 15000);
     return () => {
       window.clearTimeout(reserva);
       window.clearTimeout(sumir);
       sintese?.removeEventListener('voiceschanged', falarUmaVezSo);
     };
-  }, [ativa, frase, falar]);
+  }, [ativa, falarAoEntrar, frase, falar]);
 
   if (!ativa || !visivel || !frase) return null;
 
@@ -193,7 +203,7 @@ export function WelcomeGreeting({
                 onClick={() => falar(frase)}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-medium transition hover:bg-white/30"
               >
-                <Volume2 className="h-3.5 w-3.5" /> {bloqueado ? 'Ouvir' : 'Repetir'}
+                <Volume2 className="h-3.5 w-3.5" /> {bloqueado || !falarAoEntrar ? 'Ouvir' : 'Repetir'}
               </button>
             )}
           </div>

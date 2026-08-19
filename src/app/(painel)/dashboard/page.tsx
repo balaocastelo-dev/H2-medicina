@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, CardHeader, EmptyState, Table, Td, Th } from '@/components/ui';
 import { WelcomeGreeting } from '@/modules/greeting/welcome-greeting';
-import { saudacaoAtiva } from '@/modules/greeting/phrases';
+import { falaAutomatica, saudacaoAtiva } from '@/modules/greeting/phrases';
 import { elapsedFrom, formatMoney, formatTime, sinceISO, startOfTodayISO, todayISO } from '@/lib/format';
 import type { CrmStage } from '@/types/entities';
 import {
@@ -167,6 +167,7 @@ export default async function DashboardPage() {
     tratamentos?: Record<string, string>;
     voz?: string;
     velocidade?: string | number;
+    falar_ao_entrar?: unknown;
   };
   const cor = ctx.branding.color_primary;
 
@@ -176,6 +177,7 @@ export default async function DashboardPage() {
         nome={ctx.profile.full_name || (ctx.email ?? '')}
         tratamento={saudacao.tratamentos?.[ctx.userId] ?? saudacao.tratamento_padrao ?? null}
         ativa={saudacaoAtiva(saudacao.ativa)}
+        falarAoEntrar={falaAutomatica(saudacao.falar_ao_entrar)}
         corPrimaria={cor}
         voz={saudacao.voz ?? null}
         velocidade={saudacao.velocidade ? Number(saudacao.velocidade) : null}

@@ -78,3 +78,14 @@ export function saudacaoAtiva(valor: unknown): boolean {
   const texto = String(valor).trim().toLowerCase();
   return !['nao', 'não', 'false', '0', 'off', 'desativada', 'desativado'].includes(texto);
 }
+
+/**
+ * A clinica pediu que o sistema nao fale sozinho ao abrir, entao o padrao
+ * aqui e o oposto de `saudacaoAtiva`: so fala se alguem ligar de proposito.
+ */
+export function falaAutomatica(valor: unknown): boolean {
+  if (valor === undefined || valor === null || valor === '') return false;
+  if (typeof valor === 'boolean') return valor;
+  const texto = String(valor).trim().toLowerCase();
+  return ['sim', 'true', '1', 'on', 'ativa', 'ativada', 'ativo'].includes(texto);
+}
