@@ -84,6 +84,16 @@ export const NAV_GROUPS: NavGroup[] = [
         badge: 'medico',
       },
       {
+        // Extrato do proprio medico: quem atendeu e quanto tem a receber.
+        // Exige so a permissao de atender, nao a do financeiro — o medico
+        // ve o proprio repasse sem enxergar o caixa da clinica.
+        href: '/meus-ganhos',
+        label: 'Meus ganhos',
+        icon: 'HandCoins',
+        permission: 'medico.atender',
+        module: 'medico',
+      },
+      {
         href: '/pagamentos',
         label: 'Pagamentos',
         icon: 'Wallet',

@@ -31,6 +31,7 @@ import {
   MonitorSmartphone,
   Tv,
   FileCode,
+  HandCoins,
   Circle,
 } from 'lucide-react';
 
@@ -65,6 +66,7 @@ const MAP = {
   MonitorSmartphone,
   Tv,
   FileCode,
+  HandCoins,
 } as const;
 
 export type IconName = keyof typeof MAP;

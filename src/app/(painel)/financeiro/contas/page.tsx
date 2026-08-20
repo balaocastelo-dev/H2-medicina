@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
@@ -28,6 +29,19 @@ export default async function ContasPage({
   const contas = data ?? [];
   const hoje = todayISO();
 
+  // O repasse dos medicos nao e cadastrado aqui: nasce sozinho a cada
+  // consulta finalizada. Mas e dinheiro que a clinica deve, entao o total
+  // em aberto aparece junto das outras contas, com atalho para a baixa.
+  const { data: repasses } = await supabase
+    .from('fee_entries')
+    .select('fee, profile_id')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('status', 'a_pagar')
+    .returns<{ fee: number; profile_id: string }[]>();
+
+  const repasseAberto = (repasses ?? []).reduce((s, r) => s + Number(r.fee), 0);
+  const medicosComRepasse = new Set((repasses ?? []).map((r) => r.profile_id)).size;
+
   const soma = (filtro: (c: ContaRow) => boolean) =>
     contas.filter(filtro).reduce((s, c) => s + Number(c.amount), 0);
 
@@ -51,6 +65,29 @@ export default async function ContasPage({
         <StatCard label="Pagas" value={formatMoney(soma((c) => c.status === 'paga'))} color="#22C55E" />
         <StatCard label="Lançamentos" value={contas.length} />
       </div>
+
+      {repasseAberto > 0 && (
+        <Card className="mb-4 border-l-4 border-l-violet-500">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">Repasse médico em aberto</p>
+              <p className="text-xs text-slate-500">
+                {medicosComRepasse} médico(s) aguardando acerto. Nasce dos atendimentos, não é
+                cadastrado aqui.
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <p className="text-xl font-bold text-violet-600">{formatMoney(repasseAberto)}</p>
+              <Link
+                href="/financeiro/repasse"
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium hover:bg-slate-50"
+              >
+                Dar baixa
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {ctx.permissions.has('financeiro.registrar') && (
         <div className="mb-4">
