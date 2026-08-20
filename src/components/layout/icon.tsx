@@ -30,6 +30,7 @@ import {
   ScrollText,
   MonitorSmartphone,
   Tv,
+  FileCode,
   Circle,
 } from 'lucide-react';
 
@@ -63,6 +64,7 @@ const MAP = {
   ScrollText,
   MonitorSmartphone,
   Tv,
+  FileCode,
 } as const;
 
 export type IconName = keyof typeof MAP;

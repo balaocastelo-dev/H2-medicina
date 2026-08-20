@@ -7,11 +7,12 @@ import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NavIcon } from './icon';
 import type { Contadores } from './contadores';
-import type { NavGroup, NavItem } from './nav-config';
+import type { ArquivoParaBaixar, NavGroup, NavItem } from './nav-config';
 
 export function Sidebar({
   groups,
   fullscreenLinks,
+  downloads = [],
   systemName,
   logoUrl,
   footerText,
@@ -19,6 +20,8 @@ export function Sidebar({
 }: {
   groups: NavGroup[];
   fullscreenLinks: NavItem[];
+  /** Arquivos de instalação do totem. */
+  downloads?: ArquivoParaBaixar[];
   systemName: string;
   logoUrl: string | null;
   footerText: string | null;
@@ -97,6 +100,36 @@ export function Sidebar({
                   >
                     <NavIcon name={item.icon} className="h-4 w-4 shrink-0" />
                     <span className="truncate">{item.label}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {downloads.length > 0 && (
+          <div className="mb-4 border-t border-white/10 pt-3">
+            <p className="px-3 py-1 text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
+              Instalação do totem
+            </p>
+            <ul className="space-y-0.5">
+              {downloads.map((arquivo) => (
+                <li key={arquivo.href}>
+                  {/* `download` força salvar em vez de o navegador tentar
+                      abrir o .bat na própria aba. */}
+                  <a
+                    href={arquivo.href}
+                    download
+                    title={arquivo.descricao}
+                    className="flex items-start gap-2.5 rounded-lg px-3 py-2 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+                  >
+                    <NavIcon name={arquivo.icon} className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span className="min-w-0">
+                      <span className="block truncate">{arquivo.label}</span>
+                      <span className="block truncate text-[11px] text-slate-500">
+                        {arquivo.descricao}
+                      </span>
+                    </span>
                   </a>
                 </li>
               ))}

@@ -1,7 +1,7 @@
 import { requireSession } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
-import { NAV_GROUPS, FULLSCREEN_LINKS } from '@/components/layout/nav-config';
+import { NAV_GROUPS, FULLSCREEN_LINKS, DOWNLOADS } from '@/components/layout/nav-config';
 import { carregarContadores } from '@/components/layout/contadores';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
 import { AssistantWidget } from '@/modules/assistant/assistant-widget';
@@ -25,6 +25,7 @@ export default async function PainelLayout({ children }: { children: React.React
   })).filter((g) => g.items.length > 0);
 
   const fullscreen = FULLSCREEN_LINKS.filter((i) => allowed(i.permission, i.module));
+  const downloads = DOWNLOADS.filter((d) => allowed(d.permission));
 
   // O assistente executa acoes reais; so aparece para quem tem alguma delas.
   const podeUsarAssistente = [
@@ -50,6 +51,7 @@ export default async function PainelLayout({ children }: { children: React.React
         <Sidebar
           groups={groups}
           fullscreenLinks={fullscreen}
+          downloads={downloads}
           systemName={branding.system_name}
           logoUrl={branding.logo_compact_url ?? branding.logo_url}
           footerText={branding.footer_text}

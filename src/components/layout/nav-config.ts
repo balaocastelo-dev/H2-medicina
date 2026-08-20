@@ -260,3 +260,36 @@ export const FULLSCREEN_LINKS: NavItem[] = [
     module: 'painel_tv',
   },
 ];
+
+export interface ArquivoParaBaixar {
+  /** Caminho do arquivo servido pela aplicacao. */
+  href: string;
+  label: string;
+  descricao: string;
+  icon: string;
+  permission?: string;
+}
+
+/**
+ * Arquivos de instalacao do totem.
+ *
+ * Ficam no menu, ao lado das telas dedicadas, porque e ali que quem vai
+ * montar o totem procura. Guardados fora do sistema, viram anexo de
+ * conversa antiga que ninguem acha na hora de trocar o computador.
+ */
+export const DOWNLOADS: ArquivoParaBaixar[] = [
+  {
+    href: '/downloads/totem-quiosque.bat',
+    label: 'totem-quiosque.bat',
+    descricao: 'Abre o totem imprimindo sem a caixa de diálogo',
+    icon: 'FileCode',
+    permission: 'totem.operar',
+  },
+  {
+    href: '/downloads/impressora-do-totem.txt',
+    label: 'Guia da impressora',
+    descricao: 'Bobina de 80 mm e impressão automática',
+    icon: 'FileText',
+    permission: 'totem.operar',
+  },
+];
