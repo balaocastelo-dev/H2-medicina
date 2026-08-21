@@ -171,3 +171,29 @@ export function startOfTodayISO(): string {
   // -03:00 e o offset de Brasilia (sem horario de verao desde 2019).
   return new Date(`${partes}T00:00:00-03:00`).toISOString();
 }
+
+/**
+ * Converte o horario escolhido na tela para o instante correto em UTC.
+ *
+ * O campo `datetime-local` do navegador manda "2026-08-21T14:30", sem fuso
+ * nenhum. `new Date()` nesse texto usa o fuso de quem esta interpretando —
+ * e o servidor da Vercel roda em UTC. Era por isso que o horario "mudava
+ * sozinho": marcava-se 14:30 e o banco gravava 14:30 UTC, que e 11:30 em
+ * Sao Paulo. Tres horas a menos, calado.
+ *
+ * Aqui o horario e lido sempre como horario da clinica. Texto que ja traz
+ * fuso (termina em Z ou +hh:mm) passa direto, para a funcao poder ser
+ * chamada duas vezes sem estragar o valor.
+ */
+export function horarioLocalParaISO(valor: string): string {
+  const texto = (valor ?? '').trim();
+  if (!texto) return '';
+
+  const jaTemFuso = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(texto);
+  const comSegundos = /T\d{2}:\d{2}$/.test(texto) ? `${texto}:00` : texto;
+  const completo = jaTemFuso ? comSegundos : `${comSegundos}-03:00`;
+
+  const data = new Date(completo);
+  if (Number.isNaN(data.getTime())) return '';
+  return data.toISOString();
+}

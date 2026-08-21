@@ -7,6 +7,7 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { MOTIVO_NAO_PODE_EXCLUIR, podeExcluirDaLista } from './regras-lista';
 import { appointmentSchema } from '@/lib/validators';
+import { horarioLocalParaISO } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Appointment } from '@/types/entities';
 
@@ -38,7 +39,8 @@ export async function createAppointment(
       .from('appointments')
       .insert({
         ...appointment,
-        scheduled_at: new Date(appointment.scheduled_at).toISOString(),
+        // O horario digitado e horario da clinica, nao do servidor.
+        scheduled_at: horarioLocalParaISO(appointment.scheduled_at),
         tenant_id: ctx.tenant.id,
         origin: 'manual',
         created_by: ctx.userId,
@@ -71,6 +73,99 @@ export async function createAppointment(
 
     revalidatePath('/agenda');
     return ok(data, 'Agendamento criado.');
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Salva a edicao de um agendamento.
+ *
+ * Trocar so a data cai em `rescheduleAppointment`, que guarda o vinculo com
+ * o horario antigo. Aqui e a correcao do resto: paciente errado, empresa
+ * que faltou, tipo de atendimento trocado. E a lista chega importada de
+ * fora, entao corrigir e rotina, nao excecao.
+ */
+export async function updateAppointment(
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult<Appointment>> {
+  try {
+    const ctx = await assertPermission('agenda.administrar');
+    const id = String(formData.get('id') ?? '');
+    if (!z.string().uuid().safeParse(id).success) return fail('Agendamento inválido.');
+
+    const parsed = appointmentSchema.safeParse({
+      patient_id: formData.get('patient_id'),
+      company_id: formData.get('company_id') || null,
+      scheduled_at: formData.get('scheduled_at'),
+      duration_minutes: formData.get('duration_minutes') ?? 30,
+      attendance_kind: formData.get('attendance_kind') ?? 'admissional',
+      priority: formData.get('priority') ?? 'normal',
+      professional_id: formData.get('professional_id') || null,
+      exam_type_ids: formData.getAll('exam_type_ids').map(String),
+      notes: formData.get('notes') ?? '',
+    });
+    if (!parsed.success) {
+      return fail('Verifique os dados do agendamento.', z.flattenError(parsed.error).fieldErrors);
+    }
+
+    const supabase = await createClient();
+    const { data: original } = await supabase
+      .from('appointments')
+      .select('id, status')
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenant.id)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; status: string }>();
+    if (!original) return fail('Agendamento não encontrado.');
+
+    if (['em_atendimento', 'realizado'].includes(original.status)) {
+      return fail('Este atendimento já começou. Não dá para editar o agendamento.');
+    }
+
+    const { exam_type_ids, ...campos } = parsed.data;
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .update({
+        ...campos,
+        scheduled_at: horarioLocalParaISO(campos.scheduled_at),
+        updated_by: ctx.userId,
+      })
+      .eq('id', id)
+      .eq('tenant_id', ctx.tenant.id)
+      .select('*')
+      .single<Appointment>();
+    if (error) return fail(toFriendlyError(error));
+
+    // Exames viram a lista nova por inteiro: marcar e desmarcar na tela
+    // precisa refletir aqui sem sobrar o que foi tirado.
+    await supabase.from('appointment_exams').delete().eq('appointment_id', id);
+    if (exam_type_ids.length > 0) {
+      await supabase.from('appointment_exams').insert(
+        exam_type_ids.map((examId) => ({
+          tenant_id: ctx.tenant.id,
+          appointment_id: id,
+          exam_type_id: examId,
+          origin: 'manual' as const,
+        })),
+      );
+    }
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'appointments',
+      entityId: id,
+      patientId: data.patient_id,
+      description: 'Agendamento editado',
+      previous: original,
+      next: data,
+    });
+
+    revalidatePath('/agenda');
+    revalidatePath('/agenda/proximo-dia');
+    return ok(data, 'Agendamento atualizado.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -136,7 +231,7 @@ export async function rescheduleAppointment(
         patient_id: original.patient_id,
         company_id: original.company_id,
         order_id: original.order_id,
-        scheduled_at: new Date(newDateTime).toISOString(),
+        scheduled_at: horarioLocalParaISO(newDateTime),
         duration_minutes: original.duration_minutes,
         attendance_kind: original.attendance_kind,
         priority: original.priority,

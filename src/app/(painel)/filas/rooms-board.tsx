@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { CheckCircle2, PhoneCall, Play, RotateCcw, XCircle } from 'lucide-react';
+import { CheckCircle2, PhoneCall, Play, RotateCcw, Trash2, XCircle } from 'lucide-react';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
 import { elapsedFrom } from '@/lib/format';
 import { callNextForRoom, recallTicket, updateExamStatus } from '@/modules/queue/actions';
@@ -148,10 +148,34 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                           </p>
                           <p className="text-xs text-slate-500">{e.exam_types?.name}</p>
                         </div>
-                        <div className="text-right">
+                        <div className="flex shrink-0 items-center gap-2">
                           <p className="text-xs text-slate-500">
                             {elapsedFrom(e.queued_at ?? e.attendances?.checkin_at)}
                           </p>
+                          {/* Paciente que foi embora, desistiu ou entrou por
+                              engano trava a fila enquanto ninguem o tira. */}
+                          <button
+                            type="button"
+                            disabled={pending}
+                            title="Tirar da fila"
+                            aria-label={`Tirar ${e.attendances?.patients?.full_name ?? 'paciente'} da fila`}
+                            onClick={() => {
+                              const nome = e.attendances?.patients?.full_name ?? 'este paciente';
+                              if (!window.confirm(`Tirar ${nome} da fila desta sala?`)) return;
+                              const motivo =
+                                window.prompt('Motivo (ex: desistiu, foi embora):') ?? '';
+                              run(() =>
+                                updateExamStatus(
+                                  e.id,
+                                  'nao_realizado',
+                                  motivo || 'Removido da fila na recepção',
+                                ),
+                              );
+                            }}
+                            className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </li>
                     ))}

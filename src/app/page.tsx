@@ -47,8 +47,10 @@ export default async function Home() {
             <p className="mt-5 text-sm font-bold tracking-[0.35em] text-[#00E5FF] uppercase drop-shadow-[0_0_20px_rgba(0,229,255,0.6)]">
               Medicina Ocupacional
             </p>
+            {/* "Exame" nao cobre pericia, licenca e junta medica, que sao
+                boa parte do que a clinica atende. "Atendimento" cobre tudo. */}
             <p className="mt-2 text-xs tracking-[0.2em] text-white/50 uppercase">
-              Exames com hora marcada
+              Atendimento com hora marcada
             </p>
           </div>
 
@@ -57,7 +59,7 @@ export default async function Home() {
               href="/agendar"
               destaque
               icone={<CalendarCheck className="h-7 w-7 shrink-0" />}
-              titulo="Agendar meu exame"
+              titulo="Fazer agendamento"
               descricao="Escolha o dia e o horário e receba o comprovante"
             />
             <Cartao
@@ -69,7 +71,7 @@ export default async function Home() {
             <Cartao
               href="/meu"
               icone={<Stethoscope className="h-6 w-6 shrink-0" />}
-              titulo="Meus exames e documentos"
+              titulo="Meus documentos"
               descricao="Resultados, recibos e atestados de quem já foi atendido"
             />
           </div>

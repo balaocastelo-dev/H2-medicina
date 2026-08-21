@@ -13,6 +13,7 @@ import {
   Select,
   Textarea,
 } from '@/components/ui';
+import { BuscaSelecao } from '@/components/ui/busca-selecao';
 import { formatCPF } from '@/lib/format';
 import type { ActionResult } from '@/lib/action-result';
 import type { Appointment } from '@/types/entities';
@@ -22,6 +23,19 @@ interface PatientOption {
   full_name: string;
   cpf: string | null;
   company_id: string | null;
+}
+
+export interface ValoresIniciais {
+  id?: string;
+  patient_id?: string;
+  company_id?: string | null;
+  /** AAAA-MM-DDTHH:MM, no fuso da clinica. */
+  scheduled_at?: string;
+  attendance_kind?: string;
+  priority?: string;
+  professional_id?: string | null;
+  exam_type_ids?: string[];
+  notes?: string | null;
 }
 
 type Action = (
@@ -35,108 +49,128 @@ export function AppointmentForm({
   companies,
   examTypes,
   professionals,
+  iniciais,
+  rotuloBotao = 'Criar agendamento',
 }: {
   action: Action;
   patients: PatientOption[];
   companies: { id: string; label: string }[];
   examTypes: { id: string; name: string; code: string; average_minutes: number }[];
   professionals: { id: string; full_name: string }[];
+  /** Preenchido na edicao. */
+  iniciais?: ValoresIniciais;
+  rotuloBotao?: string;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult<Appointment> | null, FormData>(
     action,
     null,
   );
-  const [patientId, setPatientId] = useState('');
-  const [selectedExams, setSelectedExams] = useState<string[]>([]);
+  const [patientId, setPatientId] = useState(iniciais?.patient_id ?? '');
+  const [selectedExams, setSelectedExams] = useState<string[]>(iniciais?.exam_type_ids ?? []);
   const errors = state && !state.ok ? state.fieldErrors : undefined;
 
   const patient = patients.find((p) => p.id === patientId);
-  const estimated = examTypes
-    .filter((e) => selectedExams.includes(e.id))
-    .reduce((sum, e) => sum + e.average_minutes, 0);
+
+  /**
+   * Escolher o paciente ja traz a empresa dele.
+   *
+   * A recepcao cadastra o vinculo uma vez, no paciente; repetir a escolha a
+   * cada agendamento so cria oportunidade de errar.
+   *
+   * Guardamos apenas a escolha manual, e a empresa em uso e calculada no
+   * render. Fosse um estado sincronizado por efeito, haveria um instante em
+   * que a tela mostra a empresa do paciente anterior.
+   */
+  const [empresaManual, setEmpresaManual] = useState<string | null>(
+    iniciais?.company_id ?? null,
+  );
+  const companyId = empresaManual ?? patient?.company_id ?? '';
+  const veioDoPaciente = empresaManual === null && !!patient?.company_id;
+
+  const opcoesPacientes = patients.map((p) => ({
+    id: p.id,
+    rotulo: p.full_name,
+    detalhe: p.cpf ? formatCPF(p.cpf) : null,
+    busca: p.cpf ?? '',
+  }));
+
+  const opcoesEmpresas = companies.map((c) => ({ id: c.id, rotulo: c.label }));
 
   return (
     <form action={formAction} className="space-y-4">
       {state?.ok && <Alert variant="success">{state.message}</Alert>}
       {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
 
+      {iniciais?.id && <input type="hidden" name="id" value={iniciais.id} />}
+
       <Card>
         <CardHeader title="Paciente e empresa" />
         <CardBody className="grid gap-4 md:grid-cols-2">
           <Field label="Paciente" required error={errors?.patient_id}>
-            <Select
+            <BuscaSelecao
               name="patient_id"
+              opcoes={opcoesPacientes}
+              valor={patientId}
+              onChange={(id) => {
+                setPatientId(id);
+                // Paciente novo volta a mandar na empresa.
+                setEmpresaManual(null);
+              }}
+              placeholder="Buscar por nome ou CPF"
+              vazioRotulo="Nenhum paciente com esse nome ou CPF"
               required
-              value={patientId}
-              onChange={(e) => setPatientId(e.target.value)}
-            >
-              <option value="">Selecione</option>
-              {patients.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.full_name}
-                  {p.cpf ? ` — ${formatCPF(p.cpf)}` : ''}
-                </option>
-              ))}
-            </Select>
+            />
           </Field>
-          <Field label="Empresa" error={errors?.company_id}>
-            <Select name="company_id" defaultValue={patient?.company_id ?? ''} key={patientId}>
-              <option value="">Sem empresa</option>
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
+          <Field
+            label="Empresa"
+            error={errors?.company_id}
+            hint={
+              veioDoPaciente ? 'Puxada do cadastro do paciente' : 'Busque pelo nome da empresa'
+            }
+          >
+            <BuscaSelecao
+              name="company_id"
+              opcoes={opcoesEmpresas}
+              valor={companyId}
+              onChange={(id) => setEmpresaManual(id)}
+              placeholder="Sem empresa"
+              vazioRotulo="Nenhuma empresa com esse nome"
+            />
           </Field>
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Data e caracteristicas" />
-        <CardBody className="grid gap-4 md:grid-cols-4">
-          <Field
-            label="Data e hora"
-            required
-            error={errors?.scheduled_at}
-            className="md:col-span-2"
-          >
-            <Input type="datetime-local" name="scheduled_at" required />
-          </Field>
-          <Field label="Duração (min)" error={errors?.duration_minutes}>
+        <CardHeader title="Data e características" />
+        <CardBody className="grid gap-4 md:grid-cols-3">
+          <Field label="Data e hora" required error={errors?.scheduled_at}>
             <Input
-              type="number"
-              name="duration_minutes"
-              min={5}
-              max={480}
-              defaultValue={estimated || 30}
-              key={estimated}
+              type="datetime-local"
+              name="scheduled_at"
+              required
+              defaultValue={iniciais?.scheduled_at ?? ''}
             />
           </Field>
           <Field label="Prioridade" error={errors?.priority}>
-            <Select name="priority" defaultValue="normal">
+            <Select name="priority" defaultValue={iniciais?.priority ?? 'normal'}>
               <option value="normal">Normal</option>
               <option value="prioritario">Prioritário</option>
               <option value="encaixe">Encaixe</option>
             </Select>
           </Field>
-          <Field
-            label="Tipo de atendimento"
-            error={errors?.attendance_kind}
-            className="md:col-span-2"
-          >
-            <Select name="attendance_kind" defaultValue="admissional">
+          <Field label="Tipo de atendimento" error={errors?.attendance_kind}>
+            <Select name="attendance_kind" defaultValue={iniciais?.attendance_kind ?? 'admissional'}>
               <option value="admissional">Admissional</option>
-              <option value="periodico">Periodico</option>
+              <option value="periodico">Periódico</option>
               <option value="demissional">Demissional</option>
-              <option value="mudanca_funcao">Mudanca de função</option>
+              <option value="mudanca_funcao">Mudança de função</option>
               <option value="retorno_trabalho">Retorno ao trabalho</option>
               <option value="consulta">Consulta</option>
               <option value="outro">Outro</option>
             </Select>
           </Field>
-          <Field label="Profissional" error={errors?.professional_id} className="md:col-span-2">
-            <Select name="professional_id" defaultValue="">
+          <Field label="Profissional" error={errors?.professional_id} className="md:col-span-3">
+            <Select name="professional_id" defaultValue={iniciais?.professional_id ?? ''}>
               <option value="">A definir</option>
               {professionals.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -170,28 +204,26 @@ export function AppointmentForm({
                   )
                 }
               />
-              <span>
-                {e.name}
-              </span>
+              <span>{e.name}</span>
             </label>
           ))}
         </CardBody>
       </Card>
 
       <Card>
-        <CardHeader title="Observacoes" />
+        <CardHeader title="Observações" />
         <CardBody>
-          <Textarea name="notes" />
+          <Textarea name="notes" defaultValue={iniciais?.notes ?? ''} />
         </CardBody>
       </Card>
 
       <div className="flex gap-2">
         <Button type="submit" loading={pending}>
-          Criar agendamento
+          {rotuloBotao}
         </Button>
         <Link href="/agenda">
           <Button type="button" variant="outline">
-            Cancelar
+            Voltar
           </Button>
         </Link>
       </div>

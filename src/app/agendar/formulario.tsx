@@ -295,7 +295,7 @@ export function FormularioPublico({
           <CalendarCheck className="h-4 w-4" />
           {data && hora
             ? `Agendar para ${rotuloDoDia(data)} às ${hora}`
-            : 'Agendar meu exame'}
+            : 'Fazer agendamento'}
         </Button>
         <p className="mt-2 text-center text-xs text-slate-500">
           O horário fica reservado e a clínica confirma em seguida.

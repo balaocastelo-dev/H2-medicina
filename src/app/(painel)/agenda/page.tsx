@@ -9,6 +9,7 @@ import { formatDate, formatTime, todayISO } from '@/lib/format';
 import { AgendaDatePicker } from './date-picker';
 import { PedidosOnline, type PedidoOnline } from './pedidos-online';
 import { Calendario, type DiaDoCalendario } from './calendario';
+import { AcoesDoAgendamento } from './acoes-agendamento';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,7 +93,13 @@ export default async function AgendaPage({
     .eq('scheduled_date', date)
     .is('deleted_at', null);
 
-  if (sp.status) query = query.eq('status', sp.status);
+  if (sp.status) {
+    query = query.eq('status', sp.status);
+  } else {
+    // Cancelado e remarcado somem por padrao: quem abre a agenda quer ver
+    // quem vem, nao quem desmarcou. Continuam acessiveis pelo filtro.
+    query = query.not('status', 'in', '("cancelado","remarcado")');
+  }
   if (sp.empresa) query = query.eq('company_id', sp.empresa);
 
   const [rowsRes, companiesRes, mesRes, pedidosRes] = await Promise.all([
@@ -147,6 +154,7 @@ export default async function AgendaPage({
   const calendario = Array.from(porDia.values());
 
   const rows = rowsRes.data ?? [];
+  const podeMexer = ctx.permissions.has('agenda.administrar');
   const total = rows.length;
   const confirmed = rows.filter((r) => r.status === 'confirmado').length;
   const done = rows.filter((r) => r.status === 'realizado').length;
@@ -217,6 +225,7 @@ export default async function AgendaPage({
                 <Th>Prioridade</Th>
                 <Th>Status</Th>
                 <Th>Etapa agora</Th>
+                {podeMexer && <Th className="no-print">Ações</Th>}
               </tr>
             </thead>
             <tbody>
@@ -266,6 +275,16 @@ export default async function AgendaPage({
                       <span className="text-slate-400">não chegou</span>
                     )}
                   </Td>
+                  {podeMexer && (
+                    <Td className="no-print">
+                      <AcoesDoAgendamento
+                        appointmentId={r.id}
+                        paciente={r.patients?.full_name ?? 'este paciente'}
+                        status={r.status}
+                        jaChegou={!!r.attendances?.[0]}
+                      />
+                    </Td>
+                  )}
                 </tr>
               ))}
             </tbody>

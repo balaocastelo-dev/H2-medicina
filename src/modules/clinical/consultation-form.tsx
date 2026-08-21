@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Alert,
   Button,
@@ -41,6 +42,23 @@ export function ConsultationForm({
   );
   const errors = state && !state.ok ? state.fieldErrors : undefined;
   const finished = !!consultation?.finished_at;
+  const router = useRouter();
+
+  /**
+   * Consulta finalizada devolve a tela para a lista de espera.
+   *
+   * O medico chamava o proximo e continuava olhando a ficha de quem acabou
+   * de sair. A pausa curta deixa ele ler o aviso de que o A.S.O. saiu antes
+   * de a tela trocar.
+   */
+  useEffect(() => {
+    if (!state?.ok || !state.message?.includes('finalizada')) return;
+    const t = setTimeout(() => {
+      router.push('/medico');
+      router.refresh();
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [state, router]);
 
   // Blocos de selecao da ficha clinica. Comecam com o que ja foi gravado.
   const [blocos, setBlocos] = useState<Record<string, RespostasBloco>>(() =>

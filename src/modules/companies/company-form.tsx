@@ -13,6 +13,7 @@ import {
   Select,
   Textarea,
 } from '@/components/ui';
+import { CamposEndereco } from '@/modules/patients/campos-endereco';
 import type { ActionResult } from '@/lib/action-result';
 import type { Company } from '@/types/entities';
 
@@ -96,27 +97,10 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
           <Field label="E-mail financeiro" error={errors?.email_financial}>
             <Input type="email" name="email_financial" defaultValue="" />
           </Field>
-          <Field label="CEP" error={errors?.zip_code}>
-            <Input name="zip_code" defaultValue="" />
-          </Field>
-          <Field label="Logradouro" error={errors?.street}>
-            <Input name="street" defaultValue="" />
-          </Field>
-          <Field label="Numero">
-            <Input name="number" defaultValue="" />
-          </Field>
-          <Field label="Complemento">
-            <Input name="complement" defaultValue="" />
-          </Field>
-          <Field label="Bairro">
-            <Input name="district" defaultValue="" />
-          </Field>
-          <Field label="Cidade" error={errors?.city}>
-            <Input name="city" defaultValue={company?.city ?? ''} />
-          </Field>
-          <Field label="UF" error={errors?.state}>
-            <Input name="state" maxLength={2} defaultValue={company?.state ?? ''} />
-          </Field>
+          {/* O endereco vinha com os campos em branco na edicao: quem
+              corrigia um telefone apagava a rua sem perceber. Agora o bloco
+              e o mesmo do paciente, com busca por CEP e valores carregados. */}
+          <CamposEndereco valores={company ?? undefined} erros={errors} />
         </CardBody>
       </Card>
 
