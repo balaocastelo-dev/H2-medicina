@@ -87,6 +87,26 @@ describe('periodoDaVisao', () => {
   it('ano cobre janeiro a dezembro', () => {
     expect(periodoDaVisao('ano', '2026-08-19')).toEqual({ inicio: '2026-01-01', fim: '2026-12-31' });
   });
+
+  it('periodo personalizado usa as duas datas escolhidas', () => {
+    expect(
+      periodoDaVisao('personalizado', '2026-08-19', { inicio: '2026-08-01', fim: '2026-08-15' }),
+    ).toEqual({ inicio: '2026-08-01', fim: '2026-08-15' });
+  });
+
+  it('inverte quando a data final vem antes da inicial', () => {
+    // Acontece enquanto a pessoa ainda esta preenchendo o segundo campo.
+    expect(
+      periodoDaVisao('personalizado', '2026-08-19', { inicio: '2026-08-20', fim: '2026-08-05' }),
+    ).toEqual({ inicio: '2026-08-05', fim: '2026-08-20' });
+  });
+
+  it('personalizado sem intervalo cai no dia de referencia', () => {
+    expect(periodoDaVisao('personalizado', '2026-08-19')).toEqual({
+      inicio: '2026-08-19',
+      fim: '2026-08-19',
+    });
+  });
 });
 
 describe('intervaloDeDias', () => {

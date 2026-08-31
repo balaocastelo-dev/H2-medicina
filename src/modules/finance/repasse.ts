@@ -106,7 +106,7 @@ export function agruparPorMedico(lancamentos: LancamentoRepasse[]): ResumoMedico
   return [...mapa.values()].sort((a, b) => b.total - a.total);
 }
 
-export type Visao = 'dia' | 'semana' | 'mes' | 'ano';
+export type Visao = 'dia' | 'semana' | 'mes' | 'ano' | 'personalizado';
 
 export interface MovimentoFinanceiro {
   /** AAAA-MM-DD */
@@ -168,8 +168,27 @@ export function intervaloDeDias(inicio: string, fim: string): string[] {
   return saida;
 }
 
-/** Janela de datas que cada visao do calendario cobre. */
-export function periodoDaVisao(visao: Visao, referencia: string): { inicio: string; fim: string } {
+/**
+ * Janela de datas que cada visao do calendario cobre.
+ *
+ * `intervalo` so e usado na visao personalizada, que a clinica pediu para
+ * fechar periodos que nao caem em dia, semana, mes ou ano — competencia de
+ * um contrato, por exemplo.
+ */
+export function periodoDaVisao(
+  visao: Visao,
+  referencia: string,
+  intervalo?: { inicio: string; fim: string },
+): { inicio: string; fim: string } {
+  if (visao === 'personalizado') {
+    const inicio = intervalo?.inicio || referencia;
+    const fim = intervalo?.fim || referencia;
+    // Data final antes da inicial acontece enquanto a pessoa ainda esta
+    // preenchendo os dois campos. Inverter mostra algo util em vez de um
+    // calendario vazio.
+    return inicio <= fim ? { inicio, fim } : { inicio: fim, fim: inicio };
+  }
+
   const [ano, mes, dia] = referencia.split('-').map(Number) as [number, number, number];
 
   if (visao === 'dia') return { inicio: referencia, fim: referencia };

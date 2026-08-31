@@ -35,8 +35,13 @@ export function ReceptionBoard({
   examTypes: { id: string; name: string; code: string; price: number | null }[];
   canRegisterPayment: boolean;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(rows[0]?.id ?? null);
-  const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // "dps q finalizar o atendimento retornar a pagina pra a lista de pessoas a
+  //  serem atendidas automaticamente": a selecao e derivada da fila, e nao
+  //  guardada. Quando o paciente liberado sai da lista, o proximo assume
+  //  sozinho, em vez de deixar a recepcao olhando para um cartao vazio.
+  const selected = rows.find((r) => r.id === selectedId) ?? rows[0] ?? null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -49,7 +54,7 @@ export function ReceptionBoard({
               type="button"
               onClick={() => setSelectedId(r.id)}
               className={`flex w-full items-center justify-between gap-2 p-3 text-left hover:bg-slate-50 ${
-                selectedId === r.id ? 'bg-slate-100' : ''
+                selected?.id === r.id ? 'bg-slate-100' : ''
               }`}
             >
               <div className="flex min-w-0 items-center gap-2">

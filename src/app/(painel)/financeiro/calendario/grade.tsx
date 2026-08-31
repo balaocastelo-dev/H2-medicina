@@ -7,7 +7,13 @@ import type { DiaFinanceiro, Visao } from '@/modules/finance/repasse';
 
 const SEMANA = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-const ROTULO: Record<Visao, string> = { dia: 'Dia', semana: 'Semana', mes: 'Mês', ano: 'Ano' };
+const ROTULO: Record<Visao, string> = {
+  dia: 'Dia',
+  semana: 'Semana',
+  mes: 'Mês',
+  ano: 'Ano',
+  personalizado: 'Período',
+};
 
 /** Botoes de visao e navegacao pelo periodo. */
 export function SeletorDeVisao({
@@ -33,6 +39,7 @@ export function SeletorDeVisao({
 
   const deslocar = (sentido: 1 | -1) => {
     const d = new Date(`${referencia}T12:00:00-03:00`);
+    if (visao === 'personalizado') return;
     if (visao === 'dia') d.setDate(d.getDate() + sentido);
     else if (visao === 'semana') d.setDate(d.getDate() + 7 * sentido);
     else if (visao === 'mes') d.setMonth(d.getMonth() + sentido);
@@ -47,7 +54,7 @@ export function SeletorDeVisao({
           <button
             key={v}
             type="button"
-            onClick={() => ir({ visao: v })}
+            onClick={() => ir(v === 'personalizado' ? { visao: v, de: inicio, ate: fim } : { visao: v })}
             className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
               v === visao ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'
             }`}
@@ -56,6 +63,33 @@ export function SeletorDeVisao({
           </button>
         ))}
       </div>
+
+      {/* "calendário opção de incluir a data manual e selecionar o periodo
+          personalizado" — as duas datas so aparecem nessa visao. */}
+      {visao === 'personalizado' && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          <label className="flex items-center gap-1">
+            De
+            <input
+              type="date"
+              value={inicio}
+              max={fim}
+              onChange={(e) => ir({ de: e.target.value, ate: fim })}
+              className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+            />
+          </label>
+          <label className="flex items-center gap-1">
+            até
+            <input
+              type="date"
+              value={fim}
+              min={inicio}
+              onChange={(e) => ir({ de: inicio, ate: e.target.value })}
+              className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+            />
+          </label>
+        </div>
+      )}
 
       <div className="flex items-center gap-2">
         <button
@@ -183,6 +217,11 @@ function descrever(visao: Visao, inicio: string, fim: string): string {
     );
 
   if (visao === 'dia') return fmt(inicio, { dateStyle: 'long' });
+  if (visao === 'personalizado') {
+    return inicio === fim
+      ? fmt(inicio, { dateStyle: 'long' })
+      : `${fmt(inicio, { day: '2-digit', month: 'short', year: 'numeric' })} a ${fmt(fim, { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  }
   if (visao === 'ano') return inicio.slice(0, 4);
   if (visao === 'mes') return fmt(inicio, { month: 'long', year: 'numeric' });
   return `${fmt(inicio, { day: '2-digit', month: 'short' })} a ${fmt(fim, { day: '2-digit', month: 'short' })}`;

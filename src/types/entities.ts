@@ -183,6 +183,8 @@ export interface Company {
   responsible_name: string | null;
   responsible_role: string | null;
   situation: string;
+  /** Falso dispensa a ficha clinica: sai apenas o A.S.O. e os laudos. */
+  emite_ficha_clinica: boolean;
   allow_marketing: boolean;
   legal_basis: string | null;
   last_campaign_at: string | null;

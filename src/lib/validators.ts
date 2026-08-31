@@ -120,6 +120,7 @@ export const companySchema = z.object({
   situation: z.enum(['ativa', 'inativa', 'prospect', 'bloqueada']).default('ativa'),
   legal_basis: optionalText,
   allow_marketing: z.boolean().default(false),
+  emite_ficha_clinica: z.boolean().default(true),
   notes: optionalText,
 });
 export type CompanyInput = z.infer<typeof companySchema>;

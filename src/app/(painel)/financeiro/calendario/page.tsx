@@ -14,19 +14,23 @@ import { GradeCalendario, SeletorDeVisao } from './grade';
 
 export const dynamic = 'force-dynamic';
 
-const VISOES: Visao[] = ['dia', 'semana', 'mes', 'ano'];
+const VISOES: Visao[] = ['dia', 'semana', 'mes', 'ano', 'personalizado'];
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
 
 export default async function CalendarioFinanceiroPage({
   searchParams,
 }: {
-  searchParams: Promise<{ visao?: string; data?: string }>;
+  searchParams: Promise<{ visao?: string; data?: string; de?: string; ate?: string }>;
 }) {
   const ctx = await requirePermission('financeiro.ver');
   const sp = await searchParams;
 
   const visao = (VISOES as string[]).includes(sp.visao ?? '') ? (sp.visao as Visao) : 'mes';
-  const referencia = /^\d{4}-\d{2}-\d{2}$/.test(sp.data ?? '') ? sp.data! : todayISO();
-  const { inicio, fim } = periodoDaVisao(visao, referencia);
+  const referencia = ISO.test(sp.data ?? '') ? sp.data! : todayISO();
+  const { inicio, fim } = periodoDaVisao(visao, referencia, {
+    inicio: ISO.test(sp.de ?? '') ? sp.de! : referencia,
+    fim: ISO.test(sp.ate ?? '') ? sp.ate! : referencia,
+  });
 
   const supabase = await createClient();
   const [pagamentos, contas, repasses] = await Promise.all([

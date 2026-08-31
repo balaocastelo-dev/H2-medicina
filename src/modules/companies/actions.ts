@@ -14,6 +14,8 @@ function parseForm(formData: FormData) {
   return companySchema.safeParse({
     ...raw,
     allow_marketing: raw.allow_marketing === 'on' || raw.allow_marketing === 'true',
+    // Caixa desmarcada nao chega no FormData: ausencia significa "nao emite".
+    emite_ficha_clinica: raw.emite_ficha_clinica === 'on' || raw.emite_ficha_clinica === 'true',
     document: raw.document ? String(raw.document) : null,
     email: raw.email ? String(raw.email) : '',
     email_admin: raw.email_admin ? String(raw.email_admin) : '',

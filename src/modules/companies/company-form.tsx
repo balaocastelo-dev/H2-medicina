@@ -106,6 +106,30 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
 
       <Card>
         <CardHeader
+          title="Documentos do atendimento"
+          description="Vale para todos os colaboradores desta empresa."
+        />
+        <CardBody>
+          <label className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="emite_ficha_clinica"
+              value="on"
+              defaultChecked={company?.emite_ficha_clinica ?? true}
+              className="mt-1"
+            />
+            <span>
+              Emitir ficha clínica
+              <span className="mt-0.5 block text-xs text-slate-500">
+                Desmarque para contratos que pedem apenas o A.S.O. e os laudos dos exames.
+              </span>
+            </span>
+          </label>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
           title="Comunicacao comercial"
           description="Somente empresas com autorização entram nas campanhas. Dados clínicos nunca são usados."
         />
