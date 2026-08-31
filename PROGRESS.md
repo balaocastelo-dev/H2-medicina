@@ -3,12 +3,12 @@
 > Atualize este arquivo ao final de cada sessao. Ele existe para que o trabalho
 > continue exatamente de onde parou, sem recomecar nada.
 
-**Ultima sessao:** ajustes pedidos pela recepcao no WhatsApp entre 20/08 e
-27/08 — psicossocial na ficha, fichas de exame por sala, catalogo completo de
-exames, unificacao de cadastros e anexo de laudos posteriores.
+**Ultima sessao:** fechados oito dos nove itens que restavam da lista da
+recepcao — com destaque para a fila do medico, que nunca chamava tres das
+quatro procedencias.
 
-**Ultimo passo concluido:** migration `0023` e seed `0002` com o que faltava da
-lista da recepcao. Detalhe item a item na secao "Lista da recepcao" abaixo.
+**Ultimo passo concluido:** migrations `0023` a `0025` e seeds `0002` e `0003`,
+todas aplicadas em producao. Detalhe item a item na secao "Lista da recepcao".
 
 **Proximo passo exato:** implementar a loja publica (`/loja`) — vitrine, pagina de
 produto, carrinho, checkout e a conversao de pedido em agendamento. O modelo de
@@ -186,6 +186,38 @@ O que faltava desta lista foi feito na migration `0023` e no seed `0002`.
 Ja estava resolvido em sessoes anteriores: CEP automatico, editar/cancelar
 agendamento, fuso do horario, corpo clinico com CRM, assinatura do medico,
 paineis de TV separados, contratos por empresa e o rotulo da tela inicial.
+
+### Segunda rodada — 31/08
+
+Dos nove itens que ficaram em aberto, oito foram fechados.
+
+- [x] Recepcao volta sozinha para o proximo da fila ao liberar um paciente.
+- [x] Documentos com filtro de situacao ("concluido" / "aguardando
+      liberacao"), tipo e periodo.
+- [x] Financeiro com periodo personalizado, ao lado de dia, semana, mes e ano.
+- [x] **Fila do medico virou fila de pacientes.** `call_next_for_room` so
+      enxerga quem tem exame pendente, e Estado, SISPER e ingresso — tres das
+      quatro procedencias — vao direto para `aguardando_medico` sem exame
+      nenhum. O botao existia nas Salas 3, 8 e 9 e nunca achava essas
+      pessoas. Agora chamar anuncia no painel e abre a ficha na mesma acao.
+- [x] Os consultorios sairam da tela de Filas: estavam nos dois lugares, e
+      duas telas disputando a mesma sala e pedido para chamar duas vezes.
+- [x] Sala que ficava "ocupada" pelo paciente que ja tinha saido.
+- [x] Procedimento (pericia, junta medica) escolhido na recepcao.
+- [x] Ficha clinica com excecao para pericia, junta medica, SISPER e empresa
+      marcada no cadastro. A regra le marcas de dados, nao nomes escritos no
+      codigo: quando o ACL for cadastrado, basta desmarcar a caixa.
+
+**Continua em aberto:** a aba de procedimentos internos. A recepcao disse em
+27/08 que estava escrevendo o conteudo e nunca enviou. Sem saber se e um
+texto unico, uma lista ou um documento por setor, qualquer estrutura que
+inventarmos vai estar errada.
+
+**Falta confirmar com a clinica:** em que sala ficam acuidade, Ishihara,
+psicossocial, Romberg e fadiga (hoje na Sala 1) e se as seis salas antigas
+vazias podem ser desativadas.
+
+---
 
 **Aplicado no banco de producao em 31/08.** O banco estava atrasado em seis
 migrations, nao so na nova: `0017_triagem_e_prioridade`,
