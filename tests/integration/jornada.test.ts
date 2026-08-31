@@ -1,132 +1,30 @@
-/**
- * Percurso completo de um paciente, do agendamento ao documento.
- *
- * Roda contra um Postgres real (PGlite) com as migrations e os seeds do
- * projeto, como usuario autenticado e com o RLS ligado. Cada passo repete o
- * mesmo SQL que a Server Action correspondente executa — e o que permite
- * pegar erro de gatilho, de etapa e de permissao sem subir a aplicacao nem
- * mexer no banco da clinica.
- */
 import { beforeAll, afterAll, describe, expect, it } from 'vitest';
-import { PGlite } from '@electric-sql/pglite';
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
-import { uuid_ossp } from '@electric-sql/pglite/contrib/uuid_ossp';
-import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm';
-import { unaccent } from '@electric-sql/pglite/contrib/unaccent';
-import { citext } from '@electric-sql/pglite/contrib/citext';
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { montarAmbiente, type Ambiente } from './ambiente';
 
-const STUB = `
-create schema if not exists auth;
-create schema if not exists storage;
-do $$ begin
-  if not exists (select 1 from pg_roles where rolname='anon') then create role anon nologin; end if;
-  if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
-  if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin; end if;
-end $$;
-create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text);
-create or replace function auth.uid() returns uuid language sql stable as
-  $f$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $f$;
-create table if not exists storage.buckets (id text primary key, name text, public boolean default false,
-  file_size_limit bigint, allowed_mime_types text[]);
-create table if not exists storage.objects (id uuid primary key default gen_random_uuid(),
-  bucket_id text references storage.buckets(id), name text, owner uuid, metadata jsonb);
-alter table storage.objects enable row level security;
--- No Supabase o papel authenticated enxerga o schema auth para chamar
--- auth.uid(); sem isso qualquer gatilho que grave quem alterou explode.
-grant usage on schema auth to anon, authenticated;
-grant select on auth.users to anon, authenticated;
-`;
-
-let db: PGlite;
-let tenant = '';
+let amb: Ambiente;
 let usuario = '';
 let empresa = '';
 let paciente = '';
 
-/** Executa como o usuario logado, com RLS valendo. */
-async function comoUsuario<T>(fn: () => Promise<T>): Promise<T> {
-  await db.exec('set role authenticated');
-  await db.query(`select set_config('request.jwt.claim.sub', '${usuario}', false)`);
-  try {
-    return await fn();
-  } finally {
-    await db.exec('reset role');
-  }
-}
-
-async function um<T>(sql: string): Promise<T> {
-  const r = await db.query<T>(sql);
-  return r.rows[0] as T;
-}
+/** Atalhos com o mesmo nome de antes, para o corpo do teste nao mudar. */
+const comoUsuario = <T,>(fn: () => Promise<T>) => amb.como(usuario, fn);
+const um = <T,>(sql: string) => amb.um<T>(sql);
 
 beforeAll(async () => {
-  db = new PGlite({ extensions: { pgcrypto, uuid_ossp, pg_trgm, unaccent, citext } });
-  await db.exec(STUB);
-
-  for (const pasta of ['supabase/migrations', 'supabase/seed']) {
-    const dir = join(process.cwd(), pasta);
-    for (const arquivo of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
-      await db.exec(readFileSync(join(dir, arquivo), 'utf8'));
-    }
-  }
-
-  await db.exec(`
-    grant usage on schema public to anon, authenticated;
-    grant select, insert, update, delete on all tables in schema public to anon, authenticated;
-    grant usage, select on all sequences in schema public to anon, authenticated;
-    grant execute on all functions in schema public to anon, authenticated;
-  `);
-
-  tenant = (await um<{ id: string }>(`select id from public.tenants where slug = 'h2'`)).id;
-
-  // Um usuario com todas as permissoes: o objetivo aqui e o percurso, e o
-  // isolamento por permissao ja tem o teste dele em rls.test.ts.
-  usuario = (
-    await um<{ id: string }>(
-      `insert into auth.users (email) values ('percurso@teste.com') returning id`,
-    )
-  ).id;
-
-  await db.exec(`
-    insert into public.profiles (id, tenant_id, full_name, email, council_type, council_number, council_state)
-    values ('${usuario}', '${tenant}', 'Dra. Teste', 'percurso@teste.com', 'CRM', '999999', 'SP');
-
-    insert into public.roles (tenant_id, code, name) values ('${tenant}', 'tudo', 'Tudo');
-
-    insert into public.role_permissions (role_id, permission_code)
-    select r.id, p.code from public.roles r, public.permissions p
-     where r.tenant_id = '${tenant}' and r.code = 'tudo';
-
-    insert into public.user_roles (user_id, role_id, tenant_id)
-    select '${usuario}', id, '${tenant}' from public.roles
-     where tenant_id = '${tenant}' and code = 'tudo';
-  `);
-
-  // A migration 0020 popula o catalogo dos tenants existentes no momento em
-  // que roda. Num banco novo o tenant so nasce no seed, que vem depois — em
-  // producao o catalogo existe porque a migration foi aplicada com a clinica
-  // ja cadastrada. Aqui reproduzimos esse estado.
-  await db.exec(`
-    insert into public.procedure_types (tenant_id, code, name, default_fee, sort_order, emite_ficha_clinica)
-    values ('${tenant}', 'consulta_ocupacional', 'Consulta ocupacional', 0, 100, true),
-           ('${tenant}', 'pericia', 'Pericia', 30, 40, false),
-           ('${tenant}', 'junta_medica', 'Junta Medica', 64, 80, false)
-    on conflict (tenant_id, code) do nothing;
-  `);
+  amb = await montarAmbiente();
+  usuario = await amb.criarUsuario('Dra. Teste', 'percurso@teste.com');
 
   empresa = (
     await um<{ id: string }>(`
       insert into public.companies (tenant_id, legal_name, trade_name, document)
-      values ('${tenant}', 'Empresa de Teste Ltda', 'Empresa Teste', '11222333000181')
+      values ('${amb.tenant}', 'Empresa de Teste Ltda', 'Empresa Teste', '11222333000181')
       returning id
     `)
   ).id;
 });
 
 afterAll(async () => {
-  await db?.close();
+  await amb?.fechar();
 });
 
 describe('percurso do paciente', () => {
@@ -134,7 +32,7 @@ describe('percurso do paciente', () => {
     const r = await comoUsuario(async () =>
       um<{ id: string; full_name: string }>(`
         insert into public.patients (tenant_id, full_name, cpf, birth_date, company_id, job_title)
-        values ('${tenant}', 'Paciente de Teste', '52998224725', '1990-05-10', '${empresa}', 'Motorista')
+        values ('${amb.tenant}', 'Paciente de Teste', '52998224725', '1990-05-10', '${empresa}', 'Motorista')
         returning id, full_name
       `),
     );
@@ -147,14 +45,14 @@ describe('percurso do paciente', () => {
       const a = await um<{ id: string; scheduled_date: string }>(`
         insert into public.appointments
           (tenant_id, patient_id, company_id, scheduled_at, attendance_kind, created_by)
-        values ('${tenant}', '${paciente}', '${empresa}',
+        values ('${amb.tenant}', '${paciente}', '${empresa}',
                 (now() at time zone 'America/Sao_Paulo')::date + time '08:00', 'admissional', '${usuario}')
         returning id, scheduled_date::text
       `);
-      await db.exec(`
+      await amb.db.exec(`
         insert into public.appointment_exams (tenant_id, appointment_id, exam_type_id)
-        select '${tenant}', '${a.id}', id from public.exam_types
-         where tenant_id = '${tenant}' and code in ('AUDIO', 'CLINICO')
+        select '${amb.tenant}', '${a.id}', id from public.exam_types
+         where tenant_id = '${amb.tenant}' and code in ('AUDIO', 'CLINICO')
       `);
       return a;
     });
@@ -164,7 +62,7 @@ describe('percurso do paciente', () => {
   it('3. check-in no totem gera atendimento e senha', async () => {
     const r = await comoUsuario(async () =>
       um<{ payload: { attendance_id: string; ticket: { code: string } } }>(
-        `select public.checkin_patient('${tenant}', null, '${paciente}', 'normal', null, null) as payload`,
+        `select public.checkin_patient('${amb.tenant}', null, '${paciente}', 'normal', null, null) as payload`,
       ),
     );
     expect(r.payload.attendance_id).toBeTruthy();
@@ -176,22 +74,22 @@ describe('percurso do paciente', () => {
 
     await comoUsuario(async () => {
       // startReception
-      await db.exec(`
+      await amb.db.exec(`
         update public.attendances
            set stage_code = 'na_recepcao', reception_started_at = now(), updated_by = '${usuario}'
          where id = '${atendimento}'
       `);
 
       // finishReception: exames confirmados + procedimento + procedencia
-      await db.exec(`
+      await amb.db.exec(`
         insert into public.patient_exams
           (tenant_id, attendance_id, patient_id, exam_type_id, room_id, sort_order, priority, status, created_by)
-        select '${tenant}', '${atendimento}', '${paciente}', et.id, et.default_room_id, et.sort_order,
+        select '${amb.tenant}', '${atendimento}', '${paciente}', et.id, et.default_room_id, et.sort_order,
                'normal', 'pendente', '${usuario}'
           from public.exam_types et
-         where et.tenant_id = '${tenant}' and et.code in ('AUDIO', 'CLINICO')
+         where et.tenant_id = '${amb.tenant}' and et.code in ('AUDIO', 'CLINICO')
       `);
-      await db.exec(`
+      await amb.db.exec(`
         update public.attendances
            set stage_code = 'aguardando_exames',
                needs_triage = false,
@@ -217,12 +115,12 @@ describe('percurso do paciente', () => {
     const sala = await um<{ id: string }>(`
       select r.id from public.rooms r
        join public.exam_types et on et.default_room_id = r.id
-      where et.tenant_id = '${tenant}' and et.code = 'AUDIO'
+      where et.tenant_id = '${amb.tenant}' and et.code = 'AUDIO'
     `);
 
     const chamada = await comoUsuario(async () =>
       um<{ payload: { found: boolean; exam: { id: string } } }>(
-        `select public.call_next_for_room('${tenant}', '${sala.id}') as payload`,
+        `select public.call_next_for_room('${amb.tenant}', '${sala.id}') as payload`,
       ),
     );
     expect(chamada.payload.found).toBe(true);
@@ -231,12 +129,12 @@ describe('percurso do paciente', () => {
 
     // A ficha do exame, preenchida na sala.
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         insert into public.exam_results (tenant_id, patient_exam_id, patient_id, professional_id, values, conclusion, is_altered, created_by)
-        values ('${tenant}', '${exame}', '${paciente}', '${usuario}',
+        values ('${amb.tenant}', '${exame}', '${paciente}', '${usuario}',
                 '{"od_1000":"15","oe_1000":"20"}'::jsonb, 'Dentro dos limites', false, '${usuario}')
       `);
-      await db.exec(`
+      await amb.db.exec(`
         update public.patient_exams
            set status = 'concluido', finished_at = now(), updated_by = '${usuario}'
          where id = '${exame}'
@@ -244,7 +142,7 @@ describe('percurso do paciente', () => {
     });
 
     const tv = await um<{ total: number }>(
-      `select count(*)::int as total from public.tv_calls where tenant_id = '${tenant}'`,
+      `select count(*)::int as total from public.tv_calls where tenant_id = '${amb.tenant}'`,
     );
     expect(tv.total).toBeGreaterThan(0);
   });
@@ -253,7 +151,7 @@ describe('percurso do paciente', () => {
     const atendimento = await atendimentoAtual();
 
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         update public.patient_exams
            set status = 'concluido', finished_at = now(), updated_by = '${usuario}'
          where attendance_id = '${atendimento}' and status <> 'concluido'
@@ -270,7 +168,7 @@ describe('percurso do paciente', () => {
   it('7. o consultorio chama o proximo e assume o paciente', async () => {
     const atendimento = await atendimentoAtual();
     const sala = await um<{ id: string }>(
-      `select id from public.rooms where tenant_id = '${tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
+      `select id from public.rooms where tenant_id = '${amb.tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
     );
 
     // Mesmo caminho de chamarProximoNoConsultorio.
@@ -279,14 +177,14 @@ describe('percurso do paciente', () => {
         update public.attendances
            set stage_code = 'em_consulta', in_service = true, current_room_id = '${sala.id}',
                consultation_started_at = now(), updated_by = '${usuario}'
-         where id = '${atendimento}' and tenant_id = '${tenant}' and in_service = false
+         where id = '${atendimento}' and tenant_id = '${amb.tenant}' and in_service = false
         returning id
       `),
     );
     expect(tomado?.id).toBe(atendimento);
 
     // A segunda sala nao pode levar o mesmo paciente.
-    const segunda = await db.query(`
+    const segunda = await amb.db.query(`
       update public.attendances set in_service = true
        where id = '${atendimento}' and in_service = false returning id
     `);
@@ -297,11 +195,11 @@ describe('percurso do paciente', () => {
     const atendimento = await atendimentoAtual();
 
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         insert into public.medical_consultations
           (tenant_id, attendance_id, patient_id, doctor_id, room_id, verdict, valid_until,
            estilo_vida, exame_fisico, psicossocial, created_by)
-        select '${tenant}', '${atendimento}', '${paciente}', '${usuario}', a.current_room_id, 'apto',
+        select '${amb.tenant}', '${atendimento}', '${paciente}', '${usuario}', a.current_room_id, 'apto',
                 current_date + 365,
                 '{"tabagismo":"não"}'::jsonb,
                 '{"coluna":"normal"}'::jsonb,
@@ -329,19 +227,19 @@ describe('percurso do paciente', () => {
     expect(sala.current_room_id).not.toBeNull();
 
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         update public.medical_consultations set finished_at = now(), signed_at = now()
          where attendance_id = '${atendimento}'
       `);
-      await db.exec(`
+      await amb.db.exec(`
         update public.attendances
            set stage_code = 'aguardando_pagamento', consultation_finished_at = now(),
                in_service = false, current_room_id = null, updated_by = '${usuario}'
          where id = '${atendimento}'
       `);
-      await db.exec(`
+      await amb.db.exec(`
         update public.rooms set status = 'disponivel', current_attendance_id = null
-         where id = '${sala.current_room_id}' and tenant_id = '${tenant}'
+         where id = '${sala.current_room_id}' and tenant_id = '${amb.tenant}'
       `);
     });
 
@@ -355,7 +253,7 @@ describe('percurso do paciente', () => {
   it('10. o atendimento chega ao fim', async () => {
     const atendimento = await atendimentoAtual();
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         update public.attendances
            set stage_code = 'finalizado', finished_at = now(), exit_at = now(), updated_by = '${usuario}'
          where id = '${atendimento}'
@@ -372,18 +270,18 @@ describe('percurso do paciente', () => {
 
 describe('regras que a clinica pediu', () => {
   it('pericia e junta medica nao emitem ficha clinica', async () => {
-    const r = await db.query<{ code: string }>(`
+    const r = await amb.db.query<{ code: string }>(`
       select code from public.procedure_types
-       where tenant_id = '${tenant}' and not emite_ficha_clinica order by code
+       where tenant_id = '${amb.tenant}' and not emite_ficha_clinica order by code
     `);
     expect(r.rows.map((x) => x.code)).toContain('pericia');
     expect(r.rows.map((x) => x.code)).toContain('junta_medica');
   });
 
   it('todo exame ativo tem sala, menos o raio X', async () => {
-    const r = await db.query<{ code: string }>(`
+    const r = await amb.db.query<{ code: string }>(`
       select code from public.exam_types
-       where tenant_id = '${tenant}' and is_active and default_room_id is null
+       where tenant_id = '${amb.tenant}' and is_active and default_room_id is null
     `);
     expect(r.rows.map((x) => x.code)).toEqual(['RAIOX']);
   });
@@ -391,10 +289,10 @@ describe('regras que a clinica pediu', () => {
   it('nenhum exame ativo aponta para sala inativa', async () => {
     // Foi o erro do primeiro seed: as dinamometrias iam para uma sala que a
     // clinica tinha desativado, e nunca apareciam em fila nenhuma.
-    const r = await db.query<{ code: string }>(`
+    const r = await amb.db.query<{ code: string }>(`
       select et.code from public.exam_types et
         join public.rooms r on r.id = et.default_room_id
-       where et.tenant_id = '${tenant}' and et.is_active and not r.is_active
+       where et.tenant_id = '${amb.tenant}' and et.is_active and not r.is_active
     `);
     expect(r.rows).toEqual([]);
   });
@@ -403,13 +301,13 @@ describe('regras que a clinica pediu', () => {
     const duplicado = await comoUsuario(async () =>
       um<{ id: string }>(`
         insert into public.patients (tenant_id, full_name, birth_date, phone)
-        values ('${tenant}', 'Paciente de Teste', '1990-05-10', '19999990000')
+        values ('${amb.tenant}', 'Paciente de Teste', '1990-05-10', '19999990000')
         returning id
       `),
     );
 
     await comoUsuario(async () => {
-      await db.query(`select public.merge_patients('${duplicado.id}', '${paciente}')`);
+      await amb.db.query(`select public.merge_patients('${duplicado.id}', '${paciente}')`);
     });
 
     const origem = await um<{ deleted_at: string | null }>(
@@ -429,7 +327,7 @@ describe('regras que a clinica pediu', () => {
     let recusou = false;
     try {
       await comoUsuario(async () => {
-        await db.query(`select public.merge_patients('${paciente}', '${paciente}')`);
+        await amb.db.query(`select public.merge_patients('${paciente}', '${paciente}')`);
       });
     } catch {
       recusou = true;
@@ -451,20 +349,20 @@ describe('paciente que vai direto ao medico', () => {
       await comoUsuario(async () =>
         um<{ id: string }>(`
           insert into public.patients (tenant_id, full_name, cpf)
-          values ('${tenant}', 'Paciente SISPER', '11144477735') returning id
+          values ('${amb.tenant}', 'Paciente SISPER', '11144477735') returning id
         `),
       )
     ).id;
 
     const checkin = await comoUsuario(async () =>
       um<{ payload: { attendance_id: string } }>(
-        `select public.checkin_patient('${tenant}', null, '${outro}', 'normal', null, null) as payload`,
+        `select public.checkin_patient('${amb.tenant}', null, '${outro}', 'normal', null, null) as payload`,
       ),
     );
     atendimento = checkin.payload.attendance_id;
 
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         update public.attendances
            set stage_code = 'aguardando_medico', needs_triage = false, origin_kind = 'sisper',
                procedure_code = 'pericia', reception_finished_at = now(), updated_by = '${usuario}'
@@ -483,13 +381,13 @@ describe('paciente que vai direto ao medico', () => {
 
   it('o consultorio consegue chamar quem nao tem exame nenhum', async () => {
     const sala = await um<{ id: string }>(
-      `select id from public.rooms where tenant_id = '${tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
+      `select id from public.rooms where tenant_id = '${amb.tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
     );
 
     // A RPC de sala nao acha esse paciente — e o motivo da fila nova.
     const porExame = await comoUsuario(async () =>
       um<{ payload: { found: boolean } }>(
-        `select public.call_next_for_room('${tenant}', '${sala.id}') as payload`,
+        `select public.call_next_for_room('${amb.tenant}', '${sala.id}') as payload`,
       ),
     );
     expect(porExame.payload.found).toBe(false);
@@ -500,7 +398,7 @@ describe('paciente que vai direto ao medico', () => {
         update public.attendances
            set stage_code = 'em_consulta', in_service = true, current_room_id = '${sala.id}',
                consultation_started_at = now(), updated_by = '${usuario}'
-         where id = '${atendimento}' and tenant_id = '${tenant}' and in_service = false
+         where id = '${atendimento}' and tenant_id = '${amb.tenant}' and in_service = false
         returning id
       `),
     );
@@ -521,7 +419,7 @@ describe('paciente que vai direto ao medico', () => {
 
   it('a recepcao consegue cancelar o atendimento no meio da fila', async () => {
     await comoUsuario(async () => {
-      await db.query(
+      await amb.db.query(
         `select public.move_attendance_stage('${atendimento}', 'cancelado', 'Paciente foi embora')`,
       );
     });
@@ -535,11 +433,11 @@ describe('paciente que vai direto ao medico', () => {
 
   it('cancelado sai das filas das salas', async () => {
     const sala = await um<{ id: string }>(
-      `select id from public.rooms where tenant_id = '${tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
+      `select id from public.rooms where tenant_id = '${amb.tenant}' and kind = 'consultorio' and is_active order by sort_order limit 1`,
     );
     const r = await comoUsuario(async () =>
       um<{ payload: { found: boolean } }>(
-        `select public.call_next_for_room('${tenant}', '${sala.id}') as payload`,
+        `select public.call_next_for_room('${amb.tenant}', '${sala.id}') as payload`,
       ),
     );
     expect(r.payload.found).toBe(false);
@@ -552,10 +450,10 @@ describe('laudo que chega depois', () => {
       um<{ id: string; kind: string }>(`
         insert into public.patient_attachments
           (tenant_id, patient_id, exam_type_id, title, kind, bucket, file_path, uploaded_by)
-        select '${tenant}', '${paciente}', et.id, 'Raio X de torax', 'exame', 'attachments',
-               '${tenant}/pacientes/${paciente}/raiox.pdf', '${usuario}'
+        select '${amb.tenant}', '${paciente}', et.id, 'Raio X de torax', 'exame', 'attachments',
+               '${amb.tenant}/pacientes/${paciente}/raiox.pdf', '${usuario}'
           from public.exam_types et
-         where et.tenant_id = '${tenant}' and et.code = 'RAIOX'
+         where et.tenant_id = '${amb.tenant}' and et.code = 'RAIOX'
         returning id, kind
       `),
     );
@@ -574,17 +472,17 @@ describe('laudo que chega depois', () => {
     const duplicado = await comoUsuario(async () =>
       um<{ id: string }>(`
         insert into public.patients (tenant_id, full_name, birth_date)
-        values ('${tenant}', 'Paciente de Teste', '1990-05-10') returning id
+        values ('${amb.tenant}', 'Paciente de Teste', '1990-05-10') returning id
       `),
     );
     await comoUsuario(async () => {
-      await db.exec(`
+      await amb.db.exec(`
         insert into public.patient_attachments
           (tenant_id, patient_id, title, kind, bucket, file_path, uploaded_by)
-        values ('${tenant}', '${duplicado.id}', 'Laudo antigo', 'exame', 'attachments',
-                '${tenant}/pacientes/antigo.pdf', '${usuario}')
+        values ('${amb.tenant}', '${duplicado.id}', 'Laudo antigo', 'exame', 'attachments',
+                '${amb.tenant}/pacientes/antigo.pdf', '${usuario}')
       `);
-      await db.query(`select public.merge_patients('${duplicado.id}', '${paciente}')`);
+      await amb.db.query(`select public.merge_patients('${duplicado.id}', '${paciente}')`);
     });
 
     const total = await um<{ total: number }>(
