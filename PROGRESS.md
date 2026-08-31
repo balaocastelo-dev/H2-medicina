@@ -187,7 +187,20 @@ Ja estava resolvido em sessoes anteriores: CEP automatico, editar/cancelar
 agendamento, fuso do horario, corpo clinico com CRM, assinatura do medico,
 paineis de TV separados, contratos por empresa e o rotulo da tela inicial.
 
-**Falta aplicar no banco antes do deploy:** `0023` e o seed `0002`.
+**Aplicado no banco de producao em 31/08.** O banco estava atrasado em seis
+migrations, nao so na nova: `0017_triagem_e_prioridade`,
+`0018_ficha_aso_financeiro`, `0020`, `0021`, `0022` e `0023`. Sem a
+`0018_ficha_aso_financeiro` os blocos da ficha clinica nao existiam no banco —
+a tela do medico gravava em colunas que nao estavam la.
+
+Tambem foram corrigidos os dados cadastrais da clinica (seed `0003`), que ainda
+eram os de exemplo — Praca da Se, Sao Paulo, telefone (11) 4000-0000 — e era
+esse endereco que saia impresso em todo A.S.O. e atestado.
+
+Os exames novos entram nas salas que a clinica ja usa (Sala 1 para acuidade,
+cores e questionarios; Sala 5 para as dinamometrias, onde a dinamometria
+generica ja era feita). O seed nao cria sala nova: sala inventada vira cartao
+vazio no quadro de filas.
 
 ---
 
