@@ -52,6 +52,7 @@ export default async function NovoAgendamentoPage() {
         description="Vincule paciente, empresa e exames previstos"
       />
       <AppointmentForm
+        intervaloMinutos={Number((ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos ?? 10) || 10}
         action={createAppointment}
         patients={patientsRes.data ?? []}
         companies={(companiesRes.data ?? []).map((c) => ({

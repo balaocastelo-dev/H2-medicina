@@ -4,6 +4,11 @@ import { createClient } from '@/lib/supabase/server';
 import { auditClinicalAccess } from '@/lib/audit';
 import { PageHeader } from '@/components/layout/page-header';
 import { PatientForm } from '@/modules/patients/patient-form';
+import {
+  FerramentasDoPaciente,
+  ListaDeAnexos,
+  type AnexoDoPaciente,
+} from '@/modules/patients/ferramentas-do-paciente';
 import { updatePatient } from '@/modules/patients/actions';
 import { Badge, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -33,7 +38,7 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
 
   if (!patient) notFound();
 
-  const [companiesRes, historyRes] = await Promise.all([
+  const [companiesRes, historyRes, examTypesRes, anexosRes] = await Promise.all([
     supabase
       .from('companies')
       .select('id, legal_name, trade_name')
@@ -48,6 +53,22 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
       .order('checkin_at', { ascending: false })
       .limit(20)
       .returns<HistoryRow[]>(),
+    supabase
+      .from('exam_types')
+      .select('id, name')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('sort_order')
+      .returns<{ id: string; name: string }[]>(),
+    supabase
+      .from('patient_attachments')
+      .select('id, title, description, created_at, exam_types(name)')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('patient_id', id)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false })
+      .returns<AnexoDoPaciente[]>(),
   ]);
 
   if (ctx.permissions.has('clinico.ver')) {
@@ -75,6 +96,28 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
           <PatientForm action={boundAction} patient={patient} companies={companies} />
         </div>
 
+        <div className="space-y-4">
+        <Card>
+          <CardHeader
+            title="Exames anexados"
+            description="Laudos recebidos depois do atendimento"
+          />
+          <CardBody>
+            <ListaDeAnexos
+              anexos={anexosRes.data ?? []}
+              podeRemover={ctx.permissions.has('pacientes.editar')}
+            />
+          </CardBody>
+        </Card>
+
+        <FerramentasDoPaciente
+          patientId={id}
+          patientName={patient.full_name}
+          examTypes={examTypesRes.data ?? []}
+          podeEditar={ctx.permissions.has('pacientes.editar')}
+          podeExcluir={ctx.permissions.has('pacientes.excluir')}
+        />
+
         <Card className="h-fit">
           <CardHeader title="Histórico de atendimentos" />
           {history.length === 0 ? (
@@ -97,6 +140,7 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
             </CardBody>
           )}
         </Card>
+        </div>
       </div>
     </div>
   );

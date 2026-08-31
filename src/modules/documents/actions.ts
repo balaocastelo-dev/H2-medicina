@@ -9,6 +9,12 @@ import { buildDocumentPdf } from './pdf';
 import { marcaDoTenant } from './brand';
 import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
 import { regraDe } from '@/modules/queue/origin-kind';
+import {
+  BLOCO_PSICOSSOCIAL,
+  BLOCOS_FICHA,
+  respondidos,
+  sistemasAlterados,
+} from '@/modules/clinical/ficha-estrutura';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { DocumentKind } from '@/types/entities';
 
@@ -27,6 +33,12 @@ interface AttendanceForDocument {
     verdict: string | null;
     valid_until: string | null;
     conclusion: string | null;
+    antecedentes_profissionais: Record<string, string> | null;
+    antecedentes_pessoais: Record<string, string> | null;
+    estilo_vida: Record<string, string> | null;
+    exame_fisico: Record<string, string> | null;
+    psicossocial: Record<string, string> | null;
+    alteracoes_exame_fisico: string | null;
   }[];
 }
 
@@ -54,7 +66,7 @@ export async function generateAttendanceDocument(
     const { data: attendance } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, patients(full_name, cpf, birth_date), companies(trade_name, legal_name), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion)',
+        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, patients(full_name, cpf, birth_date), companies(trade_name, legal_name), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -189,6 +201,36 @@ export async function generateAttendanceDocument(
     }
 
     const consultation = attendance.medical_consultations?.[0];
+
+    // Ficha clinica: o que o medico marcou na consulta.
+    // "opc de imprimir a ficha com os dados que o medico preencheu"
+    if (kind === 'ficha_clinica' && consultation) {
+      for (const bloco of [...BLOCOS_FICHA, BLOCO_PSICOSSOCIAL]) {
+        const respostas = respondidos(
+          bloco,
+          consultation[bloco.chave] as Record<string, string> | null,
+        );
+        if (respostas.length === 0) continue;
+        sections.push({
+          title: bloco.titulo,
+          lines: respostas.map((r) => ({ label: r.rotulo, value: r.valor })),
+        });
+      }
+
+      const alterados = sistemasAlterados(
+        consultation.exame_fisico as Record<string, string> | null,
+      );
+      if (alterados.length > 0 || consultation.alteracoes_exame_fisico) {
+        sections.push({
+          title: 'Alterações do exame físico',
+          lines: [
+            { label: 'Sistemas alterados', value: alterados.join(', ') || 'nenhum' },
+            { label: 'Descrição', value: consultation.alteracoes_exame_fisico ?? '—' },
+          ],
+        });
+      }
+    }
+
     if (consultation && (kind === 'documento_final' || kind === 'resumo_atendimento')) {
       sections.push({
         title: 'Conclusão médica',

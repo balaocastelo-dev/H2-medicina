@@ -51,6 +51,7 @@ export function AppointmentForm({
   professionals,
   iniciais,
   rotuloBotao = 'Criar agendamento',
+  intervaloMinutos = 10,
 }: {
   action: Action;
   patients: PatientOption[];
@@ -60,6 +61,12 @@ export function AppointmentForm({
   /** Preenchido na edicao. */
   iniciais?: ValoresIniciais;
   rotuloBotao?: string;
+  /**
+   * Passo do relogio, em minutos.
+   * "opcao de agendamento a cada 10 minutos" — configuravel em
+   * Configuracoes -> Agenda, porque a clinica ja pediu 5 e depois 10.
+   */
+  intervaloMinutos?: number;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult<Appointment> | null, FormData>(
     action,
@@ -143,11 +150,17 @@ export function AppointmentForm({
       <Card>
         <CardHeader title="Data e características" />
         <CardBody className="grid gap-4 md:grid-cols-3">
-          <Field label="Data e hora" required error={errors?.scheduled_at}>
+          <Field
+            label="Data e hora"
+            required
+            error={errors?.scheduled_at}
+            hint={`Horários de ${intervaloMinutos} em ${intervaloMinutos} minutos`}
+          >
             <Input
               type="datetime-local"
               name="scheduled_at"
               required
+              step={Math.max(1, intervaloMinutos) * 60}
               defaultValue={iniciais?.scheduled_at ?? ''}
             />
           </Field>

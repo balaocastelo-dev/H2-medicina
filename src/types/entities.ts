@@ -395,6 +395,8 @@ export interface MedicalConsultation {
   estilo_vida: Record<string, string> | null;
   exame_fisico: Record<string, string> | null;
   alteracoes_exame_fisico: string | null;
+  /** Respostas do psicossocial; vazio quando o exame nao foi solicitado. */
+  psicossocial: Record<string, string> | null;
   started_at: string;
   finished_at: string | null;
 }

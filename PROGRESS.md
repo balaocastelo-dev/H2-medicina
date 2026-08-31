@@ -3,13 +3,12 @@
 > Atualize este arquivo ao final de cada sessao. Ele existe para que o trabalho
 > continue exatamente de onde parou, sem recomecar nada.
 
-**Ultima sessao:** fundacao completa — banco, seguranca, autenticacao, white label
-e fluxo clinico ponta a ponta.
+**Ultima sessao:** ajustes pedidos pela recepcao no WhatsApp entre 20/08 e
+27/08 — psicossocial na ficha, fichas de exame por sala, catalogo completo de
+exames, unificacao de cadastros e anexo de laudos posteriores.
 
-**Ultimo passo concluido:** preparacao para deploy na Vercel — `vercel.json`,
-healthcheck em `/api/health`, icones do PWA, `DEPLOY.md` e correcao de dois
-bloqueadores reais de build (pacote `server-only` ausente e validacao de env
-avaliada no import).
+**Ultimo passo concluido:** migration `0023` e seed `0002` com o que faltava da
+lista da recepcao. Detalhe item a item na secao "Lista da recepcao" abaixo.
 
 **Proximo passo exato:** implementar a loja publica (`/loja`) — vitrine, pagina de
 produto, carrinho, checkout e a conversao de pedido em agendamento. O modelo de
@@ -150,6 +149,45 @@ publicos que entram pela mesma porta e seguem por corredores diferentes.
 
 **A migration `0017` precisa ser aplicada antes do deploy do codigo.**
 Sem ela, a recepcao consulta colunas que ainda nao existem.
+
+---
+
+## Lista da recepcao (WhatsApp, 20/08 a 27/08)
+
+A recepcao mandou os ajustes por mensagem ao longo da primeira semana de uso.
+O que faltava desta lista foi feito na migration `0023` e no seed `0002`.
+
+- [x] Modulo medico: retirados "queixa principal" e "anamnese" da tela.
+      As colunas continuam no banco: quem ja tinha texto gravado nao perde.
+- [x] Modulo medico: bloco de **avaliacao psicossocial**, que so aparece
+      quando a recepcao marca o exame PSICO para o paciente. Respostas de
+      risco (ideacao suicida, alucinacao, desorientacao) sobem destacadas
+      logo acima da conclusao de aptidao.
+- [x] **Fichas de cada exame** preenchidas na propria sala — Romberg, fadiga,
+      dinamometria (palmar, escapular, lombar), Ishihara, acuidade e
+      audiometria. As perguntas vieram dos modelos em Word da clinica.
+      Resposta marcada como alerta liga sozinha o "resultado alterado".
+- [x] O que o examinador preencheu aparece no painel lateral do medico,
+      durante a consulta, sem abrir outra tela.
+- [x] Ficha clinica em PDF sai com os blocos que o medico marcou.
+- [x] **Exames da clinica** cadastrados: acuidade, Ishihara, psicossocial,
+      Romberg, fadiga, dinamometria palmar/escapular/lombar e raio X.
+      O raio X nao tem sala — sai como guia de encaminhamento.
+      A dinamometria generica foi desativada em favor das tres especificas.
+- [x] **Unificar cadastros** do mesmo paciente (`merge_patients`): todo o
+      historico migra para o cadastro escolhido e o duplicado e arquivado.
+      A tela sugere sozinha quem tem o mesmo CPF ou o mesmo nome e nascimento.
+- [x] **Excluir paciente** no cadastro e **cancelar o atendimento** direto
+      na recepcao, tirando o paciente do fluxo inteiro (o "tirar da fila"
+      das salas continua removendo so um exame).
+- [x] **Anexar laudo que chega depois** no cadastro do paciente.
+- [x] Agenda de 10 em 10 minutos, configuravel em Configuracoes -> Agenda.
+
+Ja estava resolvido em sessoes anteriores: CEP automatico, editar/cancelar
+agendamento, fuso do horario, corpo clinico com CRM, assinatura do medico,
+paineis de TV separados, contratos por empresa e o rotulo da tela inicial.
+
+**Falta aplicar no banco antes do deploy:** `0023` e o seed `0002`.
 
 ---
 

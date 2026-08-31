@@ -1,3 +1,8 @@
+node_modules
+.next
+.dbg
+.env.local
+debug-*.md
 supabase/full_schema.sql
 tests
 docs

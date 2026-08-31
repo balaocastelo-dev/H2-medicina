@@ -96,6 +96,7 @@ export default async function EditarAgendamentoPage({
         description="Corrija paciente, empresa, data ou exames previstos"
       />
       <AppointmentForm
+        intervaloMinutos={Number((ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos ?? 10) || 10}
         action={updateAppointment}
         rotuloBotao="Salvar alterações"
         patients={patientsRes.data ?? []}

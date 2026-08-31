@@ -6,6 +6,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui';
 import { calcAge, formatCPF, formatDate, formatDateTime } from '@/lib/format';
 import { ConsultationForm } from '@/modules/clinical/consultation-form';
+import { fichaDoExame, preenchidos } from '@/modules/clinical/fichas-de-exame';
 import type { MedicalConsultation, Triage } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,7 @@ interface AttendanceDetail {
     status: string;
     finished_at: string | null;
     not_performed_reason: string | null;
-    exam_types: { name: string } | null;
+    exam_types: { name: string; code: string } | null;
     exam_results: {
       conclusion: string | null;
       is_altered: boolean;
@@ -83,7 +84,7 @@ export default async function MedicoAtendimentoPage({
   const { data } = await supabase
     .from('attendances')
     .select(
-      'id, stage_code, priority, checkin_at, notes, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name), exam_results(conclusion, is_altered, values))',
+      'id, stage_code, priority, checkin_at, notes, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
     )
     .eq('id', id)
     .eq('tenant_id', ctx.tenant.id)
@@ -95,6 +96,10 @@ export default async function MedicoAtendimentoPage({
 
   const triage = data.triages?.[0];
   const consultation = data.medical_consultations?.[0];
+
+  // "incluir perguntas de exame psicossocial, caso essa opcao tenha sido
+  //  flegada na aba recepcao"
+  const psicossocialSolicitado = data.patient_exams.some((e) => e.exam_types?.code === 'PSICO');
 
   return (
     <div>
@@ -177,6 +182,26 @@ export default async function MedicoAtendimentoPage({
                       {e.status}
                     </Badge>
                   </div>
+                  {/* "Ter os exames realizados em uma aba lateral pro medico
+                      visualizar durante a consulta" — o que o examinador
+                      preencheu na sala aparece aqui, sem abrir outra tela. */}
+                  {(() => {
+                    const ficha = fichaDoExame(e.exam_types?.code);
+                    const valores = e.exam_results?.[0]?.values;
+                    if (!ficha || !valores) return null;
+                    const respostas = preenchidos(ficha, valores).slice(0, 12);
+                    if (respostas.length === 0) return null;
+                    return (
+                      <dl className="mt-2 space-y-0.5 rounded bg-slate-50 p-2 text-xs">
+                        {respostas.map((r) => (
+                          <div key={r.rotulo} className="flex justify-between gap-2">
+                            <dt className="text-slate-500">{r.rotulo}</dt>
+                            <dd className="text-right font-medium text-slate-700">{r.valor}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    );
+                  })()}
                   {e.exam_results?.[0]?.conclusion && (
                     <p className="mt-1 text-xs text-slate-600">{e.exam_results[0].conclusion}</p>
                   )}
@@ -197,6 +222,7 @@ export default async function MedicoAtendimentoPage({
 
         <div className="xl:col-span-2">
           <ConsultationForm
+            psicossocialSolicitado={psicossocialSolicitado}
             attendanceId={id}
             consultation={consultation ?? null}
             procedimentos={procedimentos ?? []}

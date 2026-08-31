@@ -16,6 +16,7 @@ const TABS = [
   { key: 'totem', label: 'Totem' },
   { key: 'painel_tv', label: 'Painel de TV' },
   { key: 'filas', label: 'Filas' },
+  { key: 'agenda', label: 'Agenda' },
   { key: 'ecommerce', label: 'Loja' },
   { key: 'pagamento', label: 'Pagamento e Pix' },
   { key: 'email', label: 'E-mail' },
@@ -69,6 +70,9 @@ const FIELDS: Record<string, { name: string; label: string; type?: string; texta
       { name: 'tempo_exibicao_segundos', label: 'Tempo de exibição (s)', type: 'number' },
       { name: 'volume', label: 'Volume (0 a 1)' },
       { name: 'voz', label: 'Idioma da voz' },
+    ],
+    agenda: [
+      { name: 'intervalo_minutos', label: 'Intervalo entre horários (min)', type: 'number' },
     ],
     filas: [
       { name: 'peso_prioridade', label: 'Peso da prioridade', type: 'number' },

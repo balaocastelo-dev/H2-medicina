@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { publicEnv } from '@/lib/env';
+import { isSupabaseConfigured, publicEnv } from '@/lib/env';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
 const loginSchema = z.object({
@@ -38,6 +38,12 @@ async function logAuthEvent(
 }
 
 export async function signIn(_prev: unknown, formData: FormData): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return fail(
+      'Aplicação sem configuração do Supabase. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e refaça o deploy.',
+    );
+  }
+
   const parsed = loginSchema.safeParse({
     email: formData.get('email'),
     password: formData.get('password'),
@@ -107,6 +113,12 @@ export async function requestPasswordReset(
   _prev: unknown,
   formData: FormData,
 ): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return fail(
+      'Aplicação sem configuração do Supabase. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e refaça o deploy.',
+    );
+  }
+
   const email = String(formData.get('email') ?? '').trim();
   if (!email || !z.string().email().safeParse(email).success) {
     return fail('Informe um e-mail válido.');
@@ -122,6 +134,12 @@ export async function requestPasswordReset(
 }
 
 export async function updatePassword(_prev: unknown, formData: FormData): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return fail(
+      'Aplicação sem configuração do Supabase. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY na Vercel e refaça o deploy.',
+    );
+  }
+
   const password = String(formData.get('password') ?? '');
   const confirm = String(formData.get('confirm') ?? '');
   if (password.length < 8) return fail('A senha deve ter ao menos 8 caracteres.');

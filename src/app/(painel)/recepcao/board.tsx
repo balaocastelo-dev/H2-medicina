@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { ArrowRight, CheckCircle2, Copy, Play, QrCode } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Copy, Play, QrCode, Trash2 } from 'lucide-react';
 import {
   Alert,
   Badge,
@@ -22,6 +22,7 @@ import {
 } from '@/modules/queue/reception-actions';
 import { ORIGIN_KINDS, REGRAS, regraDe, type OriginKind } from '@/modules/queue/origin-kind';
 import { formatCNPJ, formatMoney } from '@/lib/format';
+import { moveAttendanceStage } from '@/modules/queue/actions';
 import { BlocoAutorizacao } from './autorizacao';
 import type { ReceptionRow } from './types';
 
@@ -524,6 +525,29 @@ function ReceptionDetail({
           >
             {rotuloDoBotao}
             <ArrowRight className="h-4 w-4" />
+          </Button>
+
+          {/* "opc de apagar o paciente no meio da fila" — tira o paciente do
+              fluxo inteiro, diferente do "tirar da fila" das salas, que so
+              remove um exame. O atendimento e cancelado, nao apagado: o
+              historico continua na auditoria. */}
+          <Button
+            variant="ghost"
+            loading={pending}
+            onClick={() => {
+              const motivo = window.prompt('Motivo para cancelar o atendimento:');
+              if (motivo === null) return;
+              run(async () => {
+                const r = await moveAttendanceStage(
+                  row.id,
+                  'cancelado',
+                  motivo || 'Cancelado pela recepção',
+                );
+                return r.ok ? { ok: true, message: 'Atendimento cancelado.' } : r;
+              });
+            }}
+          >
+            <Trash2 className="h-4 w-4 text-red-600" /> Cancelar atendimento
           </Button>
 
           {!procedenciaDefinida && (

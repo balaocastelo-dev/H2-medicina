@@ -9,7 +9,10 @@ export interface QueueExam {
   room_id: string | null;
   exam_type_id: string;
   attendance_id: string;
+  /** O que a recepcao pediu neste exame (analises, incidencias). */
+  notes: string | null;
   exam_types: { name: string; code: string; default_room_id: string | null } | null;
+  exam_results: { values: Record<string, string>; conclusion: string | null }[];
   attendances: {
     id: string;
     checkin_at: string;

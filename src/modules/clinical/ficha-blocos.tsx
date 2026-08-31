@@ -18,14 +18,17 @@ export function BlocosDaFicha({
   valores,
   alteracoes,
   onChange,
+  extras = [],
 }: {
   valores: Record<string, RespostasBloco>;
   alteracoes: string;
   onChange: (bloco: string, campo: string, valor: string) => void;
+  /** Blocos que so aparecem em alguns atendimentos, como o psicossocial. */
+  extras?: BlocoFicha[];
 }) {
   return (
     <>
-      {BLOCOS_FICHA.map((bloco) => (
+      {[...BLOCOS_FICHA, ...extras].map((bloco) => (
         <Card key={bloco.chave}>
           <CardHeader title={bloco.titulo} description={bloco.descricao} />
           <CardBody>
@@ -37,7 +40,9 @@ export function BlocosDaFicha({
                     ? ['sim', 'não']
                     : campo.tipo === 'normal_alterado'
                       ? ['normal', 'alterado']
-                      : (campo.opcoes ?? []);
+                      : campo.tipo === 'psicossocial'
+                        ? ['sim', 'às vezes', 'não']
+                        : (campo.opcoes ?? []);
 
                 return (
                   <div
@@ -48,7 +53,7 @@ export function BlocosDaFicha({
                     <div className="flex flex-wrap gap-1">
                       {opcoes.map((op) => {
                         const marcado = atual === op;
-                        const alerta = op === 'alterado' || op === 'sim';
+                        const alerta = op === 'alterado' || op === 'sim' || op === 'às vezes';
                         return (
                           <button
                             key={op}

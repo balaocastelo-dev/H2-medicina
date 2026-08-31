@@ -17,7 +17,12 @@ import { saveConsultation } from './actions';
 import type { ActionResult } from '@/lib/action-result';
 import type { MedicalConsultation } from '@/types/entities';
 import { BlocosDaFicha } from './ficha-blocos';
-import { BLOCOS_FICHA, type RespostasBloco } from './ficha-estrutura';
+import {
+  alertasPsicossociais,
+  BLOCO_PSICOSSOCIAL,
+  BLOCOS_FICHA,
+  type RespostasBloco,
+} from './ficha-estrutura';
 
 export function ConsultationForm({
   attendanceId,
@@ -26,9 +31,12 @@ export function ConsultationForm({
   procedimentoPadrao,
   medicos = [],
   medicoPadrao,
+  psicossocialSolicitado = false,
 }: {
   attendanceId: string;
   consultation: MedicalConsultation | null;
+  /** A recepcao marcou o exame psicossocial para este paciente. */
+  psicossocialSolicitado?: boolean;
   /** Catalogo de repasse; vazio esconde o campo. */
   procedimentos?: { code: string; name: string }[];
   procedimentoPadrao?: string;
@@ -63,7 +71,7 @@ export function ConsultationForm({
   // Blocos de selecao da ficha clinica. Comecam com o que ja foi gravado.
   const [blocos, setBlocos] = useState<Record<string, RespostasBloco>>(() =>
     Object.fromEntries(
-      BLOCOS_FICHA.map((b) => [
+      [...BLOCOS_FICHA, BLOCO_PSICOSSOCIAL].map((b) => [
         b.chave,
         (consultation?.[b.chave] as RespostasBloco | undefined) ?? {},
       ]),
@@ -71,6 +79,8 @@ export function ConsultationForm({
   );
   const marcar = (bloco: string, campo: string, valor: string) =>
     setBlocos((atual) => ({ ...atual, [bloco]: { ...atual[bloco], [campo]: valor } }));
+
+  const alertasPsico = alertasPsicossociais(blocos.psicossocial);
 
   return (
     <Card>
@@ -88,16 +98,9 @@ export function ConsultationForm({
           <input type="hidden" name="attendance_id" value={attendanceId} />
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Field label="Queixa principal" error={errors?.chief_complaint}>
-              <Textarea
-                name="chief_complaint"
-                defaultValue={consultation?.chief_complaint ?? ''}
-                rows={2}
-              />
-            </Field>
-            <Field label="Anamnese" error={errors?.anamnesis}>
-              <Textarea name="anamnesis" defaultValue={consultation?.anamnesis ?? ''} rows={2} />
-            </Field>
+            {/* "Modulo medico: retirar 'queixa principal' e 'anamnese'" —
+                as colunas continuam no banco para nao perder o que ja foi
+                gravado; apenas sairam da tela. */}
             <Field label="Historia clínica">
               <Textarea
                 name="clinical_history"
@@ -156,11 +159,26 @@ export function ConsultationForm({
 
           <div className="space-y-4">
             <BlocosDaFicha
+              extras={psicossocialSolicitado ? [BLOCO_PSICOSSOCIAL] : []}
               valores={blocos}
               alteracoes={consultation?.alteracoes_exame_fisico ?? ''}
               onChange={marcar}
             />
           </div>
+
+          {/* O que o psicossocial apontou fica visivel na hora de fechar a
+              aptidao, e nao so no fim da lista de perguntas. */}
+          {psicossocialSolicitado && alertasPsico.length > 0 && (
+            <Alert variant="warning" title="Respostas que pedem atenção">
+              <ul className="list-disc pl-4">
+                {alertasPsico.map((a) => (
+                  <li key={a.rotulo}>
+                    {a.rotulo} <strong>{a.valor}</strong>
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          )}
 
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="Conclusão de aptidão" error={errors?.verdict} required>

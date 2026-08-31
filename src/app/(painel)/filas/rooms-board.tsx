@@ -5,6 +5,7 @@ import { CheckCircle2, PhoneCall, Play, RotateCcw, Trash2, XCircle } from 'lucid
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
 import { elapsedFrom } from '@/lib/format';
 import { callNextForRoom, recallTicket, updateExamStatus } from '@/modules/queue/actions';
+import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
 import type { QueueExam, RoomInfo } from './types';
 
 export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueExam[] }) {
@@ -71,6 +72,11 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                       {active.attendances?.patients?.full_name ?? '—'}
                     </p>
                     <p className="text-sm text-slate-600">{active.exam_types?.name}</p>
+                    {active.notes && (
+                      <p className="mt-1 rounded bg-white/70 p-2 text-xs text-slate-700">
+                        <strong>Solicitado:</strong> {active.notes}
+                      </p>
+                    )}
                     <div className="mt-3 flex flex-wrap gap-2">
                       {active.status === 'chamado' && (
                         <>
@@ -122,6 +128,21 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                       >
                         <XCircle className="h-4 w-4" /> Não realizado
                       </Button>
+                    </div>
+
+                    {/* "anexar fichas de cada exame respectivo nas abas para
+                        preenchimento manual durante realizacao do examinador" */}
+                    <div className="mt-3 rounded-lg bg-white p-3">
+                      <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                        Ficha do exame
+                      </p>
+                      <FichaDeExameForm
+                        key={active.id}
+                        patientExamId={active.id}
+                        codigoExame={active.exam_types?.code}
+                        valoresIniciais={active.exam_results?.[0]?.values ?? {}}
+                        conclusaoInicial={active.exam_results?.[0]?.conclusion ?? ''}
+                      />
                     </div>
                   </div>
                 ) : (

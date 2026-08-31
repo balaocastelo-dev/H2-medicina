@@ -7,7 +7,13 @@
  * sem tocar em tela nem em banco.
  */
 
-export type TipoCampo = 'sim_nao' | 'normal_alterado' | 'opcoes' | 'texto';
+export type TipoCampo =
+  | 'sim_nao'
+  | 'normal_alterado'
+  | 'opcoes'
+  /** Sim / às vezes / não, como na ficha de risco psicossocial. */
+  | 'psicossocial'
+  | 'texto';
 
 export interface CampoFicha {
   chave: string;
@@ -17,7 +23,12 @@ export interface CampoFicha {
 }
 
 export interface BlocoFicha {
-  chave: 'antecedentes_profissionais' | 'antecedentes_pessoais' | 'estilo_vida' | 'exame_fisico';
+  chave:
+    | 'antecedentes_profissionais'
+    | 'antecedentes_pessoais'
+    | 'estilo_vida'
+    | 'exame_fisico'
+    | 'psicossocial';
   titulo: string;
   descricao?: string;
   campos: CampoFicha[];
@@ -100,6 +111,104 @@ export const BLOCOS_FICHA: BlocoFicha[] = [
   },
 ];
 
+/**
+ * Avaliacao de fatores de risco psicossocial.
+ *
+ * "incluir perguntas de exame psicossocial, caso essa opcao tenha sido
+ *  flegada na aba recepcao" — por isso este bloco fica fora de BLOCOS_FICHA
+ *  e so entra na tela quando o exame esta na lista do paciente.
+ *
+ * As perguntas sao as da ficha em papel da clinica.
+ */
+export const BLOCO_PSICOSSOCIAL: BlocoFicha = {
+  chave: 'psicossocial',
+  titulo: 'Avaliação de fatores de risco psicossocial',
+  descricao: 'Incluída porque a recepção marcou este exame para o paciente.',
+  campos: [
+    { chave: 'clareza', rotulo: 'Tem dificuldade de pensar com clareza?', tipo: 'psicossocial' },
+    { chave: 'triste', rotulo: 'Tem se sentido triste ultimamente?', tipo: 'psicossocial' },
+    { chave: 'chorado', rotulo: 'Tem chorado sem motivo?', tipo: 'psicossocial' },
+    {
+      chave: 'sofrimento_trabalho',
+      rotulo: 'O trabalho lhe causa sofrimento?',
+      tipo: 'psicossocial',
+    },
+    { chave: 'interesse', rotulo: 'Tem perdido interesse pelas coisas?', tipo: 'psicossocial' },
+    { chave: 'ideacao', rotulo: 'Já teve ideias de acabar com a vida?', tipo: 'psicossocial' },
+    { chave: 'cansaco', rotulo: 'Sente-se cansado o tempo todo?', tipo: 'psicossocial' },
+    { chave: 'antecedente_psi', rotulo: 'Possui antecedente psiquiátrico?', tipo: 'psicossocial' },
+    {
+      chave: 'familiar_psi',
+      rotulo: 'Possui familiares com antecedentes psiquiátricos?',
+      tipo: 'psicossocial',
+    },
+    { chave: 'drogas', rotulo: 'Faz uso de alguma droga?', tipo: 'psicossocial' },
+    {
+      chave: 'psicotropicos',
+      rotulo: 'Faz uso de antidepressivo, antipsicótico ou calmante?',
+      tipo: 'psicossocial',
+    },
+    { chave: 'alcool', rotulo: 'Faz uso de bebida alcoólica diariamente?', tipo: 'psicossocial' },
+    {
+      chave: 'vozes',
+      rotulo: 'Costuma ouvir vozes de pessoas que não estão presentes?',
+      tipo: 'psicossocial',
+    },
+    { chave: 'vultos', rotulo: 'Enxerga vultos ou tem visões?', tipo: 'psicossocial' },
+    { chave: 'medo_altura', rotulo: 'Tem medo de altura?', tipo: 'psicossocial' },
+    { chave: 'medo_espaco_fechado', rotulo: 'Tem medo de espaço fechado?', tipo: 'psicossocial' },
+    { chave: 'medo_escuro', rotulo: 'Tem medo do escuro?', tipo: 'psicossocial' },
+    {
+      chave: 'orientacao',
+      rotulo: 'Localiza-se no tempo e no espaço?',
+      tipo: 'sim_nao',
+    },
+    {
+      chave: 'aparencia',
+      rotulo: 'Apresentação e postura adequadas na consulta?',
+      tipo: 'sim_nao',
+    },
+    {
+      chave: 'encaminhamento',
+      rotulo: 'Necessita encaminhamento psicológico ou psiquiátrico?',
+      tipo: 'sim_nao',
+    },
+  ],
+};
+
+/**
+ * Respostas que pedem atencao do medico ao fechar a aptidao.
+ * A ideacao suicida entra mesmo quando a resposta e "às vezes".
+ */
+const ALERTA_PSICOSSOCIAL: Record<string, string[]> = {
+  clareza: ['sim'],
+  triste: ['sim'],
+  chorado: ['sim'],
+  sofrimento_trabalho: ['sim'],
+  interesse: ['sim'],
+  ideacao: ['sim', 'às vezes'],
+  cansaco: ['sim'],
+  antecedente_psi: ['sim'],
+  drogas: ['sim'],
+  psicotropicos: ['sim'],
+  alcool: ['sim'],
+  vozes: ['sim', 'às vezes'],
+  vultos: ['sim', 'às vezes'],
+  encaminhamento: ['sim'],
+  orientacao: ['não'],
+  aparencia: ['não'],
+};
+
+/** Perguntas do psicossocial que merecem destaque na tela e no PDF. */
+export function alertasPsicossociais(
+  respostas: RespostasBloco | null | undefined,
+): { rotulo: string; valor: string }[] {
+  const dados = respostas ?? {};
+  return BLOCO_PSICOSSOCIAL.campos
+    .filter((campo) => (ALERTA_PSICOSSOCIAL[campo.chave] ?? []).includes(dados[campo.chave] ?? ''))
+    .map((campo) => ({ rotulo: campo.rotulo, valor: dados[campo.chave] ?? '' }));
+}
+
 export type RespostasBloco = Record<string, string>;
 
 /** Valor padrao de um bloco: nada marcado. */
@@ -132,7 +241,14 @@ export function sistemasAlterados(exame: RespostasBloco | null | undefined): str
  */
 export function lerBlocos(formData: FormData): Record<string, RespostasBloco> {
   const saida: Record<string, RespostasBloco> = {};
-  for (const bloco of BLOCOS_FICHA) {
+  // O psicossocial entra junto: quando o bloco nao esta na tela, nenhum
+  // campo chega no FormData e ele fica vazio, sem apagar nada.
+  for (const bloco of [...BLOCOS_FICHA, BLOCO_PSICOSSOCIAL]) {
+    // Bloco que nao apareceu na tela nao manda campo nenhum. Sem esta
+    // verificacao, salvar a consulta apagaria o psicossocial ja respondido.
+    const apareceuNaTela = bloco.campos.some((c) => formData.has(`${bloco.chave}.${c.chave}`));
+    if (!apareceuNaTela) continue;
+
     const respostas: RespostasBloco = {};
     for (const campo of bloco.campos) {
       const valor = formData.get(`${bloco.chave}.${campo.chave}`);

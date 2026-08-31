@@ -199,6 +199,92 @@ export async function softDeletePatient(id: string): Promise<ActionResult> {
   }
 }
 
+/**
+ * Unifica dois cadastros do mesmo paciente.
+ * "criar opc de mesclar clientes" / "Unificar cadastros de pacientes"
+ *
+ * Todo o historico — agendamentos, atendimentos, exames, documentos e
+ * pagamentos — passa para o cadastro escolhido; o duplicado e arquivado.
+ */
+export async function mergePatients(
+  origemId: string,
+  destinoId: string,
+): Promise<ActionResult<{ destinoId: string }>> {
+  try {
+    const ctx = await assertPermission('pacientes.editar');
+    if (origemId === destinoId) return fail('Selecione dois cadastros diferentes.');
+
+    const supabase = await createClient();
+    const { error } = await supabase.rpc('merge_patients', {
+      p_source: origemId,
+      p_target: destinoId,
+    });
+    if (error) return fail(toFriendlyError(error));
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'patients',
+      entityId: destinoId,
+      patientId: destinoId,
+      description: 'Cadastros de paciente unificados',
+    });
+
+    revalidatePath('/pacientes');
+    revalidatePath(`/pacientes/${destinoId}`);
+    revalidatePath(`/pacientes/${origemId}`);
+    return ok({ destinoId }, 'Cadastros unificados.');
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Cadastros que parecem ser da mesma pessoa: mesmo CPF, ou mesmo nome com a
+ * mesma data de nascimento. Alimenta a sugestao de unificacao na tela.
+ */
+export async function findMergeCandidates(
+  patientId: string,
+): Promise<ActionResult<{ id: string; full_name: string; cpf: string | null; rule: string }[]>> {
+  try {
+    const ctx = await assertPermission('pacientes.ver');
+    const supabase = await createClient();
+
+    const { data: patient } = await supabase
+      .from('patients')
+      .select('id, full_name, cpf, birth_date')
+      .eq('id', patientId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{
+        id: string;
+        full_name: string;
+        cpf: string | null;
+        birth_date: string | null;
+      }>();
+    if (!patient) return fail('Paciente não encontrado.');
+
+    const duplicados = await findDuplicates(ctx.tenant.id, patient, patientId);
+    if (duplicados.length === 0) return ok([]);
+
+    const { data } = await supabase
+      .from('patients')
+      .select('id, full_name, cpf')
+      .in(
+        'id',
+        duplicados.map((d) => d.id),
+      )
+      .returns<{ id: string; full_name: string; cpf: string | null }[]>();
+
+    return ok(
+      (data ?? []).map((p) => ({
+        ...p,
+        rule: duplicados.find((d) => d.id === p.id)?.rule ?? 'cpf',
+      })),
+    );
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
 /** Busca rapida usada pelo totem, recepcao e agenda. */
 export async function searchPatients(term: string): Promise<Patient[]> {
   const ctx = await assertPermission('pacientes.ver');
