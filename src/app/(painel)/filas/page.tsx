@@ -19,7 +19,10 @@ export default async function FilasPage() {
       .select('id, name, code, kind, status, current_attendance_id')
       .eq('tenant_id', ctx.tenant.id)
       .eq('is_active', true)
-      .in('kind', ['exame', 'consultorio', 'triagem'])
+      // Os consultorios saem daqui: a fila do medico passou a ser chamada na
+      // propria tela do medico, onde a fila e de pacientes e nao de exames.
+      // Mostrar nos dois lugares fazia duas telas disputarem a mesma sala.
+      .in('kind', ['exame', 'triagem'])
       .is('deleted_at', null)
       .order('sort_order')
       .returns<RoomInfo[]>(),

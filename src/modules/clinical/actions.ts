@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import { assertPermission } from '@/lib/auth';
 import { audit, auditClinicalAccess } from '@/lib/audit';
+import { liberarSala } from '@/modules/queue/consultorio-actions';
 import { consultationSchema, triageSchema } from '@/lib/validators';
 import { lerBlocos } from './ficha-estrutura';
 import { gerarAso } from '@/modules/documents/aso';
@@ -151,6 +152,15 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // INSERT — que marca 'em consulta' — e o paciente ficava travado ali.
     // Por isso a etapa e definida aqui, explicitamente.
     if (finish) {
+      // A sala fica guardada antes de limpar o atendimento: depois do update
+      // nao ha mais como saber de qual consultorio o paciente saiu.
+      const { data: emAtendimento } = await supabase
+        .from('attendances')
+        .select('current_room_id')
+        .eq('id', parsed.data.attendance_id)
+        .eq('tenant_id', ctx.tenant.id)
+        .maybeSingle<{ current_room_id: string | null }>();
+
       await supabase
         .from('attendances')
         .update({
@@ -162,6 +172,12 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
         })
         .eq('id', parsed.data.attendance_id)
         .eq('tenant_id', ctx.tenant.id);
+
+      // Sem isso o consultorio seguia "ocupado" pelo paciente que ja saiu, e
+      // o botao de chamar o proximo nunca voltava.
+      if (emAtendimento?.current_room_id) {
+        await liberarSala(emAtendimento.current_room_id, ctx.tenant.id);
+      }
     }
 
     // Ao finalizar, o A.S.O. sai sozinho: e o documento que a empresa espera.
