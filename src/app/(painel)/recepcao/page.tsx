@@ -6,7 +6,7 @@ import { startOfTodayISO } from '@/lib/format';
 import { ReceptionBoard } from './board';
 import { ReceptionLiveRefresh } from './live-refresh';
 
-import type { ReceptionRow } from './types';
+import type { ProcedimentoOpcao, ReceptionRow } from './types';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,11 +14,11 @@ export default async function RecepcaoPage() {
   const ctx = await requirePermission('recepcao.operar');
   const supabase = await createClient();
 
-  const [rowsRes, examsRes] = await Promise.all([
+  const [rowsRes, examsRes, procedimentosRes] = await Promise.all([
     supabase
       .from('attendances')
       .select(
-        'id, stage_code, priority, checkin_at, needs_triage, payment_status, notes, order_id, origin_kind, origin_kind_set_at, company_id, patients(id, full_name, cpf, rg, job_title, default_origin_kind), companies(trade_name, legal_name), queue_tickets(code), patient_exams(id, exam_type_id, status), patient_signatures(id, purpose, method, status, signed_at, document_id, deleted_at)',
+        'id, stage_code, priority, checkin_at, needs_triage, payment_status, notes, order_id, origin_kind, origin_kind_set_at, procedure_code, company_id, patients(id, full_name, cpf, rg, job_title, default_origin_kind), companies(trade_name, legal_name), queue_tickets(code), patient_exams(id, exam_type_id, status), patient_signatures(id, purpose, method, status, signed_at, document_id, deleted_at)',
       )
       .eq('tenant_id', ctx.tenant.id)
       .in('stage_code', ['aguardando_recepcao', 'na_recepcao'])
@@ -37,6 +37,15 @@ export default async function RecepcaoPage() {
       .is('deleted_at', null)
       .order('sort_order')
       .returns<{ id: string; name: string; code: string; price: number | null }[]>(),
+    // "colocar essa opc na area da recepcao qnd for direcionar para quais
+    //  exames" — pericia, junta medica e afins saem da tela do medico.
+    supabase
+      .from('procedure_types')
+      .select('code, name, emite_ficha_clinica')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('is_active', true)
+      .order('sort_order')
+      .returns<ProcedimentoOpcao[]>(),
   ]);
 
   const rows = rowsRes.data ?? [];
@@ -68,6 +77,7 @@ export default async function RecepcaoPage() {
         <ReceptionBoard
           rows={rows}
           examTypes={examsRes.data ?? []}
+          procedimentos={procedimentosRes.data ?? []}
           canRegisterPayment={ctx.permissions.has('financeiro.registrar')}
         />
       )}

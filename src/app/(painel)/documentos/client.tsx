@@ -20,15 +20,33 @@ const KINDS: { value: DocumentKind; label: string }[] = [
   { value: 'comprovante_agendamento', label: 'Comprovante de agendamento' },
 ];
 
+export interface AtendimentoParaEmissao {
+  id: string;
+  checkin_at: string;
+  patients: { full_name: string } | null;
+  /** Falso em pericia, junta medica, SISPER e empresa so com A.S.O. */
+  emiteFicha: boolean;
+  /** Explicacao curta, mostrada quando a ficha nao esta disponivel. */
+  motivoSemFicha: string | null;
+}
+
 export function GenerateDocumentCard({
   attendances,
 }: {
-  attendances: { id: string; checkin_at: string; patients: { full_name: string } | null }[];
+  attendances: AtendimentoParaEmissao[];
 }) {
   const [attendanceId, setAttendanceId] = useState('');
   const [kind, setKind] = useState<DocumentKind>('atestado_comparecimento');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // "emitir ficha clinica exceto para pericia, acl, sisper e empresa agape":
+  // a opcao some da lista em vez de deixar a recepcao emitir e tomar erro.
+  const atendimento = attendances.find((a) => a.id === attendanceId) ?? null;
+  const tipos = KINDS.filter(
+    (k) => k.value !== 'ficha_clinica' || !atendimento || atendimento.emiteFicha,
+  );
+  const tipoEscolhido = tipos.some((k) => k.value === kind) ? kind : (tipos[0]?.value ?? kind);
 
   return (
     <Card>
@@ -49,9 +67,15 @@ export function GenerateDocumentCard({
               ))}
             </Select>
           </Field>
-          <Field label="Tipo">
-            <Select value={kind} onChange={(e) => setKind(e.target.value as DocumentKind)}>
-              {KINDS.map((k) => (
+          <Field
+            label="Tipo"
+            hint={atendimento && !atendimento.emiteFicha ? (atendimento.motivoSemFicha ?? undefined) : undefined}
+          >
+            <Select
+              value={tipoEscolhido}
+              onChange={(e) => setKind(e.target.value as DocumentKind)}
+            >
+              {tipos.map((k) => (
                 <option key={k.value} value={k.value}>
                   {k.label}
                 </option>
@@ -65,7 +89,7 @@ export function GenerateDocumentCard({
             disabled={!attendanceId}
             onClick={() =>
               startTransition(async () => {
-                const result = await generateAttendanceDocument(attendanceId, kind);
+                const result = await generateAttendanceDocument(attendanceId, tipoEscolhido);
                 setMessage({
                   ok: result.ok,
                   text: result.ok ? (result.message ?? 'Gerado.') : result.error,

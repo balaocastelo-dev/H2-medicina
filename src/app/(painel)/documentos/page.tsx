@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, EmptyState, Table, Td, Th } from '@/components/ui';
 import { daysAgoISO, formatDateTime, todayISO } from '@/lib/format';
 import { DocumentActions, GenerateDocumentCard } from './client';
+import { avaliarFichaClinica } from '@/modules/documents/ficha-clinica';
 import { FiltrosDeDocumento } from './filtros';
 
 export const dynamic = 'force-dynamic';
@@ -58,11 +59,13 @@ export default async function DocumentosPage({
 
   if (sp.tipo) consulta = consulta.eq('kind', sp.tipo);
 
-  const [docsRes, attendancesRes] = await Promise.all([
+  const [docsRes, attendancesRes, procedimentosRes] = await Promise.all([
     consulta.order('generated_at', { ascending: false }).limit(300).returns<DocRow[]>(),
     supabase
       .from('attendances')
-      .select('id, checkin_at, patients(full_name)')
+      .select(
+        'id, checkin_at, origin_kind, procedure_code, patients(full_name), companies(emite_ficha_clinica)',
+      )
       .eq('tenant_id', ctx.tenant.id)
       // Somente quem passou pelo pagamento: a esteira e recepcao -> ... ->
       // medico -> pagamento -> documentos.
@@ -71,8 +74,45 @@ export default async function DocumentosPage({
       .is('deleted_at', null)
       .order('checkin_at', { ascending: false })
       .limit(100)
-      .returns<{ id: string; checkin_at: string; patients: { full_name: string } | null }[]>(),
+      .returns<
+        {
+          id: string;
+          checkin_at: string;
+          origin_kind: string | null;
+          procedure_code: string | null;
+          patients: { full_name: string } | null;
+          companies: { emite_ficha_clinica: boolean } | null;
+        }[]
+      >(),
+    supabase
+      .from('procedure_types')
+      .select('code, emite_ficha_clinica')
+      .eq('tenant_id', ctx.tenant.id)
+      .returns<{ code: string; emite_ficha_clinica: boolean }[]>(),
   ]);
+
+  // A regra da ficha clinica depende do procedimento, da procedencia e da
+  // empresa. Resolvida aqui, a tela ja abre com a lista de tipos certa.
+  const fichaPorProcedimento = new Map(
+    (procedimentosRes.data ?? []).map((p) => [p.code, p.emite_ficha_clinica]),
+  );
+
+  const atendimentos = (attendancesRes.data ?? []).map((a) => {
+    const regra = avaliarFichaClinica({
+      origin_kind: a.origin_kind,
+      procedimentoEmiteFicha: a.procedure_code
+        ? (fichaPorProcedimento.get(a.procedure_code) ?? null)
+        : null,
+      empresaEmiteFicha: a.companies?.emite_ficha_clinica ?? null,
+    });
+    return {
+      id: a.id,
+      checkin_at: a.checkin_at,
+      patients: a.patients,
+      emiteFicha: regra.emite,
+      motivoSemFicha: regra.motivo,
+    };
+  });
 
   /**
    * "ter um filtro para 'concluidos' e 'em aberto' das pessoas que ainda nao
@@ -98,7 +138,7 @@ export default async function DocumentosPage({
       />
 
       <div className="mb-4">
-        <GenerateDocumentCard attendances={attendancesRes.data ?? []} />
+        <GenerateDocumentCard attendances={atendimentos} />
       </div>
 
       <Card>

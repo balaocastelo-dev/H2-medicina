@@ -9,6 +9,7 @@ import { buildDocumentPdf } from './pdf';
 import { marcaDoTenant } from './brand';
 import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
 import { regraDe } from '@/modules/queue/origin-kind';
+import { avaliarFichaClinica } from './ficha-clinica';
 import {
   BLOCO_PSICOSSOCIAL,
   BLOCOS_FICHA,
@@ -26,8 +27,9 @@ interface AttendanceForDocument {
   exit_at: string | null;
   patient_id: string;
   origin_kind: string;
+  procedure_code: string | null;
   patients: { full_name: string; cpf: string | null; birth_date: string | null } | null;
-  companies: { trade_name: string | null; legal_name: string } | null;
+  companies: { trade_name: string | null; legal_name: string; emite_ficha_clinica: boolean } | null;
   patient_exams: { status: string; exam_types: { name: string } | null }[];
   medical_consultations: {
     verdict: string | null;
@@ -66,13 +68,34 @@ export async function generateAttendanceDocument(
     const { data: attendance } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, patients(full_name, cpf, birth_date), companies(trade_name, legal_name), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
+        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, procedure_code, patients(full_name, cpf, birth_date), companies(trade_name, legal_name, emite_ficha_clinica), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<AttendanceForDocument>();
 
     if (!attendance || !attendance.patients) return fail('Atendimento não encontrado.');
+
+    // "emitir ficha clinica exceto para pericia, acl, sisper e empresa agape"
+    if (kind === 'ficha_clinica') {
+      let procedimentoEmiteFicha: boolean | null = null;
+      if (attendance.procedure_code) {
+        const { data: procedimento } = await supabase
+          .from('procedure_types')
+          .select('emite_ficha_clinica')
+          .eq('tenant_id', ctx.tenant.id)
+          .eq('code', attendance.procedure_code)
+          .maybeSingle<{ emite_ficha_clinica: boolean }>();
+        procedimentoEmiteFicha = procedimento?.emite_ficha_clinica ?? null;
+      }
+
+      const regra = avaliarFichaClinica({
+        origin_kind: attendance.origin_kind,
+        procedimentoEmiteFicha,
+        empresaEmiteFicha: attendance.companies?.emite_ficha_clinica ?? null,
+      });
+      if (!regra.emite) return fail(regra.motivo ?? 'Este atendimento não gera ficha clínica.');
+    }
 
     const responsavel = (ctx.settings.responsavel_tecnico ?? {}) as Record<string, string | null>;
     const documentos = (ctx.settings.documentos ?? {}) as Record<string, string | null>;

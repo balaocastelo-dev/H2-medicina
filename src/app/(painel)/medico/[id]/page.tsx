@@ -17,6 +17,7 @@ interface AttendanceDetail {
   priority: string;
   checkin_at: string;
   notes: string | null;
+  procedure_code: string | null;
   patients: {
     id: string;
     full_name: string;
@@ -84,7 +85,7 @@ export default async function MedicoAtendimentoPage({
   const { data } = await supabase
     .from('attendances')
     .select(
-      'id, stage_code, priority, checkin_at, notes, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
+      'id, stage_code, priority, checkin_at, notes, procedure_code, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
     )
     .eq('id', id)
     .eq('tenant_id', ctx.tenant.id)
@@ -226,10 +227,15 @@ export default async function MedicoAtendimentoPage({
             attendanceId={id}
             consultation={consultation ?? null}
             procedimentos={procedimentos ?? []}
+            /* O procedimento agora vem da recepcao. O medico so precisa
+               mexer se o atendimento mudar de natureza no meio — uma
+               consulta que vira junta medica, por exemplo. */
             procedimentoPadrao={
+              data.procedure_code ??
               (ctx.settings.repasse?.procedimento_padrao as string | undefined) ??
               'consulta_ocupacional'
             }
+            procedimentoDaRecepcao={!!data.procedure_code}
             medicos={(medicos ?? []).map((m) => ({
               id: m.id,
               nome: m.full_name,

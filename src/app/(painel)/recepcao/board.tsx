@@ -9,6 +9,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Select,
   Textarea,
 } from '@/components/ui';
 import { elapsedFrom, formatCPF, formatTime } from '@/lib/format';
@@ -24,15 +25,17 @@ import { ORIGIN_KINDS, REGRAS, regraDe, type OriginKind } from '@/modules/queue/
 import { formatCNPJ, formatMoney } from '@/lib/format';
 import { moveAttendanceStage } from '@/modules/queue/actions';
 import { BlocoAutorizacao } from './autorizacao';
-import type { ReceptionRow } from './types';
+import type { ProcedimentoOpcao, ReceptionRow } from './types';
 
 export function ReceptionBoard({
   rows,
   examTypes,
+  procedimentos,
   canRegisterPayment,
 }: {
   rows: ReceptionRow[];
   examTypes: { id: string; name: string; code: string; price: number | null }[];
+  procedimentos: ProcedimentoOpcao[];
   canRegisterPayment: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -84,6 +87,7 @@ export function ReceptionBoard({
             key={selected.id}
             row={selected}
             examTypes={examTypes}
+            procedimentos={procedimentos}
             canRegisterPayment={canRegisterPayment}
           />
         ) : (
@@ -173,10 +177,12 @@ function SeletorProcedencia({
 function ReceptionDetail({
   row,
   examTypes,
+  procedimentos,
   canRegisterPayment,
 }: {
   row: ReceptionRow;
   examTypes: { id: string; name: string; code: string; price: number | null }[];
+  procedimentos: ProcedimentoOpcao[];
   canRegisterPayment: boolean;
 }) {
   const [pending, startTransition] = useTransition();
@@ -198,6 +204,11 @@ function ReceptionDetail({
   const [selectedExams, setSelectedExams] = useState<string[]>(
     row.patient_exams.map((e) => e.exam_type_id),
   );
+  // "colocar essa opc na area da recepcao qnd for direcionar para quais
+  //  exames". Sai da tela do medico e passa a ser decidido aqui.
+  const [procedimento, setProcedimento] = useState(row.procedure_code ?? '');
+  const procedimentoEscolhido = procedimentos.find((p) => p.code === procedimento) ?? null;
+
   const [cobranca, setCobranca] = useState<CobrancaRecepcao | null>(null);
   const [pago, setPago] = useState(row.payment_status === 'pago');
 
@@ -300,6 +311,25 @@ function ReceptionDetail({
           <Alert variant="info" title="Ficha médica completa">
             Ingresso escolar: o módulo médico exige a ficha com todos os selos preenchidos.
           </Alert>
+        )}
+
+        {procedimentos.length > 0 && (
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Procedimento</span>
+            <Select value={procedimento} onChange={(e) => setProcedimento(e.target.value)}>
+              <option value="">Consulta ocupacional (padrão)</option>
+              {procedimentos.map((p) => (
+                <option key={p.code} value={p.code}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+            {procedimentoEscolhido && !procedimentoEscolhido.emite_ficha_clinica && (
+              <span className="mt-1 block text-xs text-amber-700">
+                Não gera ficha clínica — sai apenas o A.S.O. e os laudos.
+              </span>
+            )}
+          </label>
         )}
 
         <div data-guia="exames">
@@ -521,6 +551,7 @@ function ReceptionDetail({
                   attendanceId: row.id,
                   needsTriage,
                   originKind,
+                  procedureCode: procedimento || null,
                   priority: priority as 'normal' | 'prioritario' | 'encaixe',
                   examTypeIds: selectedExams,
                   notes,

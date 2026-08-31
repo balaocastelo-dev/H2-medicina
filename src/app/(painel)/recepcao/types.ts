@@ -10,6 +10,7 @@ export interface ReceptionRow {
   order_id: string | null;
   origin_kind: string;
   origin_kind_set_at: string | null;
+  procedure_code: string | null;
   company_id: string | null;
   patients: {
     id: string;
@@ -31,4 +32,11 @@ export interface ReceptionRow {
     document_id: string | null;
     deleted_at: string | null;
   }[];
+}
+
+/** Procedimento oferecido na recepcao (pericia, junta medica, ingresso...). */
+export interface ProcedimentoOpcao {
+  code: string;
+  name: string;
+  emite_ficha_clinica: boolean;
 }

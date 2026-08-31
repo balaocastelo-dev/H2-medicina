@@ -130,6 +130,12 @@ export async function finishReception(input: {
   examTypeIds: string[];
   notes?: string;
   originKind?: string;
+  /**
+   * Pericia, junta medica, ingresso... Escolhido aqui e nao pelo medico:
+   * "colocar essa opc na area da recepcao qnd for direcionar para quais
+   *  exames".
+   */
+  procedureCode?: string | null;
 }): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('recepcao.operar');
@@ -222,6 +228,7 @@ export async function finishReception(input: {
         stage_code: proximaEtapa,
         needs_triage: input.needsTriage,
         origin_kind: originKind,
+        procedure_code: input.procedureCode || null,
         priority: input.priority,
         reception_finished_at: new Date().toISOString(),
         notes: input.notes ?? null,

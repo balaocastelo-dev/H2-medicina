@@ -29,6 +29,7 @@ export function ConsultationForm({
   consultation,
   procedimentos = [],
   procedimentoPadrao,
+  procedimentoDaRecepcao = false,
   medicos = [],
   medicoPadrao,
   psicossocialSolicitado = false,
@@ -40,6 +41,8 @@ export function ConsultationForm({
   /** Catalogo de repasse; vazio esconde o campo. */
   procedimentos?: { code: string; name: string }[];
   procedimentoPadrao?: string;
+  /** Ja veio escolhido da recepcao; aqui e so conferencia. */
+  procedimentoDaRecepcao?: boolean;
   /** Quem pode assinar o A.S.O.; vazio esconde o campo. */
   medicos?: { id: string; nome: string; registro: string | null; temAssinatura: boolean }[];
   medicoPadrao?: string;
@@ -205,7 +208,11 @@ export function ConsultationForm({
           {procedimentos.length > 0 && (
             <Field
               label="Procedimento"
-              hint="Define o valor do repasse lançado ao finalizar a consulta"
+              hint={
+                procedimentoDaRecepcao
+                  ? 'Escolhido na recepção. Só altere se o atendimento mudou de natureza.'
+                  : 'Define o valor do repasse lançado ao finalizar a consulta'
+              }
             >
               <Select name="procedure_code" defaultValue={procedimentoPadrao ?? ''}>
                 {procedimentos.map((p) => (
