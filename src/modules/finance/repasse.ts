@@ -10,6 +10,13 @@ export interface ProcedimentoPadrao {
   name: string;
   default_fee: number;
   sort_order: number;
+  /**
+   * Pericia e junta medica sao avaliacoes, nao consulta ocupacional: nao ha
+   * ficha clinica a emitir. Vive aqui junto do catalogo porque "restaurar
+   * catalogo" recria os procedimentos a partir desta lista — se a marca so
+   * existisse na migration, restaurar traria a pericia emitindo ficha de novo.
+   */
+  emite_ficha_clinica: boolean;
 }
 
 /**
@@ -18,16 +25,16 @@ export interface ProcedimentoPadrao {
  * Os itens em zero aguardam o valor que ainda nao foi informado.
  */
 export const CATALOGO_PADRAO: ProcedimentoPadrao[] = [
-  { code: 'cps', name: 'C.P.S.', default_fee: 20, sort_order: 10 },
-  { code: 'seduc', name: 'SEDUC', default_fee: 18, sort_order: 20 },
-  { code: 'ingresso', name: 'Ingresso', default_fee: 44, sort_order: 30 },
-  { code: 'pericia', name: 'Perícia', default_fee: 30, sort_order: 40 },
-  { code: 'pericia_domiciliar_50', name: 'Perícia domiciliar (50 km)', default_fee: 0, sort_order: 50 },
-  { code: 'pericia_domiciliar_100', name: 'Perícia domiciliar (100 km)', default_fee: 0, sort_order: 60 },
-  { code: 'junta_pericia', name: 'Junta Médica Perícia', default_fee: 130, sort_order: 70 },
-  { code: 'junta_medica', name: 'Junta Médica', default_fee: 64, sort_order: 80 },
-  { code: 'junta_auxiliar', name: 'Junta Médica auxiliar', default_fee: 0, sort_order: 90 },
-  { code: 'consulta_ocupacional', name: 'Consulta ocupacional', default_fee: 0, sort_order: 100 },
+  { code: 'cps', name: 'C.P.S.', default_fee: 20, sort_order: 10, emite_ficha_clinica: true },
+  { code: 'seduc', name: 'SEDUC', default_fee: 18, sort_order: 20, emite_ficha_clinica: true },
+  { code: 'ingresso', name: 'Ingresso', default_fee: 44, sort_order: 30, emite_ficha_clinica: true },
+  { code: 'pericia', name: 'Perícia', default_fee: 30, sort_order: 40, emite_ficha_clinica: false },
+  { code: 'pericia_domiciliar_50', name: 'Perícia domiciliar (50 km)', default_fee: 0, sort_order: 50, emite_ficha_clinica: false },
+  { code: 'pericia_domiciliar_100', name: 'Perícia domiciliar (100 km)', default_fee: 0, sort_order: 60, emite_ficha_clinica: false },
+  { code: 'junta_pericia', name: 'Junta Médica Perícia', default_fee: 130, sort_order: 70, emite_ficha_clinica: false },
+  { code: 'junta_medica', name: 'Junta Médica', default_fee: 64, sort_order: 80, emite_ficha_clinica: false },
+  { code: 'junta_auxiliar', name: 'Junta Médica auxiliar', default_fee: 0, sort_order: 90, emite_ficha_clinica: false },
+  { code: 'consulta_ocupacional', name: 'Consulta ocupacional', default_fee: 0, sort_order: 100, emite_ficha_clinica: true },
 ];
 
 /** Primeiro dia do mes de uma data AAAA-MM-DD — a competencia do lancamento. */

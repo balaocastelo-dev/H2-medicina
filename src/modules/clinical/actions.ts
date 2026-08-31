@@ -110,11 +110,18 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
     const { data: attendance } = await supabase
       .from('attendances')
-      .select('id, patient_id')
+      .select('id, patient_id, current_room_id')
       .eq('id', parsed.data.attendance_id)
       .eq('tenant_id', ctx.tenant.id)
-      .maybeSingle<{ id: string; patient_id: string }>();
+      .maybeSingle<{ id: string; patient_id: string; current_room_id: string | null }>();
     if (!attendance) return fail('Atendimento não encontrado.');
+
+    // A sala e lida agora, antes de qualquer gravacao. O gatilho
+    // tg_consultation_progress sobrescreve attendances.current_room_id com o
+    // room_id da consulta ao gravar, e limpa de vez ao finalizar: lendo
+    // depois, a sala ficaria "ocupada" para sempre e o botao de chamar o
+    // proximo nunca voltaria naquele consultorio.
+    const salaDaConsulta = attendance.current_room_id;
 
     if (finish && !parsed.data.verdict) {
       return fail('Informe a conclusão de aptidão antes de finalizar.');
@@ -136,6 +143,7 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       tenant_id: ctx.tenant.id,
       patient_id: attendance.patient_id,
       doctor_id: ctx.userId,
+      room_id: salaDaConsulta,
       finished_at: finish ? new Date().toISOString() : null,
       signed_at: finish ? new Date().toISOString() : null,
       updated_by: ctx.userId,
@@ -152,15 +160,6 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // INSERT — que marca 'em consulta' — e o paciente ficava travado ali.
     // Por isso a etapa e definida aqui, explicitamente.
     if (finish) {
-      // A sala fica guardada antes de limpar o atendimento: depois do update
-      // nao ha mais como saber de qual consultorio o paciente saiu.
-      const { data: emAtendimento } = await supabase
-        .from('attendances')
-        .select('current_room_id')
-        .eq('id', parsed.data.attendance_id)
-        .eq('tenant_id', ctx.tenant.id)
-        .maybeSingle<{ current_room_id: string | null }>();
-
       await supabase
         .from('attendances')
         .update({
@@ -175,8 +174,8 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
       // Sem isso o consultorio seguia "ocupado" pelo paciente que ja saiu, e
       // o botao de chamar o proximo nunca voltava.
-      if (emAtendimento?.current_room_id) {
-        await liberarSala(emAtendimento.current_room_id, ctx.tenant.id);
+      if (salaDaConsulta) {
+        await liberarSala(salaDaConsulta, ctx.tenant.id);
       }
     }
 
