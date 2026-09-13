@@ -1,16 +1,16 @@
-# PROGRESS — estado do projeto
+﻿# PROGRESS â€” estado do projeto
 
 > Atualize este arquivo ao final de cada sessao. Ele existe para que o trabalho
 > continue exatamente de onde parou, sem recomecar nada.
 
 **Ultima sessao:** fechados oito dos nove itens que restavam da lista da
-recepcao — com destaque para a fila do medico, que nunca chamava tres das
+recepcao â€” com destaque para a fila do medico, que nunca chamava tres das
 quatro procedencias.
 
 **Ultimo passo concluido:** migrations `0023` a `0025` e seeds `0002` e `0003`,
 todas aplicadas em producao. Detalhe item a item na secao "Lista da recepcao".
 
-**Proximo passo exato:** implementar a loja publica (`/loja`) — vitrine, pagina de
+**Proximo passo exato:** implementar a loja publica (`/loja`) â€” vitrine, pagina de
 produto, carrinho, checkout e a conversao de pedido em agendamento. O modelo de
 dados (`products`, `carts`, `orders`, `order_items`, `coupons`, `service_packages`)
 e os tipos ja estao prontos; falta a camada de UI e as Server Actions.
@@ -77,18 +77,18 @@ e os tipos ja estao prontos; falta a camada de UI e as Server Actions.
 
 ### 1. Loja publica (proximo passo)
 
-- [ ] `/loja` — vitrine, busca, categorias, filtros, banners, destaques
-- [ ] `/loja/produto/[slug]` — pagina de produto e servico, relacionados
-- [ ] `/loja/carrinho` e `/loja/checkout` — PF e PJ, multiplos beneficiarios
+- [ ] `/loja` â€” vitrine, busca, categorias, filtros, banners, destaques
+- [ ] `/loja/produto/[slug]` â€” pagina de produto e servico, relacionados
+- [ ] `/loja/carrinho` e `/loja/checkout` â€” PF e PJ, multiplos beneficiarios
 - [ ] Aplicacao de cupom (`coupons` / `coupon_usages` prontos)
-- [ ] `/loja/pedidos` — area do cliente e acompanhamento
-- [ ] Conversao pedido → agendamento: identificar exames do pacote, consultar
+- [ ] `/loja/pedidos` â€” area do cliente e acompanhamento
+- [ ] Conversao pedido â†’ agendamento: identificar exames do pacote, consultar
       disponibilidade, criar pre-agendamento, confirmar apos pagamento,
       registrar origem `ecommerce`, evitar duplicidade
 - [ ] Compra empresarial: importar lista de beneficiarios, agendamentos
       individuais, saldo do contrato (`company_contracts`)
 
-### 2. Scraper — execucao
+### 2. Scraper â€” execucao
 
 - [ ] Formulario de conector (seletores, mapeamento, autenticacao)
 - [ ] `set_connector_password` ligado a UI (a funcao SQL ja existe)
@@ -99,7 +99,7 @@ e os tipos ja estao prontos; falta a camada de UI e as Server Actions.
 - [ ] Execucao agendada (Supabase Cron ou scheduler do worker)
 - [ ] Importacao por Excel/CSV usando o mesmo pipeline (`file_imports`)
 
-### 3. Campanhas — execucao
+### 3. Campanhas â€” execucao
 
 - [ ] Gerador por template com variaveis (template ja existe no seed)
 - [ ] Selecao de audiencia respeitando bloqueio e descadastro
@@ -127,18 +127,18 @@ publicos que entram pela mesma porta e seguem por corredores diferentes.
 
 | Letra | Procedencia          | Caminho                          |
 | ----- | -------------------- | -------------------------------- |
-| P     | Empresa / particular | triagem e fichas → exames → medico |
+| P     | Empresa / particular | triagem e fichas â†’ exames â†’ medico |
 | E     | Estado (ESISLA)      | direto ao modulo medico          |
-| S     | SISPER               | triagem → medico                 |
-| I     | Ingresso (escola)    | triagem → medico, ficha completa |
+| S     | SISPER               | triagem â†’ medico                 |
+| I     | Ingresso (escola)    | triagem â†’ medico, ficha completa |
 
-- [x] Migration `0017` — enum `patient_origin_kind`, coluna em `attendances`,
+- [x] Migration `0017` â€” enum `patient_origin_kind`, coluna em `attendances`,
       `appointments` e `patients`
 - [x] Selecao na recepcao logo apos o totem, com sugestao pela ultima visita
 - [x] Encaminhamento automatico a partir da procedencia
 - [x] Trigger `tg_triage_finished` reescrito: E, S e I nao caem mais na fila
       de exames ao sair da triagem
-- [x] Kit de saida para as quatro procedencias — comprovante de comparecimento,
+- [x] Kit de saida para as quatro procedencias â€” comprovante de comparecimento,
       recibo e comprovante de agendamento, emitidos ao encerrar o atendimento
 - [x] Termo de autorizacao de envio de resultados a empresa (Arts. 85 e 89 do
       CEM), com assinatura na tela ou impressao para assinar no papel
@@ -163,7 +163,7 @@ O que faltava desta lista foi feito na migration `0023` e no seed `0002`.
       quando a recepcao marca o exame PSICO para o paciente. Respostas de
       risco (ideacao suicida, alucinacao, desorientacao) sobem destacadas
       logo acima da conclusao de aptidao.
-- [x] **Fichas de cada exame** preenchidas na propria sala — Romberg, fadiga,
+- [x] **Fichas de cada exame** preenchidas na propria sala â€” Romberg, fadiga,
       dinamometria (palmar, escapular, lombar), Ishihara, acuidade e
       audiometria. As perguntas vieram dos modelos em Word da clinica.
       Resposta marcada como alerta liga sozinha o "resultado alterado".
@@ -172,7 +172,7 @@ O que faltava desta lista foi feito na migration `0023` e no seed `0002`.
 - [x] Ficha clinica em PDF sai com os blocos que o medico marcou.
 - [x] **Exames da clinica** cadastrados: acuidade, Ishihara, psicossocial,
       Romberg, fadiga, dinamometria palmar/escapular/lombar e raio X.
-      O raio X nao tem sala — sai como guia de encaminhamento.
+      O raio X nao tem sala â€” sai como guia de encaminhamento.
       A dinamometria generica foi desativada em favor das tres especificas.
 - [x] **Unificar cadastros** do mesmo paciente (`merge_patients`): todo o
       historico migra para o cadastro escolhido e o duplicado e arquivado.
@@ -187,7 +187,7 @@ Ja estava resolvido em sessoes anteriores: CEP automatico, editar/cancelar
 agendamento, fuso do horario, corpo clinico com CRM, assinatura do medico,
 paineis de TV separados, contratos por empresa e o rotulo da tela inicial.
 
-### Segunda rodada — 31/08
+### Segunda rodada â€” 31/08
 
 Dos nove itens que ficaram em aberto, oito foram fechados.
 
@@ -196,8 +196,8 @@ Dos nove itens que ficaram em aberto, oito foram fechados.
       liberacao"), tipo e periodo.
 - [x] Financeiro com periodo personalizado, ao lado de dia, semana, mes e ano.
 - [x] **Fila do medico virou fila de pacientes.** `call_next_for_room` so
-      enxerga quem tem exame pendente, e Estado, SISPER e ingresso — tres das
-      quatro procedencias — vao direto para `aguardando_medico` sem exame
+      enxerga quem tem exame pendente, e Estado, SISPER e ingresso â€” tres das
+      quatro procedencias â€” vao direto para `aguardando_medico` sem exame
       nenhum. O botao existia nas Salas 3, 8 e 9 e nunca achava essas
       pessoas. Agora chamar anuncia no painel e abre a ficha na mesma acao.
 - [x] Os consultorios sairam da tela de Filas: estavam nos dois lugares, e
@@ -222,11 +222,11 @@ vazias podem ser desativadas.
 **Aplicado no banco de producao em 31/08.** O banco estava atrasado em seis
 migrations, nao so na nova: `0017_triagem_e_prioridade`,
 `0018_ficha_aso_financeiro`, `0020`, `0021`, `0022` e `0023`. Sem a
-`0018_ficha_aso_financeiro` os blocos da ficha clinica nao existiam no banco —
+`0018_ficha_aso_financeiro` os blocos da ficha clinica nao existiam no banco â€”
 a tela do medico gravava em colunas que nao estavam la.
 
 Tambem foram corrigidos os dados cadastrais da clinica (seed `0003`), que ainda
-eram os de exemplo — Praca da Se, Sao Paulo, telefone (11) 4000-0000 — e era
+eram os de exemplo â€” Praca da Se, Sao Paulo, telefone (11) 4000-0000 â€” e era
 esse endereco que saia impresso em todo A.S.O. e atestado.
 
 Os exames novos entram nas salas que a clinica ja usa (Sala 1 para acuidade,
@@ -242,20 +242,23 @@ Ver **DEPLOY.md** para o roteiro completo.
 
 - [x] `vercel.json` (regiao gru1, cabecalhos de seguranca)
 - [x] `.vercelignore`, `.nvmrc` (Node 22)
-- [x] Healthcheck em `/api/health` — diz se falta variavel, migration ou seed
+- [x] Healthcheck em `/api/health` â€” diz se falta variavel, migration ou seed
 - [x] Icones do PWA gerados (`npm run icons`)
 - [x] Validacao de env preguicosa (nao quebra o build quando a variavel falta)
-- [x] `npm run check:build` — detector de bloqueadores de build
+- [x] `npm run check:build` â€” detector de bloqueadores de build
 
 ## Nota sobre o build
 
-`npm run typecheck`, `npm run lint`, `npm run check:build` e `npm test` rodam
-limpos. O `next build` **nao foi executado neste ambiente**: o binario nativo do
-Next 16 aborta com `Bus error` no sandbox usado nesta sessao — confirmado que
-acontece ate num projeto Next vazio, ou seja, e limitacao do ambiente e nao do
-codigo. Execute `npm run build` na sua maquina antes do primeiro deploy; a
-propria Vercel tambem roda o build no push.
+`npm run typecheck`, `npm run lint`, `npm run check:build`, `npm test` e
+`next build` rodam limpos (13/09: build completo em Windows, 58 rotas,
+nenhum erro). Ate 12/09 o `next build` nunca tinha sido executado — o binario
+nativo do Next 16 abortava com `Bus error` no sandbox Linux usado nas
+primeiras sessoes. Agora roda direto na maquina.
 
-Dois bloqueadores reais de build foram encontrados e corrigidos pela verificacao
-estatica: o pacote `server-only` nao estava declarado, e o schema de variaveis de
-ambiente era avaliado no import (quebraria o build sem as variaveis definidas).
+Bloqueadores reais encontrados e corrigidos pela verificacao estatica: o pacote
+`server-only` nao estava declarado; o schema de variaveis de ambiente era
+avaliado no import (quebraria o build sem as variaveis definidas); uma permissao
+inexistente (`agenda.criar`) passava por tsc, lint e teste e so quebraria em
+producao; e um documento marcado como visivel para o paciente era gravado sem
+`patient_id`, sumindo da area do paciente sem erro nenhum. Os tres ultimos
+viraram checagem automatica no `check:build`.

@@ -23,6 +23,8 @@ interface ExameParaLaudo {
   attendances: {
     id: string;
     checkin_at: string;
+    /** Precisa vir gravado no documento, senao o laudo nao aparece em /meu. */
+    patient_id: string | null;
     patients: {
       full_name: string;
       social_name: string | null;
@@ -67,7 +69,7 @@ export async function gerarLaudoDeExame(
     const { data: exame } = await supabase
       .from('patient_exams')
       .select(
-        'id, status, finished_at, attendance_id, exam_types(code, name), exam_results(values, conclusion), attendances(id, checkin_at, patients(full_name, social_name, cpf, birth_date, gender, job_title, department), companies(legal_name, document), appointments(attendance_kind))',
+        'id, status, finished_at, attendance_id, exam_types(code, name), exam_results(values, conclusion), attendances(id, checkin_at, patient_id, patients(full_name, social_name, cpf, birth_date, gender, job_title, department), companies(legal_name, document), appointments(attendance_kind))',
       )
       .eq('id', patientExamId)
       .eq('tenant_id', ctx.tenant.id)
@@ -192,6 +194,8 @@ export async function gerarLaudoDeExame(
         tenant_id: ctx.tenant.id,
         kind: 'resultado_exame',
         title: `Laudo — ${exame.exam_types?.name ?? 'Exame'}`,
+        // Sem `patient_id` o laudo some da area do paciente: /meu filtra por ele.
+        patient_id: exame.attendances.patient_id,
         attendance_id: exame.attendance_id,
         bucket: 'clinical-documents',
         file_path: caminho,

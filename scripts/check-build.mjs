@@ -159,6 +159,26 @@ if (catalogo.size > 0) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Documento marcado como visivel para o paciente precisa gravar
+// `patient_id`. A area do paciente filtra por esse campo, entao sem ele o
+// documento e emitido, aparece na clinica, e some da tela de quem fez o
+// exame. Nada quebra, ninguem reclama, e o paciente liga perguntando.
+// ---------------------------------------------------------------------
+for (const file of files) {
+  const src = readFileSync(file, 'utf8');
+  for (const m of src.matchAll(/\.from\('documents'\)\s*\n\s*\.insert\(\{/g)) {
+    // Pega o corpo do insert ate o fecha-chaves na mesma indentacao.
+    const corpo = src.slice(m.index, src.indexOf('\n      })', m.index));
+    if (/is_patient_visible:\s*true/.test(corpo) && !/patient_id:/.test(corpo)) {
+      problems.push(
+        `${rel(file)}: insert em documents com is_patient_visible:true e sem patient_id ` +
+          '(o documento nao aparece na area do paciente)',
+      );
+    }
+  }
+}
+
 console.log(`Arquivos analisados: ${files.length} (${clientFiles.size} client components)`);
 if (problems.length) {
   console.error(`\n${problems.length} problema(s) que quebrariam o build:\n`);
