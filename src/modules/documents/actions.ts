@@ -1,4 +1,4 @@
-'use server';
+﻿'use server';
 
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
@@ -10,6 +10,8 @@ import { marcaDoTenant } from './brand';
 import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
 import { regraDe } from '@/modules/queue/origin-kind';
 import { avaliarFichaClinica } from './ficha-clinica';
+import { montarComprovanteImpresso } from './comprovante-texto';
+import type { SessionContext } from '@/lib/auth';
 import {
   BLOCO_PSICOSSOCIAL,
   BLOCOS_FICHA,
@@ -276,10 +278,16 @@ export async function generateAttendanceDocument(
       body =
         'Recibo referente aos serviços prestados no atendimento acima identificado. Documento emitido eletronicamente, dispensando assinatura de próprio punho.';
     } else if (kind === 'comprovante_agendamento') {
+      // Mesmo texto que a recepcao ja mandava a mao pelo WhatsApp, agora
+      // preenchido sozinho. Sem emoji: a fonte do PDF nao os tem.
       body = proximoAgendamento
-        ? `Comprovante do agendamento do(a) paciente acima para ${formatDate(
-            proximoAgendamento.scheduled_at,
-          )} as ${formatTime(proximoAgendamento.scheduled_at)}. Recomenda-se chegar com 15 minutos de antecedencia e trazer documento com foto.`
+        ? montarComprovanteImpresso({
+            paciente: attendance.patients?.full_name ?? '',
+            data: emDiaDaClinica(proximoAgendamento.scheduled_at),
+            hora: formatTime(proximoAgendamento.scheduled_at),
+            tipoAtendimento: proximoAgendamento.attendance_kind ?? null,
+            clinica: dadosDaClinica(ctx),
+          })
         : 'Nenhum agendamento futuro registrado para este paciente no momento da emissao.';
     }
 
@@ -413,4 +421,27 @@ export async function getDocumentUrl(documentId: string): Promise<ActionResult<{
   } catch (error) {
     return fail(toFriendlyError(error));
   }
+}
+
+/** Dados da clinica usados no comprovante, vindos das configuracoes. */
+function dadosDaClinica(ctx: SessionContext) {
+  const contato = (ctx.settings.contato ?? {}) as Record<string, string | null>;
+  const empresa = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
+  return {
+    nome: empresa.nome_fantasia ?? ctx.branding.system_name,
+    logradouro: contato.logradouro,
+    numero: contato.numero,
+    bairro: contato.bairro,
+    cidade: contato.cidade,
+    uf: contato.uf,
+    cep: contato.cep,
+    referencia: contato.referencia,
+    whatsapp: contato.whatsapp,
+    telefone: contato.telefone_fixo ?? contato.telefone,
+  };
+}
+
+/** Instante em UTC para o dia AAAA-MM-DD no fuso da clinica. */
+function emDiaDaClinica(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date(iso));
 }

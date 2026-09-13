@@ -51,7 +51,7 @@ export function AppointmentForm({
   professionals,
   iniciais,
   rotuloBotao = 'Criar agendamento',
-  intervaloMinutos = 10,
+  intervaloMinutos = 5,
 }: {
   action: Action;
   patients: PatientOption[];
@@ -63,8 +63,10 @@ export function AppointmentForm({
   rotuloBotao?: string;
   /**
    * Passo do relogio, em minutos.
-   * "opcao de agendamento a cada 10 minutos" — configuravel em
-   * Configuracoes -> Agenda, porque a clinica ja pediu 5 e depois 10.
+   *
+   * A clinica pediu 10 em 27/08 e 5 em 11/09; confirmado 5 em 13/09. Fica
+   * configuravel em Configuracoes -> Agenda para nao precisar de deploy na
+   * proxima vez que mudarem de ideia.
    */
   intervaloMinutos?: number;
 }) {

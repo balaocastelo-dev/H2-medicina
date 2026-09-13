@@ -263,8 +263,16 @@ export const FULLSCREEN_LINKS: NavItem[] = [
     module: 'totem',
   },
   {
-    href: '/painel',
-    label: 'Painel de TV',
+    // Endereco curto: quem abre isso esta de pe na frente da TV.
+    href: '/tv1',
+    label: 'TV 1 — recepção e triagem',
+    icon: 'Tv',
+    permission: 'painel.operar',
+    module: 'painel_tv',
+  },
+  {
+    href: '/tv2',
+    label: 'TV 2 — exames e consultórios',
     icon: 'Tv',
     permission: 'painel.operar',
     module: 'painel_tv',

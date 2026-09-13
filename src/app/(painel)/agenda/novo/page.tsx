@@ -1,4 +1,4 @@
-import { requirePermission } from '@/lib/auth';
+﻿import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { AppointmentForm } from '@/modules/scheduling/appointment-form';
@@ -52,7 +52,7 @@ export default async function NovoAgendamentoPage() {
         description="Vincule paciente, empresa e exames previstos"
       />
       <AppointmentForm
-        intervaloMinutos={Number((ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos ?? 10) || 10}
+        intervaloMinutos={Number((ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos ?? 5) || 5}
         action={createAppointment}
         patients={patientsRes.data ?? []}
         companies={(companiesRes.data ?? []).map((c) => ({
