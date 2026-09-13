@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { CalendarDays, Receipt, Stethoscope, Wallet } from 'lucide-react';
+import { CalendarDays, Receipt, Stethoscope, TrendingUp, Wallet } from 'lucide-react';
 
 const ABAS = [
   { href: '/financeiro', rotulo: 'Cobranças', Icone: Receipt },
+  { href: '/financeiro/fluxo-caixa', rotulo: 'Fluxo de caixa', Icone: TrendingUp },
   { href: '/financeiro/calendario', rotulo: 'Calendário', Icone: CalendarDays },
   { href: '/financeiro/repasse', rotulo: 'Repasse médico', Icone: Stethoscope },
   { href: '/financeiro/contas', rotulo: 'Contas a pagar', Icone: Wallet },
