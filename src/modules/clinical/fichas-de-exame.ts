@@ -103,8 +103,11 @@ const rotuloFrequencia = (hz: string) =>
   Number(hz) >= 1000 ? `${Number(hz) / 1000} kHz` : `${hz} Hz`;
 
 const CAMPOS_AUDIOMETRIA: CampoExame[] = [
+  // A clinica pediu estes quatro no laudo: "aparelho utilizado, fabricante
+  // do aparelho, calibracao do aparelho, tempo de repouso auditivo".
   { chave: 'repouso_auditivo', rotulo: 'Repouso auditivo', tipo: 'numero', unidade: 'h' },
   { chave: 'aparelho', rotulo: 'Aparelho', tipo: 'texto' },
+  { chave: 'fabricante', rotulo: 'Fabricante do aparelho', tipo: 'texto' },
   { chave: 'calibracao', rotulo: 'Calibração', tipo: 'texto' },
   { chave: 'titulo_od', rotulo: 'Orelha direita — via aérea', tipo: 'titulo' },
   ...FREQUENCIAS_AUDIO.map(
