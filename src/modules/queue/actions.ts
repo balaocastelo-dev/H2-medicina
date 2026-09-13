@@ -1,4 +1,4 @@
-'use server';
+﻿'use server';
 
 import { revalidatePath } from 'next/cache';
 import { createClient } from '@/lib/supabase/server';
@@ -15,6 +15,7 @@ import {
   termoValido,
   type SugestaoBusca,
 } from '@/modules/queue/busca-nome';
+import { podeVincularCpf, precisaGravar } from '@/modules/queue/vinculo-cpf';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -733,6 +734,68 @@ export async function moveAttendanceStage(
     });
     revalidatePath('/crm');
     return ok(undefined, 'Paciente movido.');
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}
+
+/**
+ * Grava o CPF digitado no totem no cadastro que veio sem ele.
+ *
+ * Completa um cadastro, nunca cria outro: a lista do SISPER chega sem CPF,
+ * e criar um segundo cadastro para a mesma pessoa e o que gera prontuario
+ * duplicado. A data de cadastro continua sendo a primeira — quem foi
+ * atendido em agosto nao vira paciente novo hoje.
+ */
+export async function vincularCpfAoPaciente(
+  patientId: string,
+  cpfDigitado: string,
+): Promise<ActionResult<{ vinculado: boolean }>> {
+  try {
+    const ctx = await assertPermission('totem.operar');
+    const cpf = onlyDigits(cpfDigitado);
+    const supabase = await createClient();
+
+    const { data: paciente } = await supabase
+      .from('patients')
+      .select('id, cpf, full_name')
+      .eq('id', patientId)
+      .eq('tenant_id', ctx.tenant.id)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; cpf: string | null; full_name: string }>();
+    if (!paciente) return fail('Cadastro nao localizado. Procure a recepcao.');
+
+    // O CPF ja pertence a outra pessoa? Gravar juntaria dois prontuarios.
+    const { data: dono } = await supabase
+      .from('patients')
+      .select('id')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('cpf', cpf)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string }>();
+
+    const checagem = podeVincularCpf(paciente, cpf, dono);
+    if (!checagem.pode) return fail(checagem.motivo);
+
+    if (!precisaGravar(paciente, cpf)) return ok({ vinculado: false });
+
+    const { error } = await supabase
+      .from('patients')
+      .update({ cpf, needs_review: false, review_reason: null, updated_by: ctx.userId })
+      .eq('id', patientId)
+      .eq('tenant_id', ctx.tenant.id);
+    if (error) return fail(toFriendlyError(error));
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'patients',
+      entityId: patientId,
+      patientId,
+      description: 'CPF informado pelo paciente no totem',
+      origin: 'totem',
+    });
+
+    return ok({ vinculado: true }, 'Cadastro completado.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }

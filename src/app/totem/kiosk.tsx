@@ -1,12 +1,21 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState, useTransition, useCallback } from 'react';
-import { CheckCircle2, Delete, Printer, RotateCcw, Search, UserSearch } from 'lucide-react';
+import {
+  CheckCircle2,
+  Delete,
+  Printer,
+  RotateCcw,
+  Search,
+  UserSearch,
+  XCircle,
+} from 'lucide-react';
 import {
   buscarAgendamentoPorNome,
   lookupForCheckin,
   lookupPorPaciente,
   performCheckin,
+  vincularCpfAoPaciente,
   type TotemLookupResult,
 } from '@/modules/queue/actions';
 import {
@@ -15,10 +24,11 @@ import {
   termoValido,
   type SugestaoBusca,
 } from '@/modules/queue/busca-nome';
+import { cpfParaConferencia } from '@/modules/queue/vinculo-cpf';
 import { formatCPF, formatDate, formatTime } from '@/lib/format';
 import type { Priority, QueueTicket } from '@/types/entities';
 
-type Step = 'cpf' | 'nome' | 'confirma' | 'prioridade' | 'senha' | 'erro';
+type Step = 'cpf' | 'nome' | 'confirma_cpf' | 'confirma' | 'prioridade' | 'senha' | 'erro';
 
 const TECLADO = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 
@@ -50,6 +60,10 @@ export function TotemKiosk({
   // Quem chegou pela busca por nome nao provou identidade: a tela publica
   // continua mostrando so o nome abreviado, sem data de nascimento.
   const [viaBusca, setViaBusca] = useState(false);
+  // CPF digitado que o sistema nao achou: fica guardado ate o paciente
+  // confirmar que e dele, na tela de conferencia.
+  const [cpfPendente, setCpfPendente] = useState<string | null>(null);
+  const [pacienteEscolhido, setPacienteEscolhido] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const reset = useCallback(() => {
@@ -58,6 +72,8 @@ export function TotemKiosk({
     setNome('');
     setSugestoes(null);
     setViaBusca(false);
+    setCpfPendente(null);
+    setPacienteEscolhido(null);
     setMatches([]);
     setSelected(null);
     setTicket(null);
@@ -81,8 +97,15 @@ export function TotemKiosk({
       setViaBusca(false);
       const result = await lookupForCheckin(cpf);
       if (!result.ok) {
-        setMessage(result.error);
-        setStep('erro');
+        // CPF nao encontrado nao e beco sem saida: a lista do SISPER chega
+        // sem CPF, e a pessoa existe na agenda com outro dado. Em vez de
+        // mandar procurar a recepcao, o totem leva a busca por nome
+        // guardando o CPF digitado para completar o cadastro depois.
+        setCpfPendente(cpf);
+        setNome('');
+        setSugestoes(null);
+        setMessage(null);
+        setStep('nome');
         return;
       }
       const data = result.data ?? [];
@@ -107,7 +130,24 @@ export function TotemKiosk({
     });
   }, []);
 
+  /**
+   * Carrega o agendamento da pessoa escolhida na busca por nome.
+   *
+   * Quando o paciente chegou aqui depois de digitar um CPF que o sistema
+   * nao achou, antes de seguir ele confirma que aquele CPF e dele. Assim o
+   * cadastro que veio sem CPF fica completo, e da proxima vez a busca por
+   * documento funciona.
+   */
   const escolherSugestao = (patientId: string) => {
+    if (cpfPendente) {
+      setPacienteEscolhido(patientId);
+      setStep('confirma_cpf');
+      return;
+    }
+    carregarAgendamento(patientId);
+  };
+
+  const carregarAgendamento = (patientId: string) => {
     startTransition(async () => {
       const r = await lookupPorPaciente(patientId);
       if (!r.ok) {
@@ -121,6 +161,32 @@ export function TotemKiosk({
       setSelected(data[0] ?? null);
       setStep('confirma');
     });
+  };
+
+  /** O paciente confirmou que o CPF digitado e dele. */
+  const confirmarCpf = () => {
+    if (!pacienteEscolhido || !cpfPendente) return;
+    startTransition(async () => {
+      const r = await vincularCpfAoPaciente(pacienteEscolhido, cpfPendente);
+      if (!r.ok) {
+        setMessage(r.error);
+        setStep('erro');
+        return;
+      }
+      setCpfPendente(null);
+      carregarAgendamento(pacienteEscolhido);
+    });
+  };
+
+  /** Nao era o CPF dele: volta para o teclado numerico. */
+  const recusarCpf = () => {
+    setPacienteEscolhido(null);
+    setCpfPendente(null);
+    setCpf('');
+    setNome('');
+    setSugestoes(null);
+    setMessage(null);
+    setStep('cpf');
   };
 
   const confirm = (priority: Priority) => {
@@ -232,6 +298,49 @@ export function TotemKiosk({
           >
             <UserSearch className="h-5 w-5" /> Não tenho CPF — buscar pelo nome
           </button>
+        </section>
+      )}
+
+      {step === 'confirma_cpf' && cpfPendente && (
+        <section className="w-full max-w-lg text-center">
+          <h2 className="mb-2 text-2xl font-semibold">Confirme seu CPF</h2>
+          <p className="mb-6 text-slate-300">
+            Seu cadastro está sem CPF. Este é o número que você digitou:
+          </p>
+
+          <div className="mb-8 rounded-2xl bg-white/10 p-8">
+            <p className="font-mono text-4xl font-bold tracking-wider">
+              {cpfParaConferencia(cpfPendente)}
+            </p>
+          </div>
+
+          <p className="mb-5 text-lg">Este CPF é o seu?</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={recusarCpf}
+              className="rounded-2xl bg-red-600 py-6 text-xl font-semibold transition hover:bg-red-500 disabled:opacity-50"
+            >
+              <XCircle className="mx-auto mb-1 h-7 w-7" />
+              Não
+            </button>
+            <button
+              type="button"
+              disabled={pending}
+              onClick={confirmarCpf}
+              className="rounded-2xl bg-emerald-600 py-6 text-xl font-semibold transition hover:bg-emerald-500 disabled:opacity-50"
+            >
+              <CheckCircle2 className="mx-auto mb-1 h-7 w-7" />
+              {pending ? 'Salvando...' : 'Sim'}
+            </button>
+          </div>
+
+          <p className="mt-6 text-sm text-slate-400">
+            Confirmando, seu CPF fica guardado no cadastro e da próxima vez o atendimento é mais
+            rápido.
+          </p>
         </section>
       )}
 
