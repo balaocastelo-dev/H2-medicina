@@ -1,18 +1,20 @@
 import 'server-only';
 import { createClient } from '@/lib/supabase/server';
 import { startOfTodayISO } from '@/lib/format';
-import type { ContadorChave } from './nav-config';
+import { contarPorSetor, type Contadores } from './contadores-calculo';
 
-export type Contadores = Partial<Record<ContadorChave, number>>;
+export type { Contadores };
 
 /**
  * Quantos pacientes estao em cada setor da clinica neste momento.
  *
- * Cada atendimento aberto esta em exatamente uma etapa, entao somar as
- * bolinhas de recepcao, triagem, filas, medico, pagamentos e documentos da
- * o total de gente dentro da clinica — que e justamente o numero mostrado
- * na bolinha do CRM. Contagens usam `head: true`: o banco devolve so o
- * numero, sem trafegar as linhas.
+ * Uma consulta so, em vez das sete de antes.
+ *
+ * Eram sete contagens em paralelo, mas paralelo no cliente nao e de graca:
+ * sao sete idas e voltas ate o banco em cada carregamento de pagina, e o
+ * menu aparece em toda tela do sistema. Trazer as etapas abertas do dia e
+ * contar aqui custa uma viagem — a clinica move algumas dezenas de
+ * pacientes por dia, nao dezenas de milhares.
  */
 export async function carregarContadores(tenantId: string): Promise<Contadores> {
   try {
@@ -24,44 +26,18 @@ export async function carregarContadores(tenantId: string): Promise<Contadores> 
     // aberto — a bolinha dizia "2 na recepcao" e a tela da recepcao abria
     // vazia. Bolinha que aponta para tela vazia treina a equipe a ignorar
     // a bolinha, e ai ela deixa de servir para qualquer coisa.
-    const inicioDoDia = startOfTodayISO();
+    const { data, error } = await supabase
+      .from('attendances')
+      .select('stage_code')
+      .eq('tenant_id', tenantId)
+      .gte('checkin_at', startOfTodayISO())
+      .is('finished_at', null)
+      .is('deleted_at', null)
+      .limit(2000)
+      .returns<{ stage_code: string }[]>();
 
-    const abertos = (etapas: string[]) =>
-      supabase
-        .from('attendances')
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId)
-        .in('stage_code', etapas)
-        .gte('checkin_at', inicioDoDia)
-        .is('finished_at', null)
-        .is('deleted_at', null);
-
-    const [recepcao, triagem, filas, medico, pagamentos, documentos, crm] = await Promise.all([
-      abertos(['aguardando_recepcao', 'na_recepcao']),
-      abertos(['aguardando_triagem', 'em_triagem']),
-      abertos(['aguardando_exames', 'em_exames']),
-      // 'em_consulta' entra aqui: o paciente esta na sala do medico agora.
-      // Sem isso ele sumia de todas as bolinhas e a soma nao batia com a
-      // quantidade de gente dentro da clinica.
-      abertos(['aguardando_medico', 'em_consulta']),
-      abertos(['aguardando_pagamento']),
-      abertos(['aguardando_documentos']),
-      abertos([
-        'aguardando_recepcao', 'na_recepcao', 'aguardando_triagem', 'em_triagem',
-        'aguardando_exames', 'em_exames', 'aguardando_medico', 'em_consulta',
-        'aguardando_pagamento', 'aguardando_documentos',
-      ]),
-    ]);
-
-    return {
-      recepcao: recepcao.count ?? 0,
-      triagem: triagem.count ?? 0,
-      filas: filas.count ?? 0,
-      medico: medico.count ?? 0,
-      pagamentos: pagamentos.count ?? 0,
-      documentos: documentos.count ?? 0,
-      crm: crm.count ?? 0,
-    };
+    if (error) throw error;
+    return contarPorSetor(data ?? []);
   } catch (error) {
     // O menu nunca pode quebrar por causa de um contador.
     console.error('[menu] falha ao contar pendências:', error);
