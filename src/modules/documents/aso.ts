@@ -59,12 +59,8 @@ interface AtendimentoAso {
   }[];
 }
 
-const APTIDAO: Record<string, string> = {
-  apto: 'APTO para a função',
-  apto_com_restricoes: 'APTO para a função, com restrições',
-  inapto: 'INAPTO para a função',
-  inconclusivo: 'INCONCLUSIVO',
-};
+// O parecer deixou de ser escrito por extenso: o modelo da clinica usa
+// caixas de marcar, e quem desenha isso agora e o proprio PDF.
 
 const TIPO_EXAME: Record<string, string> = {
   admissional: 'Admissional',
