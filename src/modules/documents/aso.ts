@@ -1,9 +1,10 @@
-import 'server-only';
+﻿import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
 import type { SessionContext } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { buildAsoPdf } from './aso-pdf';
+import { idadeNaData, montarRiscos, perfilParaCargo, type PerfilDeRisco } from './riscos';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
@@ -19,6 +20,7 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 interface AtendimentoAso {
   id: string;
   checkin_at: string;
+  company_id: string | null;
   patient_signature_path: string | null;
   patients: {
     full_name: string;
@@ -29,6 +31,7 @@ interface AtendimentoAso {
     gender: string;
     job_title: string | null;
     department: string | null;
+    registration_number: string | null;
   } | null;
   companies: {
     legal_name: string;
@@ -49,7 +52,11 @@ interface AtendimentoAso {
     observations: string | null;
     conclusion: string | null;
   }[];
-  patient_exams: { status: string; exam_types: { name: string } | null }[];
+  patient_exams: {
+    status: string;
+    finished_at: string | null;
+    exam_types: { name: string } | null;
+  }[];
 }
 
 const APTIDAO: Record<string, string> = {
@@ -80,7 +87,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -118,6 +125,21 @@ export async function gerarAso(
     const codigo = randomBytes(5).toString('hex').toUpperCase();
     const paciente = at.patients;
     const empresa = at.companies;
+    const emitidoEm = new Date();
+
+    // Perigos e fatores de risco: do cargo dentro da empresa, nao do
+    // paciente. Gravados junto com o atendimento para o A.S.O. ja emitido
+    // nao mudar se a empresa revisar o perfil depois.
+    const { data: perfis } = await supabase
+      .from('company_risk_profiles')
+      .select('cargo, fisicos, quimicos, biologicos, ergonomicos, acidentes')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('company_id', at.company_id ?? '')
+      .is('deleted_at', null)
+      .returns<PerfilDeRisco[]>();
+
+    const riscos = montarRiscos(perfilParaCargo(perfis ?? [], paciente.job_title));
+    await supabase.from('attendances').update({ riscos }).eq('id', attendanceId);
 
     const pdf = await buildAsoPdf({
       clinica: {
@@ -132,20 +154,22 @@ export async function gerarAso(
         cor: ctx.branding.color_primary,
       },
       // A data e sempre a da emissao, como pedido.
-      emitidoEm: new Date(),
+      emitidoEm,
       empresaContratante: {
         razaoSocial: empresa?.legal_name ?? 'Não informada',
         cnpj: empresa?.document ? formatCNPJ(empresa.document) : null,
-        endereco:
-          [empresa?.street, empresa?.number, empresa?.district].filter(Boolean).join(', ') || null,
-        cidade: [empresa?.city, empresa?.state].filter(Boolean).join('/') || null,
+        endereco: [empresa?.street, empresa?.number].filter(Boolean).join(', ') || null,
+        bairro: empresa?.district ?? null,
+        cidade: [empresa?.city, empresa?.state].filter(Boolean).join(' / ') || null,
         cep: empresa?.zip_code ?? null,
       },
       funcionario: {
         nome: paciente.social_name ?? paciente.full_name,
+        matricula: paciente.registration_number ?? null,
         cpf: paciente.cpf ? formatCPF(paciente.cpf) : null,
         rg: paciente.rg ?? null,
         nascimento: formatDate(paciente.birth_date),
+        idade: idadeNaData(paciente.birth_date, emitidoEm),
         sexo: paciente.gender,
         cargo: paciente.job_title ?? null,
         setor: paciente.department ?? null,
@@ -156,7 +180,13 @@ export async function gerarAso(
         numero: pcmsoCfg.numero ?? respCfg.numero ?? null,
         uf: pcmsoCfg.uf ?? respCfg.uf ?? null,
         rqe: pcmsoCfg.rqe ?? null,
+        endereco: pcmsoCfg.endereco ?? null,
+        bairro: pcmsoCfg.bairro ?? null,
+        cidade: pcmsoCfg.cidade ?? null,
+        cep: pcmsoCfg.cep ?? null,
+        telefone: pcmsoCfg.telefone ?? null,
       },
+      riscos,
       medicoExaminador: {
         nome: signatario.nome,
         conselho: signatario.conselho,
@@ -165,11 +195,18 @@ export async function gerarAso(
       },
       assinaturaMedico: signatario.assinatura,
       tipoExame: TIPO_EXAME[at.appointments?.attendance_kind ?? ''] ?? 'Ocupacional',
-      exames: at.patient_exams
-        .filter((e) => e.status === 'concluido')
-        .map((e) => e.exam_types?.name ?? 'Exame')
-        .filter(Boolean),
-      parecer: APTIDAO[consulta.verdict] ?? consulta.verdict,
+      // O modelo da clinica imprime a data ao lado de cada exame.
+      exames: [
+        { nome: 'Exame Clínico', data: formatDate(emitidoEm) },
+        ...at.patient_exams
+          .filter((e) => e.status === 'concluido')
+          .map((e) => ({
+            nome: e.exam_types?.name ?? 'Exame',
+            data: e.finished_at ? formatDate(e.finished_at) : null,
+          })),
+      ],
+      // O PDF marca a caixa certa, entao recebe o codigo e nao o rotulo.
+      parecer: consulta.verdict,
       restricoes: consulta.restrictions ?? null,
       validade: consulta.valid_until ? formatDate(consulta.valid_until) : null,
       observacoes: consulta.observations ?? consulta.conclusion ?? null,

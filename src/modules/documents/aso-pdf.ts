@@ -1,12 +1,17 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { CATEGORIAS, type Riscos } from './riscos';
 
 /**
- * Desenho do A.S.O. em A4, no formato que a clinica ja usa em papel.
+ * A.S.O. no modelo que a clinica ja usa em papel.
  *
- * O layout segue o modelo entregue pela doutora: identificacao da empresa
- * contratante, do funcionario, do medico responsavel pelo PCMSO, exames
- * realizados, parecer de aptidao e as duas assinaturas.
+ * A estrutura veio do ASO_BRANCO.docx entregue pela clinica: blocos com
+ * faixa de titulo e pares rotulo/valor, o quadro de perigos e fatores de
+ * risco exigido pela NR-7, o parecer em caixas de marcar e o espaco de
+ * carimbo e assinatura no rodape.
+ *
+ * A ordem dos blocos e a redacao dos rotulos sao as do documento deles:
+ * quem confere o A.S.O. na empresa procura a informacao onde sempre esteve.
  */
 
 export interface DadosAso {
@@ -23,14 +28,17 @@ export interface DadosAso {
     razaoSocial: string;
     cnpj: string | null;
     endereco: string | null;
+    bairro: string | null;
     cidade: string | null;
     cep: string | null;
   };
   funcionario: {
     nome: string;
+    matricula: string | null;
     cpf: string | null;
     rg: string | null;
     nascimento: string;
+    idade: number | null;
     sexo: string;
     cargo: string | null;
     setor: string | null;
@@ -41,6 +49,11 @@ export interface DadosAso {
     numero: string | null;
     uf: string | null;
     rqe: string | null;
+    endereco: string | null;
+    bairro: string | null;
+    cidade: string | null;
+    cep: string | null;
+    telefone: string | null;
   };
   medicoExaminador: {
     nome: string;
@@ -48,23 +61,32 @@ export interface DadosAso {
     numero: string | null;
     uf: string | null;
   };
+  riscos: Riscos;
   tipoExame: string;
-  exames: string[];
+  /** Exame e data de realizacao, como sai no modelo da clinica. */
+  exames: { nome: string; data: string | null }[];
+  /** apto | apto_com_restricoes | inapto | inconclusivo */
   parecer: string;
   restricoes: string | null;
   validade: string | null;
   observacoes: string | null;
-  /** PNG em data URI, coletada na entrada. */
   assinaturaPaciente: string | null;
-  /** Assinatura manuscrita do medico examinador, quando registrada. */
   assinaturaMedico?: string | null;
   codigoVerificacao: string;
   urlVerificacao: string | null;
   rodape: string | null;
 }
 
+const A4: [number, number] = [595.28, 841.89];
+const MARGEM = 38;
+const LARGURA = A4[0] - MARGEM * 2;
+
+const PORTARIAS =
+  'EM CUMPRIMENTO ÀS PORTARIAS Nºs 3214/78, 3164/82, 12/83, 24/94 E 08/96 NR7 DO ' +
+  'MINISTÉRIO DO TRABALHO E EMPREGO PARA FINS DE EXAME:';
+
 function hexParaRgb(hex: string) {
-  const limpo = hex.replace('#', '');
+  const limpo = (hex ?? '').replace('#', '');
   const cheio = limpo.length === 3 ? limpo.split('').map((c) => c + c).join('') : limpo;
   const n = (i: number) => parseInt(cheio.slice(i, i + 2), 16) / 255;
   const [r, g, b] = [n(0), n(2), n(4)];
@@ -78,7 +100,7 @@ function hexParaRgb(hex: string) {
 function quebrar(texto: string, fonte: PDFFont, tamanho: number, largura: number): string[] {
   const linhas: string[] = [];
   let atual = '';
-  for (const palavra of texto.split(/\s+/)) {
+  for (const palavra of (texto ?? '').split(/\s+/)) {
     const teste = atual ? `${atual} ${palavra}` : palavra;
     if (fonte.widthOfTextAtSize(teste, tamanho) > largura && atual) {
       linhas.push(atual);
@@ -97,219 +119,292 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
   const cor = hexParaRgb(d.clinica.cor);
   const cinza = rgb(0.42, 0.45, 0.5);
-  const linhaCor = rgb(0.85, 0.87, 0.89);
+  const preto = rgb(0.1, 0.1, 0.12);
+  const borda = rgb(0.75, 0.78, 0.81);
 
-  let pagina: PDFPage = pdf.addPage([595.28, 841.89]);
-  const margem = 42;
-  const largura = 595.28 - margem * 2;
-  let y = 841.89 - margem;
+  let pagina: PDFPage = pdf.addPage(A4);
+  let y = A4[1] - MARGEM;
 
-  pagina.drawRectangle({ x: 0, y: 841.89 - 6, width: 595.28, height: 6, color: cor });
-
-  // Cabecalho
-  pagina.drawText(d.clinica.nome, { x: margem, y, size: 15, font: negrito, color: cor });
-  pagina.drawText('ATESTADO DE SAÚDE OCUPACIONAL', {
-    x: margem + 250, y, size: 13, font: negrito, color: rgb(0.1, 0.1, 0.12),
-  });
-  y -= 14;
-  for (const linha of [d.clinica.razaoSocial, d.clinica.cnpj, d.clinica.endereco, d.clinica.telefone]) {
-    if (!linha) continue;
-    pagina.drawText(String(linha), { x: margem, y, size: 7.5, font: fonte, color: cinza });
-    y -= 9.5;
-  }
-  const dataEmissao = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(d.emitidoEm);
-  pagina.drawText(`Emitido em ${dataEmissao}`, {
-    x: 595.28 - margem - 110, y: y + 12, size: 9, font: negrito, color: rgb(0.1, 0.1, 0.12),
-  });
-
-  y -= 8;
-  pagina.drawLine({ start: { x: margem, y }, end: { x: 595.28 - margem, y }, thickness: 0.8, color: linhaCor });
-  y -= 18;
-
-  /** Bloco com titulo em faixa e pares rotulo/valor. */
-  const bloco = (titulo: string, pares: [string, string | null][]) => {
-    pagina.drawRectangle({ x: margem, y: y - 13, width: largura, height: 16, color: rgb(0.95, 0.96, 0.97) });
-    pagina.drawText(titulo, { x: margem + 6, y: y - 9, size: 8.5, font: negrito, color: rgb(0.2, 0.22, 0.25) });
-    y -= 22;
-    const validos = pares.filter(([, v]) => v);
-    for (let i = 0; i < validos.length; i += 2) {
-      const par = validos.slice(i, i + 2);
-      par.forEach(([rot, val], col) => {
-        const x = margem + 6 + col * (largura / 2);
-        pagina.drawText(`${rot}:`, { x, y, size: 8, font: negrito, color: cinza });
-        const desloc = negrito.widthOfTextAtSize(`${rot}: `, 8);
-        pagina.drawText(String(val), { x: x + desloc, y, size: 8, font: fonte, color: rgb(0.1, 0.1, 0.12) });
-      });
-      y -= 12;
-    }
-    y -= 6;
+  const novaPagina = () => {
+    pagina = pdf.addPage(A4);
+    pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
+    y = A4[1] - MARGEM;
+    pagina.drawText(`${d.funcionario.nome} — continuação do A.S.O.`, {
+      x: MARGEM, y, size: 8, font: negrito, color: cinza,
+    });
+    y -= 18;
   };
 
-  bloco('EMPRESA CONTRATANTE', [
-    ['Razão social', d.empresaContratante.razaoSocial],
-    ['CNPJ', d.empresaContratante.cnpj],
+  const espaco = (altura: number) => {
+    if (y - altura < 150) novaPagina();
+  };
+
+  /** Faixa de titulo de bloco, como no modelo em Word. */
+  const faixa = (titulo: string) => {
+    espaco(26);
+    pagina.drawRectangle({ x: MARGEM, y: y - 12, width: LARGURA, height: 15, color: rgb(0.9, 0.92, 0.93) });
+    pagina.drawText(titulo, { x: MARGEM + 6, y: y - 8.5, size: 8.5, font: negrito, color: rgb(0.2, 0.22, 0.25) });
+    y -= 20;
+  };
+
+  /** Linha com duas colunas de rotulo/valor, como as tabelas do modelo. */
+  const paresEmDuasColunas = (pares: [string, string | null][]) => {
+    const validos = pares.filter(([, v]) => v !== null && String(v).trim() !== '');
+    for (let i = 0; i < validos.length; i += 2) {
+      espaco(14);
+      validos.slice(i, i + 2).forEach(([rotulo, valor], coluna) => {
+        const x = MARGEM + 4 + coluna * (LARGURA / 2);
+        pagina.drawText(`${rotulo}:`, { x, y, size: 7.5, font: negrito, color: cinza });
+        const desloc = negrito.widthOfTextAtSize(`${rotulo}: `, 7.5);
+        const larguraValor = LARGURA / 2 - desloc - 10;
+        const texto = quebrar(String(valor), fonte, 8, larguraValor)[0] ?? '';
+        pagina.drawText(texto, { x: x + desloc, y, size: 8, font: fonte, color: preto });
+      });
+      y -= 12.5;
+    }
+    y -= 4;
+  };
+
+  // -------------------------------------------------------------------
+  // Cabecalho
+  // -------------------------------------------------------------------
+  pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
+
+  pagina.drawText('A S O – ATESTADO DE SAÚDE OCUPACIONAL', {
+    x: MARGEM, y: y - 4, size: 14, font: negrito, color: preto,
+  });
+  y -= 20;
+
+  pagina.drawText(d.clinica.razaoSocial, { x: MARGEM, y, size: 8, font: negrito, color: cor });
+  const dataEmissao = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(d.emitidoEm);
+  pagina.drawText(`Emitido em ${dataEmissao}`, {
+    x: A4[0] - MARGEM - fonte.widthOfTextAtSize(`Emitido em ${dataEmissao}`, 8.5),
+    y, size: 8.5, font: negrito, color: preto,
+  });
+  y -= 10;
+
+  for (const linha of [d.clinica.cnpj, d.clinica.endereco, d.clinica.telefone].filter(Boolean)) {
+    pagina.drawText(String(linha), { x: MARGEM, y, size: 7, font: fonte, color: cinza });
+    y -= 8.5;
+  }
+  y -= 6;
+
+  // -------------------------------------------------------------------
+  // Empresa
+  // -------------------------------------------------------------------
+  faixa('Empresa');
+  paresEmDuasColunas([
+    ['Razão Social', d.empresaContratante.razaoSocial],
+    ['Cidade / UF', d.empresaContratante.cidade],
+    ['CNPJ / CPF', d.empresaContratante.cnpj],
+    ['Bairro', d.empresaContratante.bairro],
     ['Endereço', d.empresaContratante.endereco],
-    ['Cidade/UF', d.empresaContratante.cidade],
     ['CEP', d.empresaContratante.cep],
   ]);
 
-  bloco('FUNCIONÁRIO', [
+  // -------------------------------------------------------------------
+  // Funcionario
+  // -------------------------------------------------------------------
+  faixa('Funcionário');
+  paresEmDuasColunas([
     ['Nome', d.funcionario.nome],
-    ['CPF', d.funcionario.cpf],
-    ['RG', d.funcionario.rg],
-    ['Nascimento', d.funcionario.nascimento],
+    ['Código / Matrícula', d.funcionario.matricula],
+    ['RG / CPF', [d.funcionario.rg, d.funcionario.cpf].filter(Boolean).join(' / ') || null],
     ['Sexo', d.funcionario.sexo],
+    ['Nascimento', d.funcionario.nascimento],
+    ['Idade', d.funcionario.idade !== null ? `${d.funcionario.idade} ANOS` : null],
     ['Cargo', d.funcionario.cargo],
     ['Setor', d.funcionario.setor],
-    ['Tipo de exame', d.tipoExame],
   ]);
 
-  bloco('MÉDICO RESPONSÁVEL PELO PCMSO', [
+  // -------------------------------------------------------------------
+  // Medico responsavel pelo PCMSO
+  // -------------------------------------------------------------------
+  faixa('Médico responsável pelo PCMSO');
+  const registroPcmso = d.medicoPcmso.numero
+    ? `${d.medicoPcmso.numero}${d.medicoPcmso.uf ? ` / ${d.medicoPcmso.uf}` : ''}`
+    : null;
+  paresEmDuasColunas([
     ['Nome', d.medicoPcmso.nome],
-    [
-      'Registro',
-      d.medicoPcmso.numero
-        ? `${d.medicoPcmso.conselho} ${d.medicoPcmso.numero}${d.medicoPcmso.uf ? '/' + d.medicoPcmso.uf : ''}`
-        : null,
-    ],
+    [d.medicoPcmso.conselho, registroPcmso],
+    ['Endereço', d.medicoPcmso.endereco],
+    ['Cidade / UF', d.medicoPcmso.cidade],
+    ['Bairro', d.medicoPcmso.bairro],
+    ['CEP', d.medicoPcmso.cep],
+    ['Telefone', d.medicoPcmso.telefone],
     ['RQE', d.medicoPcmso.rqe],
   ]);
 
-  // Exames realizados
-  pagina.drawRectangle({ x: margem, y: y - 13, width: largura, height: 16, color: rgb(0.95, 0.96, 0.97) });
-  pagina.drawText('AVALIAÇÃO CLÍNICA E EXAMES REALIZADOS', {
-    x: margem + 6, y: y - 9, size: 8.5, font: negrito, color: rgb(0.2, 0.22, 0.25),
-  });
-  y -= 22;
-  const listaExames = d.exames.length > 0 ? d.exames.join(' · ') : 'Avaliação clínica ocupacional';
-  for (const linha of quebrar(listaExames, fonte, 8, largura - 12)) {
-    pagina.drawText(linha, { x: margem + 6, y, size: 8, font: fonte, color: rgb(0.1, 0.1, 0.12) });
-    y -= 11;
+  // -------------------------------------------------------------------
+  // Perigos e fatores de risco — exigencia da NR-7
+  // -------------------------------------------------------------------
+  faixa('Perigos / Fatores de Risco');
+  for (const { chave, rotulo } of CATEGORIAS) {
+    const linhas = quebrar(d.riscos[chave], fonte, 7.5, LARGURA - 90);
+    espaco(linhas.length * 10 + 4);
+    pagina.drawText(rotulo, { x: MARGEM + 4, y, size: 7.5, font: negrito, color: cinza });
+    linhas.forEach((linha, i) => {
+      pagina.drawText(linha, { x: MARGEM + 82, y: y - i * 9.5, size: 7.5, font: fonte, color: preto });
+    });
+    y -= Math.max(12, linhas.length * 9.5 + 3);
   }
-  y -= 8;
+  y -= 4;
 
-  // Parecer — o coracao do documento
-  pagina.drawRectangle({
-    x: margem, y: y - 40, width: largura, height: 46,
-    color: rgb(0.98, 0.98, 0.99), borderColor: cor, borderWidth: 1,
-  });
-  pagina.drawText('PARECER', { x: margem + 8, y: y - 8, size: 8.5, font: negrito, color: cinza });
-  pagina.drawText(d.parecer, { x: margem + 8, y: y - 26, size: 13, font: negrito, color: cor });
+  // -------------------------------------------------------------------
+  // Portarias e finalidade do exame
+  // -------------------------------------------------------------------
+  espaco(40);
+  for (const linha of quebrar(PORTARIAS, fonte, 6.5, LARGURA - 8)) {
+    pagina.drawText(linha, { x: MARGEM + 4, y, size: 6.5, font: fonte, color: cinza });
+    y -= 8;
+  }
+  pagina.drawText(d.tipoExame, { x: MARGEM + 4, y: y - 3, size: 11, font: negrito, color: preto });
+  y -= 20;
+
+  // -------------------------------------------------------------------
+  // Avaliacao clinica e exames realizados
+  // -------------------------------------------------------------------
+  faixa('Avaliação Clínica e Exames Realizados');
+  const exames = d.exames.length > 0 ? d.exames : [{ nome: 'Exame Clínico', data: null }];
+  for (const exame of exames) {
+    espaco(13);
+    pagina.drawText(exame.nome, { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
+    if (exame.data) {
+      pagina.drawText(exame.data, {
+        x: A4[0] - MARGEM - 60, y, size: 8, font: fonte, color: preto,
+      });
+    }
+    y -= 11.5;
+  }
+  y -= 6;
+
+  // -------------------------------------------------------------------
+  // Parecer, em caixas de marcar como no modelo da clinica
+  // -------------------------------------------------------------------
+  faixa('Parecer');
+  const opcoes: [string, string][] = [
+    ['inapto', 'Inapto para função'],
+    ['apto_com_restricoes', 'Apto para função com restrições'],
+    ['apto', 'Apto para função'],
+  ];
+  for (const [chave, rotulo] of opcoes) {
+    espaco(15);
+    const marcada = d.parecer === chave;
+    pagina.drawRectangle({
+      x: MARGEM + 5, y: y - 1.5, width: 9, height: 9,
+      borderColor: marcada ? cor : borda, borderWidth: marcada ? 1.4 : 0.8,
+      color: marcada ? cor : rgb(1, 1, 1),
+    });
+    if (marcada) {
+      pagina.drawText('X', { x: MARGEM + 7.2, y: y + 0.6, size: 8, font: negrito, color: rgb(1, 1, 1) });
+    }
+    pagina.drawText(rotulo, {
+      x: MARGEM + 20, y, size: marcada ? 9.5 : 8.5,
+      font: marcada ? negrito : fonte, color: marcada ? preto : cinza,
+    });
+    y -= 14;
+  }
+
   if (d.validade) {
-    pagina.drawText(`Validade: ${d.validade}`, {
-      x: 595.28 - margem - 120, y: y - 26, size: 9, font: fonte, color: rgb(0.1, 0.1, 0.12),
+    pagina.drawText(`Validade do exame: ${d.validade}`, {
+      x: MARGEM + 5, y, size: 8, font: negrito, color: preto,
     });
+    y -= 13;
   }
-  y -= 54;
-
   if (d.restricoes) {
-    pagina.drawText('Restrições:', { x: margem, y, size: 8, font: negrito, color: cinza });
-    y -= 11;
-    for (const linha of quebrar(d.restricoes, fonte, 8, largura)) {
-      pagina.drawText(linha, { x: margem, y, size: 8, font: fonte, color: rgb(0.1, 0.1, 0.12) });
-      y -= 10;
-    }
-    y -= 6;
-  }
-
-  if (d.observacoes) {
-    pagina.drawText('Observações:', { x: margem, y, size: 8, font: negrito, color: cinza });
-    y -= 11;
-    for (const linha of quebrar(d.observacoes, fonte, 8, largura).slice(0, 6)) {
-      pagina.drawText(linha, { x: margem, y, size: 8, font: fonte, color: rgb(0.1, 0.1, 0.12) });
+    for (const linha of quebrar(`Restrições: ${d.restricoes}`, fonte, 8, LARGURA - 10)) {
+      espaco(11);
+      pagina.drawText(linha, { x: MARGEM + 5, y, size: 8, font: fonte, color: preto });
       y -= 10;
     }
   }
+  y -= 6;
 
-  // Assinaturas. Se o parecer e as observacoes ocuparam a folha, elas vao
-  // para uma segunda pagina em vez de escrever por cima do rodape.
-  if (y < 230) {
-    pagina = pdf.addPage([595.28, 841.89]);
-    pagina.drawRectangle({ x: 0, y: 841.89 - 6, width: 595.28, height: 6, color: cor });
-    pagina.drawText(`${d.funcionario.nome} — continuação do A.S.O.`, {
-      x: margem, y: 841.89 - margem, size: 9, font: negrito, color: cinza,
-    });
+  // -------------------------------------------------------------------
+  // Observacoes
+  // -------------------------------------------------------------------
+  faixa('Observações');
+  const observacoes = d.observacoes?.trim() || '—';
+  for (const linha of quebrar(observacoes, fonte, 8, LARGURA - 10).slice(0, 8)) {
+    espaco(11);
+    pagina.drawText(linha, { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
+    y -= 10;
   }
 
-  const yAssinatura = 150;
-  const meia = largura / 2;
+  // -------------------------------------------------------------------
+  // Carimbo e assinatura
+  // -------------------------------------------------------------------
+  if (y < 210) novaPagina();
+  const yAss = 130;
+  const meia = LARGURA / 2;
 
-  // Assinatura manuscrita do medico, quando ele registrou a dele. Sem ela o
-  // documento sai como sempre saiu: linha, nome e registro.
-  let assinouAMao = false;
+  let assinou = false;
   if (d.assinaturaMedico) {
     try {
       const png = await pdf.embedPng(d.assinaturaMedico);
-      const escala = Math.min((meia - 40) / png.width, 42 / png.height);
+      const escala = Math.min((meia - 50) / png.width, 40 / png.height);
       pagina.drawImage(png, {
-        x: margem + 10,
-        y: yAssinatura + 16,
-        width: png.width * escala,
-        height: png.height * escala,
+        x: MARGEM + 10, y: yAss + 14, width: png.width * escala, height: png.height * escala,
       });
-      assinouAMao = true;
+      assinou = true;
     } catch {
-      /* assinatura ilegivel nao pode impedir a emissao do documento */
+      /* assinatura ilegivel nao pode impedir a emissao */
     }
   }
-
-  if (!assinouAMao) {
+  if (!assinou) {
     pagina.drawText('Assinado eletronicamente', {
-      x: margem + 10, y: yAssinatura + 30, size: 7, font: fonte, color: cinza,
-    });
-    pagina.drawText(d.medicoExaminador.nome, {
-      x: margem + 10, y: yAssinatura + 18, size: 9.5, font: negrito, color: rgb(0.1, 0.1, 0.12),
+      x: MARGEM + 10, y: yAss + 26, size: 6.5, font: fonte, color: cinza,
     });
   }
+
   pagina.drawLine({
-    start: { x: margem, y: yAssinatura + 12 }, end: { x: margem + meia - 20, y: yAssinatura + 12 },
+    start: { x: MARGEM, y: yAss + 10 }, end: { x: MARGEM + meia - 20, y: yAss + 10 },
     thickness: 0.8, color: rgb(0.3, 0.3, 0.3),
+  });
+  pagina.drawText(d.medicoExaminador.nome, {
+    x: MARGEM, y: yAss, size: 8.5, font: negrito, color: preto,
   });
   const registro = d.medicoExaminador.numero
     ? `${d.medicoExaminador.conselho} ${d.medicoExaminador.numero}${d.medicoExaminador.uf ? '/' + d.medicoExaminador.uf : ''}`
     : '';
-  pagina.drawText(d.medicoExaminador.nome, {
-    x: margem, y: yAssinatura, size: 8.5, font: negrito, color: rgb(0.1, 0.1, 0.12),
-  });
-  pagina.drawText(`Médico examinador — ${registro}`, {
-    x: margem, y: yAssinatura - 10, size: 7.5, font: fonte, color: cinza,
+  pagina.drawText(`Carimbo e Assinatura — Médico Examinador ${registro}`.trim(), {
+    x: MARGEM, y: yAss - 10, size: 7, font: fonte, color: cinza,
   });
 
   if (d.assinaturaPaciente) {
     try {
       const png = await pdf.embedPng(d.assinaturaPaciente);
-      const escala = Math.min((meia - 40) / png.width, 46 / png.height);
+      const escala = Math.min((meia - 40) / png.width, 40 / png.height);
       pagina.drawImage(png, {
-        x: margem + meia + 10,
-        y: yAssinatura + 16,
-        width: png.width * escala,
-        height: png.height * escala,
+        x: MARGEM + meia + 10, y: yAss + 14, width: png.width * escala, height: png.height * escala,
       });
     } catch {
-      /* assinatura ilegivel nao pode impedir a emissao do documento */
+      /* idem */
     }
   }
   pagina.drawLine({
-    start: { x: margem + meia + 10, y: yAssinatura + 12 },
-    end: { x: 595.28 - margem, y: yAssinatura + 12 },
+    start: { x: MARGEM + meia + 10, y: yAss + 10 }, end: { x: A4[0] - MARGEM, y: yAss + 10 },
     thickness: 0.8, color: rgb(0.3, 0.3, 0.3),
   });
-  pagina.drawText(d.funcionario.nome, { x: margem + meia + 10, y: yAssinatura, size: 8, font: fonte, color: cinza });
+  pagina.drawText(d.funcionario.nome, {
+    x: MARGEM + meia + 10, y: yAss, size: 8, font: fonte, color: preto,
+  });
   pagina.drawText(
     d.assinaturaPaciente ? 'Assinatura coletada na recepção' : 'Assinatura do funcionário',
-    { x: margem + meia + 10, y: yAssinatura - 10, size: 6.5, font: fonte, color: cinza },
+    { x: MARGEM + meia + 10, y: yAss - 10, size: 6.5, font: fonte, color: cinza },
   );
 
+  // -------------------------------------------------------------------
   // Rodape
-  let yr = 46;
+  // -------------------------------------------------------------------
+  let yr = 40;
   const rodape = [
     d.rodape,
     `Código de verificação: ${d.codigoVerificacao}${d.urlVerificacao ? ` — ${d.urlVerificacao}` : ''}`,
-    'Em cumprimento às portarias nº 3214/78, 3164/82, 12/83, 24/94 e 08/96 NR7 do Ministério do Trabalho e Emprego.',
   ].filter(Boolean) as string[];
   for (const parte of rodape.reverse()) {
-    for (const linha of quebrar(parte, fonte, 6.5, largura).reverse()) {
-      pagina.drawText(linha, { x: margem, y: yr, size: 6.5, font: fonte, color: cinza });
+    for (const linha of quebrar(parte, fonte, 6.5, LARGURA).reverse()) {
+      pagina.drawText(linha, { x: MARGEM, y: yr, size: 6.5, font: fonte, color: cinza });
       yr += 9;
     }
   }

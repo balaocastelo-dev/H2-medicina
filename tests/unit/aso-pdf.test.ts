@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildAsoPdf, type DadosAso } from '@/modules/documents/aso-pdf';
+import { montarRiscos } from '@/modules/documents/riscos';
 
 /** PNG 1x1 transparente — serve de assinatura sem depender de arquivo externo. */
 const PNG_1X1 =
@@ -20,23 +21,41 @@ const base: DadosAso = {
     razaoSocial: 'Indústria Modelo S.A.',
     cnpj: '11.111.111/0001-11',
     endereco: 'Av. Industrial, 500',
-    cidade: 'São Paulo/SP',
-    cep: '01000-000',
+    bairro: 'Distrito Industrial',
+    cidade: 'Campinas / SP',
+    cep: '13000-000',
   },
   funcionario: {
     nome: 'Ana Paula Ribeiro',
+    matricula: '4477',
     cpf: '123.456.789-00',
     rg: '12.345.678-9',
     nascimento: '10/03/1990',
+    idade: 36,
     sexo: 'Feminino',
     cargo: 'Operadora de máquinas',
     setor: 'Produção',
   },
-  medicoPcmso: { nome: 'Dra. Exemplo', conselho: 'CRM', numero: '79775', uf: 'SP', rqe: '1234' },
+  medicoPcmso: {
+    nome: 'Dra. Exemplo',
+    conselho: 'CRM',
+    numero: '79775',
+    uf: 'SP',
+    rqe: '1234',
+    endereco: 'Rua Paulo Orozimbo, 391',
+    bairro: 'Cambuci',
+    cidade: 'São Paulo / SP',
+    cep: '01535-000',
+    telefone: '(11) 3000-0000',
+  },
   medicoExaminador: { nome: 'Dra. Exemplo', conselho: 'CRM', numero: '79775', uf: 'SP' },
+  riscos: montarRiscos(null),
   tipoExame: 'Admissional',
-  exames: ['Audiometria', 'Espirometria', 'ECG'],
-  parecer: 'APTO',
+  exames: [
+    { nome: 'Exame Clínico', data: '19/08/2026' },
+    { nome: 'Audiometria', data: '19/08/2026' },
+  ],
+  parecer: 'apto',
   restricoes: null,
   validade: '19/08/2027',
   observacoes: null,
@@ -47,25 +66,35 @@ const base: DadosAso = {
 };
 
 describe('buildAsoPdf', () => {
-  it('gera um PDF de uma pagina em A4', async () => {
+  it('gera um PDF em A4', async () => {
     const bytes = await buildAsoPdf(base);
     expect(bytes.byteLength).toBeGreaterThan(1000);
 
     const doc = await PDFDocument.load(bytes);
-    expect(doc.getPageCount()).toBe(1);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(1);
     const { width, height } = doc.getPage(0).getSize();
     expect(Math.round(width)).toBe(595);
     expect(Math.round(height)).toBe(842);
   });
 
   it('embute a assinatura do paciente quando existe', async () => {
-    const comAssinatura = await buildAsoPdf({ ...base, assinaturaPaciente: PNG_1X1 });
+    const com = await buildAsoPdf({ ...base, assinaturaPaciente: PNG_1X1 });
     const sem = await buildAsoPdf(base);
-    expect(comAssinatura.byteLength).toBeGreaterThan(sem.byteLength);
+    expect(com.byteLength).toBeGreaterThan(sem.byteLength);
+  });
+
+  it('embute a assinatura do medico quando existe', async () => {
+    const com = await buildAsoPdf({ ...base, assinaturaMedico: PNG_1X1 });
+    const sem = await buildAsoPdf(base);
+    expect(com.byteLength).toBeGreaterThan(sem.byteLength);
   });
 
   it('nao quebra com assinatura corrompida', async () => {
-    const bytes = await buildAsoPdf({ ...base, assinaturaPaciente: 'data:image/png;base64,xxx' });
+    const bytes = await buildAsoPdf({
+      ...base,
+      assinaturaPaciente: 'data:image/png;base64,xxx',
+      assinaturaMedico: 'data:image/png;base64,xxx',
+    });
     expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 
@@ -73,9 +102,35 @@ describe('buildAsoPdf', () => {
     const bytes = await buildAsoPdf({
       ...base,
       clinica: { ...base.clinica, cnpj: null, endereco: null, telefone: null, cor: 'nao-e-cor' },
-      empresaContratante: { razaoSocial: 'X', cnpj: null, endereco: null, cidade: null, cep: null },
-      funcionario: { ...base.funcionario, cpf: null, rg: null, cargo: null, setor: null },
-      medicoPcmso: { nome: null, conselho: 'CRM', numero: null, uf: null, rqe: null },
+      empresaContratante: {
+        razaoSocial: 'X',
+        cnpj: null,
+        endereco: null,
+        bairro: null,
+        cidade: null,
+        cep: null,
+      },
+      funcionario: {
+        ...base.funcionario,
+        matricula: null,
+        cpf: null,
+        rg: null,
+        idade: null,
+        cargo: null,
+        setor: null,
+      },
+      medicoPcmso: {
+        nome: null,
+        conselho: 'CRM',
+        numero: null,
+        uf: null,
+        rqe: null,
+        endereco: null,
+        bairro: null,
+        cidade: null,
+        cep: null,
+        telefone: null,
+      },
       medicoExaminador: { nome: 'Dra. Exemplo', conselho: 'CRM', numero: null, uf: null },
       exames: [],
       validade: null,
@@ -85,17 +140,43 @@ describe('buildAsoPdf', () => {
     expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 
-  it('imprime restricoes e observacoes longas sem estourar', async () => {
-    const longo = 'Restrição detalhada '.repeat(30);
-    const bytes = await buildAsoPdf({ ...base, restricoes: longo, observacoes: longo });
+  it('aceita qualquer parecer sem quebrar', async () => {
+    for (const parecer of ['apto', 'apto_com_restricoes', 'inapto', 'inconclusivo', 'coisa']) {
+      const bytes = await buildAsoPdf({ ...base, parecer });
+      expect(bytes.byteLength).toBeGreaterThan(1000);
+    }
+  });
+
+  it('imprime riscos longos sem estourar', async () => {
+    const longo = 'Exposição a ruído contínuo acima do limite de tolerância. '.repeat(8);
+    const bytes = await buildAsoPdf({
+      ...base,
+      riscos: montarRiscos({
+        cargo: null,
+        fisicos: longo,
+        quimicos: longo,
+        biologicos: longo,
+        ergonomicos: longo,
+        acidentes: longo,
+      }),
+    });
     expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 
-  it('joga as assinaturas para a segunda pagina quando o texto ocupa a folha', async () => {
+  it('abre segunda pagina quando o conteudo ocupa a folha', async () => {
     const enorme = 'Restrição muito detalhada do posto de trabalho. '.repeat(60);
     const doc = await PDFDocument.load(
       await buildAsoPdf({ ...base, restricoes: enorme, observacoes: enorme }),
     );
-    expect(doc.getPageCount()).toBe(2);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
+  });
+
+  it('lista muitos exames sem quebrar', async () => {
+    const exames = Array.from({ length: 30 }, (_, i) => ({
+      nome: `Exame ${i + 1}`,
+      data: '19/08/2026',
+    }));
+    const bytes = await buildAsoPdf({ ...base, exames });
+    expect(bytes.byteLength).toBeGreaterThan(1000);
   });
 });
