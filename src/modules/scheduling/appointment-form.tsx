@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { BuscaSelecao } from '@/components/ui/busca-selecao';
 import { formatCPF } from '@/lib/format';
+import { INTERVALO_PADRAO_MINUTOS } from '@/modules/scheduling/intervalo';
 import type { ActionResult } from '@/lib/action-result';
 import type { Appointment } from '@/types/entities';
 
@@ -51,7 +52,7 @@ export function AppointmentForm({
   professionals,
   iniciais,
   rotuloBotao = 'Criar agendamento',
-  intervaloMinutos = 5,
+  intervaloMinutos = INTERVALO_PADRAO_MINUTOS,
 }: {
   action: Action;
   patients: PatientOption[];

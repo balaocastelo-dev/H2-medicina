@@ -4,6 +4,8 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
 import { RoomsBoard } from './rooms-board';
 import { ExamesForaDaFila } from './fora-da-fila';
+import { ExamesSemSala } from './sem-sala';
+import { contarNaFila, distribuirExames, NA_FILA } from '@/modules/queue/distribuicao';
 
 import type { QueueExam, RoomInfo } from './types';
 
@@ -42,6 +44,12 @@ export default async function FilasPage() {
 
   const rooms = roomsRes.data ?? [];
   const exams = examsRes.data ?? [];
+
+  // Reparte antes de desenhar: o que nao couber em sala nenhuma precisa
+  // aparecer em algum lugar, e o numero do topo sai desta mesma conta.
+  const distribuicao = distribuirExames(rooms, exams);
+  const contagem = contarNaFila(distribuicao);
+  const semSala = distribuicao.semSala.filter((e) => NA_FILA.includes(e.status));
 
   // Quem foi movido manualmente para frente pode ter deixado exames por fazer.
   // Esses exames nao aparecem em fila nenhuma — e preciso avisar.
@@ -87,7 +95,10 @@ export default async function FilasPage() {
         <StatCard label="Salas ativas" value={rooms.length} />
         <StatCard
           label="Exames na fila"
-          value={exams.filter((e) => ['pendente', 'em_fila'].includes(e.status)).length}
+          // Conta o que as salas realmente mostram. Antes contava a fila
+          // inteira, inclusive o que nenhum cartao exibia, e o numero do topo
+          // nao fechava com a tela -- foi assim que a clinica achou o defeito.
+          value={contagem.emSalas}
           color="#FB923C"
         />
         <StatCard
@@ -101,6 +112,12 @@ export default async function FilasPage() {
           color="#FACC15"
         />
       </div>
+
+      {semSala.length > 0 && rooms.length > 0 && (
+        <div className="mb-4">
+          <ExamesSemSala exames={semSala} salas={rooms} />
+        </div>
+      )}
 
       {foraDaFila.size > 0 && (
         <div className="mb-4">

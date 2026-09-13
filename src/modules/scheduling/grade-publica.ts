@@ -9,6 +9,8 @@
  * Logica pura: sem banco e sem fuso implicito, testavel direto.
  */
 
+import { INTERVALO_PADRAO_MINUTOS } from './intervalo';
+
 export interface ConfiguracaoDaGrade {
   ativo: boolean;
   /** Horarios oferecidos, em HH:MM. */
@@ -77,8 +79,13 @@ export const FAIXAS_PADRAO: FaixaDeHorario[] = [
   { inicio: '13:30', fim: '17:00' },
 ];
 
-/** Intervalo entre horarios oferecidos, em minutos. */
-export const PASSO_PADRAO = 5;
+/**
+ * Intervalo entre horarios oferecidos, em minutos.
+ *
+ * Vem do mesmo lugar que a agenda interna: a pagina publica oferecendo um
+ * passo e a recepcao marcando noutro produz horario que nao existe na agenda.
+ */
+export const PASSO_PADRAO = INTERVALO_PADRAO_MINUTOS;
 
 export const GRADE_PADRAO: ConfiguracaoDaGrade = {
   ativo: true,

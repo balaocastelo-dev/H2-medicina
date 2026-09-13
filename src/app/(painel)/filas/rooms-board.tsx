@@ -7,6 +7,7 @@ import { elapsedFrom } from '@/lib/format';
 import { callNextForRoom, recallTicket, updateExamStatus } from '@/modules/queue/actions';
 import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
 import { gerarLaudoDeExame } from '@/modules/documents/laudo-actions';
+import { distribuirExames } from '@/modules/queue/distribuicao';
 import type { QueueExam, RoomInfo } from './types';
 
 /** Exames com laudo proprio. Cresce quando outro exame ganhar o seu. */
@@ -57,8 +58,10 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
       });
     });
 
-  const examsForRoom = (room: RoomInfo) =>
-    exams.filter((e) => e.room_id === room.id || e.exam_types?.default_room_id === room.id);
+  // Mesma reparticao que a pagina usa para contar. Duas contas diferentes para
+  // a mesma pergunta foi o que fez o topo dizer 5 com as salas todas vazias.
+  const { porSala } = distribuirExames(rooms, exams);
+  const examsForRoom = (room: RoomInfo) => porSala.get(room.id) ?? [];
 
   return (
     <div className="space-y-4">

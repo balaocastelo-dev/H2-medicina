@@ -62,10 +62,12 @@ describe('gerarGrade', () => {
 });
 
 describe('grade padrao', () => {
-  it('usa passo de 5 minutos', () => {
-    expect(PASSO_PADRAO).toBe(5);
-    expect(GRADE_PADRAO.grade).toContain('08:05');
+  // A clinica confirmou 10 minutos em 13/09, depois de pedir 5 em 11/09.
+  it('usa passo de 10 minutos', () => {
+    expect(PASSO_PADRAO).toBe(10);
+    expect(GRADE_PADRAO.grade).toContain('08:10');
     expect(GRADE_PADRAO.grade).toContain('08:20');
+    expect(GRADE_PADRAO.grade).not.toContain('08:05');
   });
 
   it('cobre manha e tarde', () => {
@@ -98,7 +100,7 @@ describe('lerConfiguracao', () => {
   });
 
   it('passo invalido nao quebra a grade', () => {
-    const c = lerConfiguracao({ faixas: [{ inicio: '08:00', fim: '08:10' }], passo_minutos: 'oi' });
-    expect(c.grade).toEqual(['08:00', '08:05', '08:10']);
+    const c = lerConfiguracao({ faixas: [{ inicio: '08:00', fim: '08:20' }], passo_minutos: 'oi' });
+    expect(c.grade).toEqual(['08:00', '08:10', '08:20']);
   });
 });

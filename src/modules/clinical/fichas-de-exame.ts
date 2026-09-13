@@ -10,6 +10,8 @@
  * formulario da sala, o resumo do medico e o laudo em PDF.
  */
 
+import { LAMINAS } from './ishihara';
+
 export type TipoCampoExame = 'texto' | 'numero' | 'longo' | 'opcoes' | 'sim_nao' | 'titulo';
 
 export interface CampoExame {
@@ -230,16 +232,21 @@ export const FICHAS_DE_EXAME: FichaDeExame[] = [
   {
     codigo: 'ISHIHARA',
     titulo: 'Teste de Ishihara (visão de cores)',
+    // Uma linha por lamina do material da clinica. O examinador anota o que o
+    // paciente respondeu; quem conta os acertos e compara com o gabarito e o
+    // sistema (`conferirIshihara`). Antes havia um campo "placas acertadas"
+    // digitado a mao: o numero ia para o prontuario sem nada que permitisse
+    // reconferir depois, a nao ser repetir o exame no paciente.
     campos: [
-      { chave: 'placas_acertadas', rotulo: 'Placas identificadas', tipo: 'numero' },
-      { chave: 'placas_total', rotulo: 'Placas aplicadas', tipo: 'numero' },
-      {
-        chave: 'resultado',
-        rotulo: 'Resultado',
-        tipo: 'opcoes',
-        opcoes: ['normal', 'discromatopsia'],
-        alertaEm: ['discromatopsia'],
-      },
+      ...LAMINAS.map(
+        (l): CampoExame => ({
+          chave: l.chave,
+          rotulo: l.controle
+            ? `Figura ${l.figura} (controle) — o que o paciente leu`
+            : `Figura ${l.figura} — o que o paciente leu`,
+          tipo: 'texto',
+        }),
+      ),
       { chave: 'observacao', rotulo: 'Observação', tipo: 'longo' },
     ],
   },

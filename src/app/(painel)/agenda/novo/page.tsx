@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { AppointmentForm } from '@/modules/scheduling/appointment-form';
 import { createAppointment } from '@/modules/scheduling/actions';
+import { intervaloConfigurado } from '@/modules/scheduling/intervalo';
 
 export const dynamic = 'force-dynamic';
 
@@ -52,7 +53,9 @@ export default async function NovoAgendamentoPage() {
         description="Vincule paciente, empresa e exames previstos"
       />
       <AppointmentForm
-        intervaloMinutos={Number((ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos ?? 5) || 5}
+        intervaloMinutos={intervaloConfigurado(
+          (ctx.settings.agenda as { intervalo_minutos?: number } | undefined)?.intervalo_minutos,
+        )}
         action={createAppointment}
         patients={patientsRes.data ?? []}
         companies={(companiesRes.data ?? []).map((c) => ({

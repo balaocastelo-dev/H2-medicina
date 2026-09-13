@@ -800,3 +800,64 @@ export async function vincularCpfAoPaciente(
     return fail(toFriendlyError(error));
   }
 }
+
+/**
+ * Manda para uma sala um exame que nao estava em nenhuma.
+ *
+ * Existe por causa do defeito de 13/09: exame sem sala atribuida, cujo tipo
+ * tambem nao tem sala padrao, nao aparecia em cartao algum. O paciente ficava
+ * esperando e nao havia botao na tela capaz de chama-lo.
+ *
+ * Isto resolve o caso na hora, na frente do paciente. A correcao de fundo e
+ * cadastrar a sala padrao do tipo de exame, para o proximo nao cair aqui.
+ */
+export async function atribuirSalaAoExame(
+  examId: string,
+  roomId: string,
+): Promise<ActionResult> {
+  try {
+    const ctx = await assertPermission('filas.operar');
+    const supabase = await createClient();
+
+    // A sala precisa existir, estar ativa e ser desta clinica. Sem conferir,
+    // um id errado gravaria um exame numa sala que a tela nao mostra -- que e
+    // exatamente o problema que esta funcao veio resolver.
+    const { data: sala } = await supabase
+      .from('rooms')
+      .select('id, name')
+      .eq('id', roomId)
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .maybeSingle<{ id: string; name: string }>();
+
+    if (!sala) return fail('Sala não encontrada ou inativa.');
+
+    const { data: exame, error } = await supabase
+      .from('patient_exams')
+      .update({ room_id: sala.id, updated_by: ctx.userId })
+      .eq('id', examId)
+      .eq('tenant_id', ctx.tenant.id)
+      // So faz sentido para quem ainda espera: exame em andamento ja esta
+      // com alguem numa sala, e concluido nao volta para fila.
+      .in('status', ['pendente', 'em_fila'])
+      .select('id, attendance_id, patient_id')
+      .maybeSingle<{ id: string; attendance_id: string; patient_id: string | null }>();
+
+    if (error) return fail(toFriendlyError(error));
+    if (!exame) return fail('Este exame não está mais aguardando na fila.');
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'patient_exams',
+      entityId: exame.id,
+      patientId: exame.patient_id ?? undefined,
+      description: `Exame enviado para ${sala.name} (estava sem sala)`,
+    });
+
+    revalidatePath('/filas');
+    return ok(undefined, `Exame enviado para ${sala.name}.`);
+  } catch (error) {
+    return fail(toFriendlyError(error));
+  }
+}

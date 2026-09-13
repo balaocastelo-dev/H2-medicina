@@ -433,7 +433,10 @@ function dadosDaClinica(ctx: SessionContext) {
     numero: contato.numero,
     bairro: contato.bairro,
     cidade: contato.cidade,
-    uf: contato.uf,
+    // A tela de Configuracoes grava `estado`; todos os outros documentos leem
+    // `estado`. So aqui estava escrito `uf`, e o comprovante saia sem o estado.
+    // O `uf` fica como reserva para instalacao antiga que gravou assim.
+    uf: contato.estado ?? contato.uf,
     cep: contato.cep,
     referencia: contato.referencia,
     whatsapp: contato.whatsapp,
