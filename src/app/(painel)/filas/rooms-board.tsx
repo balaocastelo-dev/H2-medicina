@@ -6,7 +6,11 @@ import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState } from '@/
 import { elapsedFrom } from '@/lib/format';
 import { callNextForRoom, recallTicket, updateExamStatus } from '@/modules/queue/actions';
 import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
+import { gerarLaudoDeExame } from '@/modules/documents/laudo-actions';
 import type { QueueExam, RoomInfo } from './types';
+
+/** Exames com laudo proprio. Cresce quando outro exame ganhar o seu. */
+const TEM_LAUDO = new Set(['AUDIO']);
 
 export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueExam[] }) {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -18,6 +22,38 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
       setMessage({
         ok: result.ok,
         text: result.ok ? (result.message ?? 'Concluido.') : (result.error ?? 'Erro.'),
+      });
+    });
+
+  /**
+   * Conclui o exame e, quando ele tem laudo proprio, ja emite o documento.
+   *
+   * Duas acoes numa so porque o cartao do paciente sai da tela assim que o
+   * exame e concluido: um botao de laudo depois disso nunca apareceria. O
+   * examinador acabou de preencher a ficha e e quem assina o laudo.
+   *
+   * Falha na emissao nao desfaz a conclusao: o exame foi feito de verdade,
+   * e o laudo pode ser emitido depois pela tela de documentos.
+   */
+  const concluir = (examId: string, codigo: string | undefined) =>
+    startTransition(async () => {
+      const conclusao = await updateExamStatus(examId, 'concluido');
+      if (!conclusao.ok) {
+        setMessage({ ok: false, text: conclusao.error ?? 'Erro.' });
+        return;
+      }
+
+      if (!TEM_LAUDO.has(codigo ?? '')) {
+        setMessage({ ok: true, text: conclusao.message ?? 'Exame concluído.' });
+        return;
+      }
+
+      const laudo = await gerarLaudoDeExame(examId);
+      setMessage({
+        ok: laudo.ok,
+        text: laudo.ok
+          ? 'Exame concluído e laudo emitido.'
+          : `Exame concluído, mas o laudo falhou: ${laudo.error}`,
       });
     });
 
@@ -102,9 +138,12 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                           size="sm"
                           variant="success"
                           loading={pending}
-                          onClick={() => run(() => updateExamStatus(active.id, 'concluido'))}
+                          onClick={() => concluir(active.id, active.exam_types?.code)}
                         >
-                          <CheckCircle2 className="h-4 w-4" /> Concluir
+                          <CheckCircle2 className="h-4 w-4" />
+                          {TEM_LAUDO.has(active.exam_types?.code ?? '')
+                            ? 'Concluir e emitir laudo'
+                            : 'Concluir'}
                         </Button>
                       )}
                       <Button
@@ -128,6 +167,7 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                       >
                         <XCircle className="h-4 w-4" /> Não realizado
                       </Button>
+
                     </div>
 
                     {/* "anexar fichas de cada exame respectivo nas abas para
