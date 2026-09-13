@@ -33,12 +33,56 @@ export function horaValida(valor: unknown): valor is string {
   return (h ?? 99) <= 23 && (m ?? 99) <= 59;
 }
 
+/** Um periodo de atendimento no dia. */
+export interface FaixaDeHorario {
+  inicio: string;
+  fim: string;
+}
+
+/**
+ * Expande faixas de atendimento em horarios de N em N minutos.
+ *
+ * A clinica atende por ordem de chegada, entao a grade nao precisa reservar
+ * o tempo do exame — ela so marca a hora que a pessoa deve chegar. Por isso
+ * o passo e curto: de 30 em 30 minutos, quem tinha compromisso as 8h20 nao
+ * achava horario.
+ *
+ * O fim da faixa entra na lista: 07:00-11:30 oferece ate as 11:30.
+ */
+export function gerarGrade(faixas: FaixaDeHorario[], passoMinutos: number): string[] {
+  const passo = Number.isFinite(passoMinutos) && passoMinutos >= 1 ? Math.floor(passoMinutos) : 5;
+  const saida: string[] = [];
+
+  for (const faixa of faixas) {
+    if (!horaValida(faixa.inicio) || !horaValida(faixa.fim)) continue;
+    const emMinutos = (h: string) => {
+      const [hh, mm] = h.split(':').map(Number);
+      return (hh ?? 0) * 60 + (mm ?? 0);
+    };
+    const inicio = emMinutos(faixa.inicio);
+    const fim = emMinutos(faixa.fim);
+    if (fim < inicio) continue;
+
+    for (let m = inicio; m <= fim; m += passo) {
+      const hora = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      if (!saida.includes(hora)) saida.push(hora);
+    }
+  }
+
+  return saida.sort();
+}
+
+export const FAIXAS_PADRAO: FaixaDeHorario[] = [
+  { inicio: '07:00', fim: '11:30' },
+  { inicio: '13:30', fim: '17:00' },
+];
+
+/** Intervalo entre horarios oferecidos, em minutos. */
+export const PASSO_PADRAO = 5;
+
 export const GRADE_PADRAO: ConfiguracaoDaGrade = {
   ativo: true,
-  grade: [
-    '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00',
-    '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  ],
+  grade: gerarGrade(FAIXAS_PADRAO, PASSO_PADRAO),
   diasUteis: [1, 2, 3, 4, 5],
   diasDeAntecedencia: 1,
   janelaDeDias: 45,
@@ -48,7 +92,24 @@ export const GRADE_PADRAO: ConfiguracaoDaGrade = {
 export function lerConfiguracao(bruto: unknown): ConfiguracaoDaGrade {
   const dados = (bruto ?? {}) as Record<string, unknown>;
 
-  const horarios = Array.isArray(dados.grade) ? dados.grade.filter(horaValida) : [];
+  // Lista explicita continua valendo; sem ela, a grade nasce das faixas de
+  // atendimento com o passo configurado.
+  const explicitos = Array.isArray(dados.grade) ? dados.grade.filter(horaValida) : [];
+
+  const faixas: FaixaDeHorario[] = Array.isArray(dados.faixas)
+    ? (dados.faixas as FaixaDeHorario[]).filter(
+        (f) => f && horaValida(f.inicio) && horaValida(f.fim),
+      )
+    : [];
+
+  const passo = Number(dados.passo_minutos);
+  const horarios =
+    explicitos.length > 0
+      ? explicitos
+      : gerarGrade(
+          faixas.length > 0 ? faixas : FAIXAS_PADRAO,
+          Number.isFinite(passo) && passo >= 1 ? passo : PASSO_PADRAO,
+        );
 
   const dias = Array.isArray(dados.dias_uteis)
     ? dados.dias_uteis
