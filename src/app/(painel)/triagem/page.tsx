@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Card, EmptyState, StatCard } from '@/components/ui';
 import { TriageWorkspace } from './workspace';
 
-import type { TriageRow } from './types';
+import type { ExameDeBancada, TriageRow } from './types';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +25,26 @@ export default async function TriagemPage() {
     .returns<TriageRow[]>();
 
   const rows = data ?? [];
+
+  // Exames de bancada destes pacientes: sao feitos aqui mesmo, sem o
+  // paciente sair da triagem para entrar numa fila e voltar depois.
+  let bancada: ExameDeBancada[] = [];
+  if (rows.length > 0) {
+    const { data: exames } = await supabase
+      .from('patient_exams')
+      .select(
+        'id, status, attendance_id, exam_types(name, code, rooms:default_room_id(kind)), exam_results(values, conclusion)',
+      )
+      .eq('tenant_id', ctx.tenant.id)
+      .in(
+        'attendance_id',
+        rows.map((r) => r.id),
+      )
+      .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
+      .returns<(ExameDeBancada & { exam_types: { rooms: { kind: string } | null } | null })[]>();
+
+    bancada = (exames ?? []).filter((e) => e.exam_types?.rooms?.kind === 'triagem');
+  }
 
   return (
     <div>
@@ -52,7 +72,7 @@ export default async function TriagemPage() {
           />
         </Card>
       ) : (
-        <TriageWorkspace rows={rows} />
+        <TriageWorkspace rows={rows} bancada={bancada} />
       )}
     </div>
   );

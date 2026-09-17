@@ -10,6 +10,7 @@ import {
   type AnexoDoPaciente,
 } from '@/modules/patients/ferramentas-do-paciente';
 import { updatePatient } from '@/modules/patients/actions';
+import { DocumentActions } from '@/app/(painel)/documentos/client';
 import { Badge, Card, CardBody, CardHeader, EmptyState } from '@/components/ui';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Patient } from '@/types/entities';
@@ -21,6 +22,14 @@ interface HistoryRow {
   checkin_at: string;
   stage_code: string;
   finished_at: string | null;
+}
+
+interface DocumentoDoPaciente {
+  id: string;
+  kind: string;
+  title: string;
+  generated_at: string;
+  verification_code: string | null;
 }
 
 export default async function PacienteDetalhePage({ params }: { params: Promise<{ id: string }> }) {
@@ -38,7 +47,7 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
 
   if (!patient) notFound();
 
-  const [companiesRes, historyRes, examTypesRes, anexosRes] = await Promise.all([
+  const [companiesRes, historyRes, examTypesRes, anexosRes, documentosRes] = await Promise.all([
     supabase
       .from('companies')
       .select('id, legal_name, trade_name')
@@ -69,6 +78,18 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .returns<AnexoDoPaciente[]>(),
+    // "deve mostrar todos os exames que o paciente ja fez. Mostrar todos os
+    //  PDFs com resultados dos exames e documentos" — Isabella, 15/09.
+    // Os anexos acima sao o que CHEGA de fora; isto e o que a clinica EMITIU.
+    supabase
+      .from('documents')
+      .select('id, kind, title, generated_at, verification_code')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('patient_id', id)
+      .is('deleted_at', null)
+      .order('generated_at', { ascending: false })
+      .limit(100)
+      .returns<DocumentoDoPaciente[]>(),
   ]);
 
   if (ctx.permissions.has('clinico.ver')) {
@@ -107,6 +128,36 @@ export default async function PacienteDetalhePage({ params }: { params: Promise<
               anexos={anexosRes.data ?? []}
               podeRemover={ctx.permissions.has('pacientes.editar')}
             />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Documentos emitidos"
+            description="Tudo que a clínica gerou para este paciente"
+          />
+          <CardBody className="space-y-2">
+            {(documentosRes.data ?? []).length === 0 ? (
+              <p className="text-sm text-slate-500">
+                Nenhum documento emitido ainda para este paciente.
+              </p>
+            ) : (
+              (documentosRes.data ?? []).map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 p-2"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{d.title}</p>
+                    <p className="text-xs text-slate-500">
+                      {formatDate(d.generated_at)}
+                      {d.verification_code ? ` · ${d.verification_code}` : ''}
+                    </p>
+                  </div>
+                  <DocumentActions documentId={d.id} />
+                </div>
+              ))
+            )}
           </CardBody>
         </Card>
 

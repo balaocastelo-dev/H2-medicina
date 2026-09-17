@@ -11,3 +11,20 @@ export interface TriageRow {
   queue_tickets: { code: string }[];
   triages: Triage[];
 }
+
+/**
+ * Exame de bancada, feito na propria sala de triagem.
+ *
+ * Acuidade, Ishihara e fadiga sao feitos ali mesmo, com o paciente sentado
+ * na frente de quem fez os sinais vitais. Ate 15/09 eles apareciam na tela
+ * de Filas e salas, e o paciente tinha que sair da triagem, entrar na fila
+ * e voltar. "O cliente/usuario nao deve sair da recepcao e ir para triagem,
+ * filas e salas e depois voltar para triagem."
+ */
+export interface ExameDeBancada {
+  id: string;
+  status: string;
+  attendance_id: string;
+  exam_types: { name: string; code: string } | null;
+  exam_results: { values: Record<string, string>; conclusion: string | null }[];
+}

@@ -15,7 +15,8 @@ export const ORIGIN_KINDS: OriginKind[] = ['particular', 'estado', 'sisper', 'in
 export interface RegraProcedencia {
   code: OriginKind;
   /** Letra usada no dia a dia da recepcao. */
-  letter: 'P' | 'E' | 'S' | 'I';
+  /** Sigla do selo. Curta de proposito: cabe no cartao da fila. */
+  letter: 'P' | 'PR' | 'S' | 'I';
   label: string;
   /** Texto curto para cracha e listagem. */
   short: string;
@@ -55,9 +56,13 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
   },
   estado: {
     code: 'estado',
-    letter: 'E',
-    label: 'Estado — licença ESISLA',
-    short: 'Estado',
+    // "quando vir de estado (E) para pericia (PR) nao tera mais o nome e de
+    //  estado apenas PR de pericia" -- 15/09. O codigo interno continua
+    //  'estado' de proposito: mudar o valor gravado no banco renomearia o
+    //  historico de todos os atendimentos ja registrados.
+    letter: 'PR',
+    label: 'Perícia',
+    short: 'Perícia',
     color: '#7C3AED',
     needsTriage: false,
     afterTriage: 'medico',

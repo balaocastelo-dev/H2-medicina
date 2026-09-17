@@ -21,10 +21,16 @@ export default async function FilasPage() {
       .select('id, name, code, kind, status, current_attendance_id')
       .eq('tenant_id', ctx.tenant.id)
       .eq('is_active', true)
-      // Os consultorios saem daqui: a fila do medico passou a ser chamada na
-      // propria tela do medico, onde a fila e de pacientes e nao de exames.
-      // Mostrar nos dois lugares fazia duas telas disputarem a mesma sala.
-      .in('kind', ['exame', 'triagem'])
+      // So salas de exame.
+      //
+      // Os consultorios saem daqui: a fila do medico e chamada na propria
+      // tela do medico, onde a fila e de pacientes e nao de exames.
+      //
+      // As salas de triagem tambem sairam (15/09). Acuidade, Ishihara e
+      // fadiga sao feitos na bancada da triagem, e apareciam aqui como se
+      // fossem outra etapa -- o paciente saia da triagem, entrava nesta
+      // fila e voltava. Agora o examinador preenche tudo na tela de Triagem.
+      .eq('kind', 'exame')
       .is('deleted_at', null)
       .order('sort_order')
       .returns<RoomInfo[]>(),
@@ -43,7 +49,22 @@ export default async function FilasPage() {
   ]);
 
   const rooms = roomsRes.data ?? [];
-  const exams = examsRes.data ?? [];
+
+  // Exame de bancada da triagem nao e orfao: ele tem sala, so nao e uma
+  // sala desta tela. Sem esta exclusao ele cairia no aviso de "sem sala" e
+  // a recepcao seria avisada de um problema que nao existe.
+  const { data: salasDeTriagem } = await supabase
+    .from('rooms')
+    .select('id')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('kind', 'triagem')
+    .returns<{ id: string }[]>();
+
+  const idsDeTriagem = new Set((salasDeTriagem ?? []).map((s) => s.id));
+  const exams = (examsRes.data ?? []).filter((e) => {
+    const sala = e.room_id ?? e.exam_types?.default_room_id ?? null;
+    return sala === null || !idsDeTriagem.has(sala);
+  });
 
   // Reparte antes de desenhar: o que nao couber em sala nenhuma precisa
   // aparecer em algum lugar, e o numero do topo sai desta mesma conta.

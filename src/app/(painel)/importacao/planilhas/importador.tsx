@@ -146,7 +146,7 @@ export function ImportadorPlanilha({
                   }`}
                   style={ativo ? { backgroundColor: r.color, borderColor: r.color } : undefined}
                 >
-                  <span className="text-lg leading-none font-bold">{r.letter}</span>
+                  <span className={`leading-none font-bold ${r.letter.length > 1 ? 'text-sm' : 'text-lg'}`}>{r.letter}</span>
                   <span className="text-[11px] leading-tight">{r.short}</span>
                 </button>
               );

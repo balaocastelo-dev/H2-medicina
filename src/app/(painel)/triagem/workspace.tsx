@@ -13,12 +13,20 @@ import {
 } from '@/components/ui';
 import { calcAge, elapsedFrom, formatTime } from '@/lib/format';
 import { saveTriage } from '@/modules/clinical/actions';
+import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
 import type { ActionResult } from '@/lib/action-result';
-import type { TriageRow } from './types';
+import type { ExameDeBancada, TriageRow } from './types';
 
-export function TriageWorkspace({ rows }: { rows: TriageRow[] }) {
+export function TriageWorkspace({
+  rows,
+  bancada,
+}: {
+  rows: TriageRow[];
+  bancada: ExameDeBancada[];
+}) {
   const [selectedId, setSelectedId] = useState(rows[0]?.id ?? null);
   const selected = rows.find((r) => r.id === selectedId) ?? null;
+  const examesDoPaciente = bancada.filter((e) => e.attendance_id === selectedId);
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -46,8 +54,39 @@ export function TriageWorkspace({ rows }: { rows: TriageRow[] }) {
         </div>
       </Card>
 
-      <div className="lg:col-span-2">
+      <div className="space-y-4 lg:col-span-2">
         {selected ? <TriageForm key={selected.id} row={selected} /> : null}
+
+        {/*
+          Exames de bancada, na mesma tela.
+
+          Antes o paciente saía da triagem, aparecia na fila da Sala 1 e
+          voltava para cá. "Fluxo deve ser contínuo de recepção depois
+          triagem onde se preenche todas as informações de triagem."
+        */}
+        {selected && examesDoPaciente.length > 0 && (
+          <Card>
+            <CardHeader
+              title="Exames feitos aqui na triagem"
+              description="Preencha antes de encaminhar — o paciente não precisa entrar em outra fila"
+            />
+            <CardBody className="space-y-6">
+              {examesDoPaciente.map((exame) => (
+                <div key={exame.id} className="rounded-xl border border-slate-200 p-3">
+                  <p className="mb-2 text-sm font-medium text-slate-800">
+                    {exame.exam_types?.name ?? 'Exame'}
+                  </p>
+                  <FichaDeExameForm
+                    patientExamId={exame.id}
+                    codigoExame={exame.exam_types?.code}
+                    valoresIniciais={exame.exam_results?.[0]?.values ?? {}}
+                    conclusaoInicial={exame.exam_results?.[0]?.conclusion ?? ''}
+                  />
+                </div>
+              ))}
+            </CardBody>
+          </Card>
+        )}
       </div>
     </div>
   );

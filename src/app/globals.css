@@ -96,13 +96,29 @@ body {
   .ticket-termico {
     width: 72mm;
     margin: 0;
-    padding: 3mm 2mm 8mm;
+    /*
+      "o corte tem que ser mais justo com a impressao para diminuir o
+       desperdicio de papel" — 15/09.
+
+      Os 8mm de rodape viravam quase um centimetro de bobina em branco em
+      cada senha. 3mm e o minimo: abaixo disso a lamina corta dentro da
+      ultima linha impressa.
+    */
+    padding: 2mm 2mm 3mm;
     font-family: 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.15;
     color: #000;
     background: white;
     text-align: center;
-    /* Corte no fim de cada ticket, se sair mais de um. */
-    page-break-after: always;
+  }
+
+  /*
+    Quebra so ENTRE tickets, nunca depois do ultimo.
+    Com `page-break-after: always` a impressora avancava uma pagina inteira
+    depois de cada senha — inclusive da unica, quando so havia uma.
+  */
+  .ticket-termico + .ticket-termico {
+    page-break-before: always;
   }
 
   .ticket-termico * {

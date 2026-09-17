@@ -10,7 +10,8 @@ import {
 describe('procedência do paciente', () => {
   it('tem uma letra distinta para cada procedência', () => {
     const letras = ORIGIN_KINDS.map((k) => REGRAS[k].letter);
-    expect(letras).toEqual(['P', 'E', 'S', 'I']);
+    // 'E' de Estado virou 'PR' de Pericia a pedido da clinica (15/09).
+    expect(letras).toEqual(['P', 'PR', 'S', 'I']);
     expect(new Set(letras).size).toBe(4);
   });
 
