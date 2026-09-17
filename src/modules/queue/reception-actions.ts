@@ -79,7 +79,15 @@ export async function definirProcedencia(
       .from('attendances')
       .update({
         origin_kind: originKind,
-        needs_triage: regra.needsTriage,
+        // `needs_triage` NAO entra aqui de proposito.
+        //
+        // Escolher a procedencia sobrescrevia a escolha de triagem que a
+        // recepcao ja tinha feito, no banco e na tela. Foi o defeito de
+        // 14/09: "selecionei que precisava e nao foi, ela foi direto pro
+        // medico" -- aconteceu com a Fernanda, a Evelyn, o Breno e outros.
+        //
+        // A procedencia sugere; quem decide e a recepcao, e quem grava a
+        // decisao e `finishReception`, no fim do atendimento.
         origin_kind_set_at: new Date().toISOString(),
         origin_kind_set_by: ctx.userId,
         updated_by: ctx.userId,

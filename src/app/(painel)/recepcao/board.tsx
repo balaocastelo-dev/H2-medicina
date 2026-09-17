@@ -198,6 +198,10 @@ function ReceptionDetail({
   const regra = REGRAS[originKind];
 
   const [needsTriage, setNeedsTriage] = useState(row.needs_triage);
+  // A procedencia sugere triagem; a recepcao decide. Depois que alguem mexe
+  // na caixinha, trocar a procedencia nao desfaz mais a escolha -- era o que
+  // mandava o paciente direto ao medico sem ninguem perceber (14/09).
+  const [triagemDecidida, setTriagemDecidida] = useState(false);
   // A clinica deixou de usar preferencia: todo atendimento entra como normal.
   const priority = 'normal';
   const [notes, setNotes] = useState(row.notes ?? '');
@@ -285,7 +289,7 @@ function ReceptionDetail({
           disabled={pending}
           onSelect={(kind) => {
             setOriginKind(kind);
-            setNeedsTriage(REGRAS[kind].needsTriage);
+            if (!triagemDecidida) setNeedsTriage(REGRAS[kind].needsTriage);
             startTransition(async () => {
               const r = await definirProcedencia(row.id, kind);
               if (r.ok) setProcedenciaDefinida(true);
@@ -371,7 +375,10 @@ function ReceptionDetail({
             <input
               type="checkbox"
               checked={needsTriage}
-              onChange={(e) => setNeedsTriage(e.target.checked)}
+              onChange={(e) => {
+                setNeedsTriage(e.target.checked);
+                setTriagemDecidida(true);
+              }}
               className="mb-3"
             />
             <span className="mb-3">Encaminhar para triagem</span>
