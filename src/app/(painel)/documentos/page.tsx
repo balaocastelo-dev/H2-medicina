@@ -69,7 +69,13 @@ export default async function DocumentosPage({
       .eq('tenant_id', ctx.tenant.id)
       // Somente quem passou pelo pagamento: a esteira e recepcao -> ... ->
       // medico -> pagamento -> documentos.
-      .in('stage_code', ['aguardando_documentos', 'finalizado'])
+      //
+      // 'finalizado' saiu da lista: quem ja teve o kit emitido nao precisa
+      // aparecer de novo na hora de emitir. "o nome do paciente nao deve
+      // mais aparecer na lista de atendimento, liberando pra ficar apenas os
+      // pacientes que ainda nao emitiram" -- Isabella, 15/09. Os documentos
+      // dele continuam na lista de baixo, e a busca por data acha tudo.
+      .eq('stage_code', 'aguardando_documentos')
       .gte('checkin_at', `${de}T00:00:00`)
       .is('deleted_at', null)
       .order('checkin_at', { ascending: false })

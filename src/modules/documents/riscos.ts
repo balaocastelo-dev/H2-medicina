@@ -29,11 +29,11 @@ export type Riscos = Record<CategoriaDeRisco, string>;
 /**
  * Texto usado quando a categoria nao foi preenchida.
  *
- * E a frase do proprio modelo da clinica. Deixar em branco seria pior:
- * campo vazio num A.S.O. sugere que a avaliacao nao foi feita, e nao que
- * nao havia risco relevante.
+ * E exatamente o que a clinica imprime hoje, conferido no A.S.O. do Roberto
+ * da Silva Oliveira (09/09). Deixar em branco seria pior: campo vazio num
+ * A.S.O. sugere que a avaliacao nao foi feita, e nao que nao havia risco.
  */
-export const SEM_RISCO_RELEVANTE = 'Não foram encontradas fontes significativas do risco.';
+export const SEM_RISCO_RELEVANTE = '"S.R.O.E" Sem riscos ocupacionais específicos';
 
 export interface PerfilDeRisco {
   cargo: string | null;
@@ -73,8 +73,36 @@ export function perfilParaCargo(
   return perfis.find((p) => !p.cargo) ?? null;
 }
 
-/** Preenche as cinco categorias, completando o que faltar. */
-export function montarRiscos(perfil: PerfilDeRisco | null): Riscos {
+/**
+ * Preenche as cinco categorias, completando o que faltar.
+ *
+ * `doPaciente` e o risco anotado no cadastro daquele empregado, pedido pela
+ * clinica em 15/09: "deve existir um campo onde podemos colocar o risco
+ * ocupacional do empregado da empresa".
+ *
+ * Quando existe, ele vence o perfil do cargo em TODAS as categorias. E o
+ * caso do empregado que faz algo diferente do resto do cargo dele -- quem
+ * escreveu ali sabia mais do que a tabela da empresa sabe. Misturar os dois
+ * produziria um A.S.O. que ninguem escreveu.
+ */
+export function montarRiscos(
+  perfil: PerfilDeRisco | null,
+  doPaciente?: string | null,
+): Riscos {
+  const especifico = (doPaciente ?? '').trim();
+  if (especifico) {
+    // A anotacao e um texto corrido, nao cinco campos. Vai inteira na
+    // primeira categoria e as outras saem com a frase padrao -- e o que o
+    // modelo em papel da clinica faz.
+    return {
+      fisicos: especifico,
+      quimicos: SEM_RISCO_RELEVANTE,
+      biologicos: SEM_RISCO_RELEVANTE,
+      ergonomicos: SEM_RISCO_RELEVANTE,
+      acidentes: SEM_RISCO_RELEVANTE,
+    };
+  }
+
   const valor = (bruto: string | null | undefined) => {
     const texto = (bruto ?? '').trim();
     return texto || SEM_RISCO_RELEVANTE;

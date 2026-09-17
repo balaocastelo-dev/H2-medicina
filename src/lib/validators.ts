@@ -89,6 +89,8 @@ export const patientSchema = z.object({
   job_title: optionalText,
   department: optionalText,
   registration_number: optionalText,
+  /** Perigos e fatores de risco deste empregado; sai impresso no A.S.O. */
+  occupational_risks: optionalText,
   emergency_contact_name: optionalText,
   emergency_contact_phone: optionalText,
   notes: optionalText,

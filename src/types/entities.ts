@@ -220,6 +220,8 @@ export interface Patient {
   job_title: string | null;
   department: string | null;
   registration_number: string | null;
+  /** Perigos e fatores de risco deste empregado; sai impresso no A.S.O. */
+  occupational_risks: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;

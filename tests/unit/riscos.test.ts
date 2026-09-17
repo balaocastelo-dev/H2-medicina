@@ -77,6 +77,36 @@ describe('montarRiscos', () => {
     const r = montarRiscos(null);
     for (const { chave } of CATEGORIAS) expect(r[chave].length).toBeGreaterThan(10);
   });
+
+  // "deve existir um campo onde podemos colocar o risco ocupacional do
+  //  empregado da empresa" -- Isabella, 15/09.
+  describe('risco anotado no cadastro do empregado', () => {
+    it('vence o perfil do cargo', () => {
+      const r = montarRiscos(MOTORISTA, 'Ruído contínuo acima de 85 dB(A)');
+      expect(r.fisicos).toBe('Ruído contínuo acima de 85 dB(A)');
+    });
+
+    it('nao mistura com o perfil: o resto sai com a frase padrao', () => {
+      // Misturar produziria um A.S.O. que ninguem escreveu.
+      const r = montarRiscos(MOTORISTA, 'Poeira mineral');
+      expect(r.fisicos).toBe('Poeira mineral');
+      for (const chave of ['quimicos', 'biologicos', 'ergonomicos', 'acidentes'] as const) {
+        expect(r[chave]).toBe(SEM_RISCO_RELEVANTE);
+      }
+    });
+
+    it('campo vazio ou so com espaco cai de volta no perfil do cargo', () => {
+      expect(montarRiscos(MOTORISTA, '').fisicos).toBe('Vibração de corpo inteiro');
+      expect(montarRiscos(MOTORISTA, '   ').fisicos).toBe('Vibração de corpo inteiro');
+      expect(montarRiscos(MOTORISTA, null).fisicos).toBe('Vibração de corpo inteiro');
+      expect(montarRiscos(MOTORISTA, undefined).fisicos).toBe('Vibração de corpo inteiro');
+    });
+
+    it('funciona mesmo sem perfil de empresa nenhum', () => {
+      const r = montarRiscos(null, 'Trabalho em altura');
+      expect(r.fisicos).toBe('Trabalho em altura');
+    });
+  });
 });
 
 describe('temRiscoRelevante', () => {

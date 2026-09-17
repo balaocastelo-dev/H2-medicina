@@ -1,4 +1,4 @@
-﻿import 'server-only';
+import 'server-only';
 import { randomBytes } from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
 import type { SessionContext } from '@/lib/auth';
@@ -32,6 +32,8 @@ interface AtendimentoAso {
     job_title: string | null;
     department: string | null;
     registration_number: string | null;
+    /** Risco anotado no cadastro deste empregado; vence o perfil do cargo. */
+    occupational_risks: string | null;
   } | null;
   companies: {
     legal_name: string;
@@ -83,7 +85,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -134,7 +136,11 @@ export async function gerarAso(
       .is('deleted_at', null)
       .returns<PerfilDeRisco[]>();
 
-    const riscos = montarRiscos(perfilParaCargo(perfis ?? [], paciente.job_title));
+    const riscos = montarRiscos(
+      perfilParaCargo(perfis ?? [], paciente.job_title),
+      // O risco anotado no cadastro deste empregado vence o perfil do cargo.
+      paciente.occupational_risks,
+    );
     await supabase.from('attendances').update({ riscos }).eq('id', attendanceId);
 
     const pdf = await buildAsoPdf({

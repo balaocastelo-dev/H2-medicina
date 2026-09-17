@@ -1,4 +1,4 @@
-﻿'use server';
+'use server';
 
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
@@ -19,6 +19,7 @@ import {
   sistemasAlterados,
 } from '@/modules/clinical/ficha-estrutura';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { gerarAso } from './aso';
 import type { DocumentKind } from '@/types/entities';
 
 
@@ -363,32 +364,104 @@ export async function generateAttendanceDocument(
  */
 export async function emitirDocumentosDeSaida(
   attendanceId: string,
-): Promise<ActionResult<{ emitidos: string[]; falhas: string[] }>> {
-  const kinds: { kind: DocumentKind; nome: string }[] = [
-    { kind: 'comprovante_comparecimento', nome: 'comprovante de comparecimento' },
-    { kind: 'recibo', nome: 'recibo de pagamento' },
-    { kind: 'comprovante_agendamento', nome: 'comprovante de agendamento' },
-  ];
+): Promise<ActionResult<{ emitidos: string[]; falhas: string[]; jaExistiam: string[] }>> {
+  try {
+    const ctx = await assertPermission('documentos.emitir');
+    const supabase = await createClient();
 
-  const emitidos: string[] = [];
-  const falhas: string[] = [];
+    const { data: at } = await supabase
+      .from('attendances')
+      .select('id, origin_kind, medical_consultations(verdict)')
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{
+        id: string;
+        origin_kind: string | null;
+        medical_consultations: { verdict: string | null }[];
+      }>();
 
-  for (const { kind, nome } of kinds) {
-    const resultado = await generateAttendanceDocument(attendanceId, kind);
-    if (resultado.ok) emitidos.push(nome);
-    else falhas.push(`${nome} (${resultado.error})`);
+    if (!at) return fail('Atendimento não encontrado.');
+
+    const ehParticular = (at.origin_kind ?? 'particular') === 'particular';
+    const temParecer = Boolean(at.medical_consultations?.[0]?.verdict);
+
+    const kinds: { kind: DocumentKind; nome: string }[] = [
+      { kind: 'comprovante_comparecimento', nome: 'comprovante de comparecimento' },
+      { kind: 'recibo', nome: 'recibo de pagamento' },
+      { kind: 'comprovante_agendamento', nome: 'comprovante de agendamento' },
+      // "essa ficha clinica deve sair pra cada paciente com as informacoes
+      //  preenchidas" -- Isabella, 15/09.
+      { kind: 'ficha_clinica', nome: 'ficha clínica' },
+    ];
+
+    const emitidos: string[] = [];
+    const falhas: string[] = [];
+
+    for (const { kind, nome } of kinds) {
+      const resultado = await generateAttendanceDocument(attendanceId, kind);
+      if (resultado.ok) emitidos.push(nome);
+      else falhas.push(`${nome} (${resultado.error})`);
+    }
+
+    // -----------------------------------------------------------------
+    // A.S.O. -- so para particular, e so depois do parecer do medico.
+    //
+    // "sempre na parte de recepcao tem um paciente de entrada como
+    //  particular obrigatoriamente deve gerar o aso" e "lembrando que o aso
+    //  aparece apenas para clientes particulares" -- Isabella, 15/09.
+    //
+    // Sem parecer o A.S.O. nao pode existir: ele atesta aptidao, e quem
+    // atesta e o medico. Antes isso falhava calado e a clinica so descobria
+    // que o documento nao saiu. Agora o kit diz o porque.
+    // -----------------------------------------------------------------
+    if (ehParticular) {
+      if (!temParecer) {
+        falhas.push('A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido)');
+      } else {
+        const aso = await gerarAso(ctx, attendanceId);
+        if (aso.ok) emitidos.push('A.S.O.');
+        else falhas.push(`A.S.O. (${aso.error})`);
+      }
+    }
+
+    // -----------------------------------------------------------------
+    // O que ja estava pronto tambem faz parte do kit.
+    //
+    // "conferir que todos os exames feitos estao aparecendo os documentos
+    //  no kit de saida" -- o laudo de audiometria sai quando o exame e
+    //  concluido, e a guia sai no balcao. Nao se emite de novo; se lista,
+    //  senao a recepcao acha que sumiram.
+    // -----------------------------------------------------------------
+    const { data: existentes } = await supabase
+      .from('documents')
+      .select('title, kind')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', attendanceId)
+      .in('kind', ['resultado_exame', 'guia_exame', 'aso'])
+      .is('deleted_at', null)
+      .returns<{ title: string; kind: string }[]>();
+
+    const jaExistiam = (existentes ?? [])
+      .filter((d) => d.kind !== 'aso' || !emitidos.includes('A.S.O.'))
+      .map((d) => d.title);
+
+    if (emitidos.length === 0) {
+      return fail(`Nenhum documento foi emitido. ${falhas.join('; ')}`);
+    }
+
+    const total = emitidos.length + jaExistiam.length;
+    const base =
+      jaExistiam.length > 0
+        ? `${total} documentos no kit (${jaExistiam.length} já estavam prontos).`
+        : `${emitidos.length} documentos emitidos.`;
+
+    return ok(
+      { emitidos, falhas, jaExistiam },
+      falhas.length === 0 ? base : `${base} Não saiu: ${falhas.join('; ')}.`,
+    );
+  } catch (error) {
+    return fail(toFriendlyError(error));
   }
-
-  if (emitidos.length === 0) {
-    return fail(`Nenhum documento foi emitido. ${falhas.join('; ')}`);
-  }
-
-  return ok(
-    { emitidos, falhas },
-    falhas.length === 0
-      ? `${emitidos.length} documentos emitidos: ${emitidos.join(', ')}.`
-      : `Emitidos: ${emitidos.join(', ')}. Falhou: ${falhas.join('; ')}.`,
-  );
 }
 
 /** URL assinada temporaria (documentos clinicos nunca sao publicos). */

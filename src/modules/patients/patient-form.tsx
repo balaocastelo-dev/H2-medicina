@@ -120,6 +120,19 @@ export function PatientForm({
           <Field label="Matricula" error={errors?.registration_number}>
             <Input name="registration_number" defaultValue={patient?.registration_number ?? ''} />
           </Field>
+          <Field
+            label="Risco ocupacional"
+            className="sm:col-span-2"
+            error={errors?.occupational_risks}
+            hint="Sai impresso no A.S.O. Deixe em branco para usar o perfil do cargo cadastrado na empresa."
+          >
+            <Textarea
+              name="occupational_risks"
+              rows={2}
+              defaultValue={patient?.occupational_risks ?? ''}
+              placeholder="Ex.: Ruído contínuo acima de 85 dB(A); poeira mineral"
+            />
+          </Field>
           <Field label="Contato de emergencia">
             <Input
               name="emergency_contact_name"

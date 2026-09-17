@@ -1,16 +1,20 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { CheckCircle2, Download, FileText, PackageCheck } from 'lucide-react';
+import { Download, FileText, PackageCheck } from 'lucide-react';
 import { Alert, Button, Card, CardBody, CardHeader, Field, Select } from '@/components/ui';
-import { emitirDocumentosDeSaida, generateAttendanceDocument } from '@/modules/documents/actions';
+import { generateAttendanceDocument } from '@/modules/documents/actions';
 import { abrirDocumentoEmNovaAba } from '@/lib/abrir-documento';
 import { encerrarAtendimento } from '@/modules/finance/attendance-actions';
 import { formatDateTime } from '@/lib/format';
 import type { DocumentKind } from '@/types/entities';
 
+// "está emitindo documentos repetidos com nomes diferentes comprovante de
+//  comparecimento e atestado de comparecimento para o mesmo paciente. Deve
+//  ficar apenas comprovante de comparecimento" — Isabella, 15/09.
+// O tipo continua existindo no sistema para os que já foram emitidos; só
+// deixa de ser oferecido na hora de emitir.
 const KINDS: { value: DocumentKind; label: string }[] = [
-  { value: 'atestado_comparecimento', label: 'Atestado de comparecimento médico' },
   { value: 'comprovante_comparecimento', label: 'Comprovante de comparecimento' },
   { value: 'resumo_atendimento', label: 'Resumo do atendimento' },
   { value: 'relacao_exames', label: 'Relacao dos exames' },
@@ -36,7 +40,7 @@ export function GenerateDocumentCard({
   attendances: AtendimentoParaEmissao[];
 }) {
   const [attendanceId, setAttendanceId] = useState('');
-  const [kind, setKind] = useState<DocumentKind>('atestado_comparecimento');
+  const [kind, setKind] = useState<DocumentKind>('comprovante_comparecimento');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -100,20 +104,13 @@ export function GenerateDocumentCard({
             <FileText className="h-4 w-4" /> Gerar documento
           </Button>
 
-          <Button
-            variant="outline"
-            loading={pending}
-            disabled={!attendanceId}
-            onClick={() =>
-              startTransition(async () => {
-                const r = await emitirDocumentosDeSaida(attendanceId);
-                setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Emitidos.') : r.error });
-              })
-            }
-          >
-            <PackageCheck className="h-4 w-4" /> Kit de saída
-          </Button>
-
+          {/*
+            Um botão só. Antes eram dois — "Kit de saída" e "Encerrar
+            atendimento" — e o de encerrar já emitia o kit por dentro. Quem
+            clicasse só no primeiro via o paciente continuar na lista, porque
+            o atendimento não tinha sido encerrado. Emitir o kit É o fim do
+            atendimento: o paciente está indo embora com os papéis na mão.
+          */}
           <Button
             variant="success"
             loading={pending}
@@ -121,17 +118,20 @@ export function GenerateDocumentCard({
             onClick={() => {
               if (
                 !window.confirm(
-                  'Encerrar o atendimento deste paciente?\n\nO kit de saída (comprovante, recibo e agendamento) é emitido automaticamente.',
+                  'Gerar o kit de saída e encerrar o atendimento?\n\n' +
+                    'Saem o comprovante, o recibo, a ficha clínica e — para particular — o A.S.O.\n' +
+                    'O paciente sai da lista de emissão.',
                 )
               )
                 return;
               startTransition(async () => {
                 const r = await encerrarAtendimento(attendanceId);
                 setMessage({ ok: r.ok, text: r.ok ? (r.message ?? 'Encerrado.') : r.error });
+                if (r.ok) setAttendanceId('');
               });
             }}
           >
-            <CheckCircle2 className="h-4 w-4" /> Encerrar atendimento
+            <PackageCheck className="h-4 w-4" /> Gerar kit de saída e encerrar
           </Button>
         </div>
       </CardBody>
