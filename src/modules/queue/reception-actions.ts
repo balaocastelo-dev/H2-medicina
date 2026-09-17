@@ -9,6 +9,7 @@ import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import {
+  FORA_DA_CLINICA,
   isOriginKind,
   proximaEtapaDaRecepcao,
   regraDe,
@@ -180,12 +181,19 @@ export async function finishReception(input: {
     if (toAdd.length > 0) {
       const { data: types } = await supabase
         .from('exam_types')
-        .select('id, default_room_id, sort_order')
+        .select('id, code, default_room_id, sort_order')
         .in('id', toAdd)
-        .returns<{ id: string; default_room_id: string | null; sort_order: number }[]>();
+        .returns<
+          { id: string; code: string; default_room_id: string | null; sort_order: number }[]
+        >();
+
+      // Exame feito fora nao entra em fila: nao ha sala aqui para chamar.
+      // A Izabella de Oliveira ficou 42 minutos esperando um raio-X que a
+      // clinica nem realiza (15/09). O que ela precisava era da guia.
+      const paraFila = (types ?? []).filter((t) => !FORA_DA_CLINICA.has(t.code));
 
       await supabase.from('patient_exams').insert(
-        (types ?? []).map((t) => ({
+        paraFila.map((t) => ({
           tenant_id: ctx.tenant.id,
           attendance_id: input.attendanceId,
           patient_id: attendance.patient_id,

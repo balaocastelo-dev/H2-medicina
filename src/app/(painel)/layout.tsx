@@ -1,10 +1,9 @@
-import { requireSession } from '@/lib/auth';
+﻿import { requireSession } from '@/lib/auth';
 import { Sidebar } from '@/components/layout/sidebar';
 import { Topbar } from '@/components/layout/topbar';
 import { NAV_GROUPS, FULLSCREEN_LINKS, DOWNLOADS } from '@/components/layout/nav-config';
 import { carregarContadores } from '@/components/layout/contadores';
 import { AutoRefresh } from '@/components/layout/auto-refresh';
-import { AssistantWidget } from '@/modules/assistant/assistant-widget';
 import { GuiaProvider } from '@/components/guide/guia-provider';
 import { guiasJaVistos } from '@/modules/guide/actions';
 
@@ -26,14 +25,6 @@ export default async function PainelLayout({ children }: { children: React.React
 
   const fullscreen = FULLSCREEN_LINKS.filter((i) => allowed(i.permission, i.module));
   const downloads = DOWNLOADS.filter((d) => allowed(d.permission));
-
-  // O assistente executa acoes reais; so aparece para quem tem alguma delas.
-  const podeUsarAssistente = [
-    'filas.operar',
-    'financeiro.registrar',
-    'usuarios.administrar',
-    'pacientes.ver',
-  ].some((p) => permissions.has(p));
 
   const themeVars = {
     ['--brand-primary' as string]: branding.color_primary,
@@ -67,13 +58,10 @@ export default async function PainelLayout({ children }: { children: React.React
           <main className="flex-1 p-4 lg:p-6">{children}</main>
         </div>
 
-        {/* Mantém os contadores do menu atualizados sem recarregar a página. */}
+        {/* MantÃ©m os contadores do menu atualizados sem recarregar a pÃ¡gina. */}
         <AutoRefresh />
 
-        {/* Assistente: aparece para quem pode operar o sistema. */}
-        {podeUsarAssistente && (
-          <AssistantWidget nomeUsuario={profile.full_name || (ctx.email ?? 'Usuario')} />
-        )}
+        {/* O assistente de Ctrl+K foi retirado a pedido da clÃ­nica (15/09). */}
       </div>
     </GuiaProvider>
   );

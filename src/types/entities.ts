@@ -81,7 +81,9 @@ export type DocumentKind =
   | 'relatorio_empresarial'
   | 'autorizacao_envio_resultados'
   | 'comprovante_agendamento'
-  | 'contrato_empresa';
+  | 'contrato_empresa'
+  /** Guia de solicitacao de exame feito fora da clinica (raio-X, laboratorio). */
+  | 'guia_exame';
 
 /** Procedencia do paciente: P (particular), E (estado), S (SISPER), I (ingresso). */
 export type PatientOriginKind = 'particular' | 'estado' | 'sisper' | 'ingresso';

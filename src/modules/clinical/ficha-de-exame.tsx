@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { Save } from 'lucide-react';
 import { Alert, Button, Field, Input, Textarea } from '@/components/ui';
 import { saveExamResult } from './actions';
-import { alertasDaFicha, fichaDoExame } from './fichas-de-exame';
+import { alertasDaFicha, fichaDoExame, padroesDaFicha } from './fichas-de-exame';
 
 /**
  * Ficha do exame preenchida na propria sala, montada a partir do modelo.
@@ -26,7 +26,12 @@ export function FichaDeExameForm({
   aoSalvar?: () => void;
 }) {
   const ficha = fichaDoExame(codigoExame);
-  const [valores, setValores] = useState<Record<string, string>>(valoresIniciais);
+  // Os padroes so valem para campo que ninguem preencheu ainda: reabrir um
+  // exame salvo nao pode sobrescrever o que o examinador digitou.
+  const [valores, setValores] = useState<Record<string, string>>({
+    ...padroesDaFicha(ficha),
+    ...valoresIniciais,
+  });
   const [conclusao, setConclusao] = useState(conclusaoInicial);
   const [pendente, iniciarTransicao] = useTransition();
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);

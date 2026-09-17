@@ -24,6 +24,7 @@ import {
 import { ORIGIN_KINDS, REGRAS, regraDe, type OriginKind } from '@/modules/queue/origin-kind';
 import { formatCNPJ, formatMoney } from '@/lib/format';
 import { moveAttendanceStage } from '@/modules/queue/actions';
+import { BlocoGuiaDeExame } from './guia-de-exame';
 import { BlocoAutorizacao } from './autorizacao';
 import type { ProcedimentoOpcao, ReceptionRow } from './types';
 
@@ -220,6 +221,15 @@ function ReceptionDetail({
     .filter((e) => selectedExams.includes(e.id))
     .reduce((soma, e) => soma + Number(e.price ?? 0), 0);
 
+  // Raio-X e coleta laboratorial nao sao feitos aqui: em vez de entrar na
+  // fila de uma sala que nao existe, saem como guia impressa no balcao.
+  const codigosEscolhidos = new Set(
+    examTypes.filter((e) => selectedExams.includes(e.id)).map((e) => e.code),
+  );
+  const temLaboratorio = codigosEscolhidos.has('LAB');
+  const temRaioX = codigosEscolhidos.has('RAIOX');
+  const temGuia = temLaboratorio || temRaioX;
+
   // Via substituida continua no banco para o historico, mas nao conta aqui.
   const assinaturasVigentes = (row.patient_signatures ?? []).filter((a) => !a.deleted_at);
   const temAutorizacao = assinaturasVigentes.some(
@@ -369,6 +379,14 @@ function ReceptionDetail({
             ))}
           </div>
         </div>
+
+        {temGuia && (
+          <BlocoGuiaDeExame
+            attendanceId={row.id}
+            temLaboratorio={temLaboratorio}
+            temRaioX={temRaioX}
+          />
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="flex items-end gap-2 text-sm">

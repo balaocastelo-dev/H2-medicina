@@ -22,6 +22,22 @@ export interface CampoExame {
   unidade?: string;
   /** Respostas que o medico precisa ver destacadas. */
   alertaEm?: string[];
+  /**
+   * Valor que ja vem escrito quando a ficha abre em branco.
+   *
+   * Para dado que e sempre o mesmo -- o audiometro da clinica nao muda a
+   * cada paciente. Continua editavel: e ponto de partida, nao trava.
+   */
+  padrao?: string;
+}
+
+/** Valores iniciais de uma ficha, a partir dos padroes dos campos. */
+export function padroesDaFicha(ficha: FichaDeExame | null): Record<string, string> {
+  const valores: Record<string, string> = {};
+  for (const campo of ficha?.campos ?? []) {
+    if (campo.padrao !== undefined) valores[campo.chave] = campo.padrao;
+  }
+  return valores;
 }
 
 export interface FichaDeExame {
@@ -107,9 +123,13 @@ const rotuloFrequencia = (hz: string) =>
 const CAMPOS_AUDIOMETRIA: CampoExame[] = [
   // A clinica pediu estes quatro no laudo: "aparelho utilizado, fabricante
   // do aparelho, calibracao do aparelho, tempo de repouso auditivo".
-  { chave: 'repouso_auditivo', rotulo: 'Repouso auditivo', tipo: 'numero', unidade: 'h' },
-  { chave: 'aparelho', rotulo: 'Aparelho', tipo: 'texto' },
-  { chave: 'fabricante', rotulo: 'Fabricante do aparelho', tipo: 'texto' },
+  //
+  // Os quatro vem preenchidos: sao o equipamento da clinica, nao um dado do
+  // paciente. Redigitar isso em todo exame so cria oportunidade de erro de
+  // digitacao num campo que vai impresso no laudo. Continuam editaveis.
+  { chave: 'repouso_auditivo', rotulo: 'Repouso auditivo', tipo: 'numero', unidade: 'h', padrao: '14' },
+  { chave: 'aparelho', rotulo: 'Aparelho', tipo: 'texto', padrao: 'AUDIÔMETRO – A030' },
+  { chave: 'fabricante', rotulo: 'Fabricante do aparelho', tipo: 'texto', padrao: 'ACÚSTICA ORLANDI' },
   { chave: 'calibracao', rotulo: 'Calibração', tipo: 'texto' },
   { chave: 'titulo_od', rotulo: 'Orelha direita — via aérea', tipo: 'titulo' },
   ...FREQUENCIAS_AUDIO.map(
@@ -290,8 +310,22 @@ export const FICHAS_DE_EXAME: FichaDeExame[] = [
   },
 ];
 
+/**
+ * Exames que nao tem ficha preenchida na sala.
+ *
+ * Pedido da clinica em 15/09:
+ *  - "no exame de eletroencefalograma, eletrocardiograma e espirometria,
+ *     nao devem ter ficha de exame" -- o resultado sai do proprio aparelho,
+ *     em laudo separado; uma ficha em branco na tela so atrapalha.
+ *  - "em exames laboratoriais coleta de exames nao deve aparecer ficha de
+ *     exames, ela deve ser preenchida na recepcao" -- o que se pede ao
+ *     laboratorio e decidido no balcao e sai na guia, nao na sala.
+ */
+export const SEM_FICHA_NA_SALA = new Set(['EEG', 'ECG', 'ESPIRO', 'LAB', 'RAIOX']);
+
 export function fichaDoExame(codigo: string | null | undefined): FichaDeExame | null {
   if (!codigo) return null;
+  if (SEM_FICHA_NA_SALA.has(codigo)) return null;
   return FICHAS_DE_EXAME.find((f) => f.codigo === codigo) ?? null;
 }
 

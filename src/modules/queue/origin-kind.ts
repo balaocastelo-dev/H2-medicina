@@ -94,6 +94,15 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
   },
 };
 
+/**
+ * Exames que a clinica nao realiza: o paciente leva a guia e faz fora.
+ *
+ * Nao entram em fila nem ocupam sala. Ate 15/09 entravam, e ficavam presos
+ * numa sala inexistente -- a Izabella esperou 42 minutos por um raio-X que
+ * nunca ia ser chamado. O resultado volta depois, pelo laboratorio.
+ */
+export const FORA_DA_CLINICA = new Set(['RAIOX', 'LAB']);
+
 export function regraDe(kind: string | null | undefined): RegraProcedencia {
   return REGRAS[(kind ?? 'particular') as OriginKind] ?? REGRAS.particular;
 }
