@@ -194,6 +194,11 @@ describe('clinica lotada — 3 medicos e dezenas de pacientes', () => {
 
       await amb.como(recepcao, async () => {
         // Particular faz exames; as demais procedencias vao direto ao medico.
+        //
+        // CLINICO entra junto porque, desde 17/09, e ele que decide se o
+        // paciente vai ao consultorio depois dos exames. Sem ele marcado,
+        // quem termina os exames vai direto ao pagamento -- que e o caso
+        // de quem veio so fazer um eletroencefalograma.
         if (p.procedencia === 'particular') {
           await amb.db.exec(`
             insert into public.patient_exams
@@ -201,7 +206,7 @@ describe('clinica lotada — 3 medicos e dezenas de pacientes', () => {
             select '${amb.tenant}', '${atendimento.id}', '${p.id}', et.id, et.default_room_id,
                    et.sort_order, '${p.prioridade}', 'pendente', '${recepcao}'
               from public.exam_types et
-             where et.tenant_id = '${amb.tenant}' and et.code in ('AUDIO','ECG')
+             where et.tenant_id = '${amb.tenant}' and et.code in ('AUDIO','ECG','CLINICO')
           `);
         }
         await amb.db.exec(`
@@ -258,9 +263,16 @@ describe('clinica lotada — 3 medicos e dezenas de pacientes', () => {
 
     expect(new Set(chamados).size).toBe(chamados.length);
 
+    // A consulta clinica fica de fora: ela nao e feita numa sala de exame,
+    // e quem a conclui e o medico, la na frente. Contar CLINICO aqui seria
+    // exigir que a fila de exames resolvesse a consulta.
     const pendentes = await amb.um<{ total: number }>(`
-      select count(*)::int as total from public.patient_exams
-       where tenant_id = '${amb.tenant}' and status in ('pendente','em_fila','chamado','em_andamento')
+      select count(*)::int as total
+        from public.patient_exams pe
+        join public.exam_types et on et.id = pe.exam_type_id
+       where pe.tenant_id = '${amb.tenant}'
+         and et.code <> 'CLINICO'
+         and pe.status in ('pendente','em_fila','chamado','em_andamento')
     `);
     expect(pendentes.total).toBe(0);
   });

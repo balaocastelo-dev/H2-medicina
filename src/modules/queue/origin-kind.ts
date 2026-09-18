@@ -126,15 +126,39 @@ export function proximaEtapaDaRecepcao(input: {
   originKind: OriginKind;
   needsTriage: boolean;
   temExames: boolean;
-}): 'aguardando_triagem' | 'aguardando_exames' | 'aguardando_medico' {
+  /**
+   * A consulta clinica ocupacional foi marcada.
+   *
+   * "o paciente so deve passar pelo medico se o icone 'consulta clinica
+   *  ocupacional' estiver ticado" -- Isabella, 17/09. Quem vem so fazer um
+   *  eletroencefalograma termina os exames e vai embora.
+   *
+   * Indefinido mantem o comportamento antigo, para nao mudar o destino de
+   * chamada que ainda nao passa esta informacao.
+   */
+  temConsulta?: boolean;
+}):
+  | 'aguardando_triagem'
+  | 'aguardando_exames'
+  | 'aguardando_medico'
+  | 'aguardando_pagamento' {
   if (input.needsTriage) return 'aguardando_triagem';
 
   const regra = REGRAS[input.originKind];
+  const temConsulta = input.temConsulta ?? true;
 
-  // Sem triagem e sem exame para fazer, mandar para a fila deixaria o
-  // paciente parado: nao ha exame para concluir e nada dispara a etapa
-  // seguinte. Vai direto ao medico.
-  if (regra.afterTriage === 'medico' || !input.temExames) return 'aguardando_medico';
+  // Nada a fazer aqui dentro: nem exame, nem consulta. Segue para o
+  // pagamento, que e o passo seguinte da esteira -- mandar ao consultorio
+  // colocaria o paciente numa fila para uma consulta que ninguem pediu.
+  if (!input.temExames && !temConsulta) return 'aguardando_pagamento';
+
+  // Sem exame para fazer, mandar para a fila deixaria o paciente parado:
+  // nao ha exame para concluir e nada dispara a etapa seguinte.
+  if (!input.temExames) return 'aguardando_medico';
+
+  // Com exames: a procedencia que pula a fila so faz sentido se houver
+  // consulta esperando do outro lado.
+  if (regra.afterTriage === 'medico' && temConsulta) return 'aguardando_medico';
   return 'aguardando_exames';
 }
 

@@ -232,10 +232,27 @@ export async function finishReception(input: {
       .eq('status', 'pendente')
       .is('queued_at', null);
 
+    // O que foi marcado decide para onde o paciente vai: a consulta clinica
+    // manda ao consultorio, e o resto so passa pelas filas de exame. Quem
+    // veio so fazer um eletroencefalograma termina e vai embora.
+    const { data: escolhidos } = await supabase
+      .from('exam_types')
+      .select('code')
+      .in('id', input.examTypeIds.length > 0 ? input.examTypeIds : ['00000000-0000-0000-0000-000000000000'])
+      .returns<{ code: string }[]>();
+
+    const codigos = new Set((escolhidos ?? []).map((e) => e.code));
+    const temConsulta = codigos.has('CLINICO');
+    // Consulta e exame de fora nao ocupam sala nenhuma aqui dentro.
+    const temExamesNaClinica = [...codigos].some(
+      (c) => c !== 'CLINICO' && !FORA_DA_CLINICA.has(c),
+    );
+
     const proximaEtapa = proximaEtapaDaRecepcao({
       originKind,
       needsTriage: input.needsTriage,
-      temExames: input.examTypeIds.length > 0,
+      temExames: temExamesNaClinica,
+      temConsulta,
     });
 
     const { error } = await supabase
