@@ -7,6 +7,8 @@ import { buildAsoPdf } from './aso-pdf';
 import { idadeNaData, montarRiscos, perfilParaCargo, type PerfilDeRisco } from './riscos';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { urlDeVerificacao } from './verificacao';
+import { publicEnv } from '@/lib/env';
 
 /**
  * A.S.O. — Atestado de Saude Ocupacional.
@@ -214,7 +216,7 @@ export async function gerarAso(
       observacoes: consulta.observations ?? consulta.conclusion ?? null,
       assinaturaPaciente,
       codigoVerificacao: codigo,
-      urlVerificacao: docsCfg.url_verificacao ?? null,
+      urlVerificacao: urlDeVerificacao(docsCfg.url_verificacao, publicEnv.NEXT_PUBLIC_APP_URL),
       rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
     });
 

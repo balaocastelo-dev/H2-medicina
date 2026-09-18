@@ -11,6 +11,8 @@ import { marcaDoTenant } from './brand';
 import { paragrafosDoTermo } from './authorization';
 import { formatCPF } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { urlDeVerificacao } from './verificacao';
+import { publicEnv } from '@/lib/env';
 
 const TITULO = 'Autorização para entrega de prontuário à empresa';
 const FINALIDADE = 'autorizacao_envio_resultados';
@@ -135,7 +137,7 @@ export async function emitirTermoAutorizacao(input: {
         },
       ],
       verificationCode,
-      verificationUrl: documentos.url_verificacao ?? null,
+      verificationUrl: urlDeVerificacao(documentos.url_verificacao, publicEnv.NEXT_PUBLIC_APP_URL),
     });
 
     const carimbo = Date.now();

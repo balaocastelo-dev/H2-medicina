@@ -19,6 +19,8 @@ import {
   sistemasAlterados,
 } from '@/modules/clinical/ficha-estrutura';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { urlDeVerificacao } from './verificacao';
+import { publicEnv } from '@/lib/env';
 import { gerarAso } from './aso';
 import type { DocumentKind } from '@/types/entities';
 
@@ -306,7 +308,7 @@ export async function generateAttendanceDocument(
       signatureName,
       signatureRole: signatureRole || null,
       verificationCode,
-      verificationUrl: documentos.url_verificacao ?? null,
+      verificationUrl: urlDeVerificacao(documentos.url_verificacao, publicEnv.NEXT_PUBLIC_APP_URL),
     });
 
     const path = `${ctx.tenant.id}/atendimentos/${attendanceId}/${kind}-${Date.now()}.pdf`;
