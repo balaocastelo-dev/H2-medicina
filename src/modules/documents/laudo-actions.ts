@@ -8,6 +8,7 @@ import { audit } from '@/lib/audit';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { idadeNaData } from './riscos';
 import { buildLaudoAudiometria } from './laudo-audiometria';
+import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
 /** Exames que tem laudo proprio. Os demais saem na ficha do atendimento. */
@@ -127,21 +128,12 @@ export async function gerarLaudoDeExame(
       const v = valores[chave];
       return v === null || v === undefined || v === '' ? null : String(v);
     };
-
-    const contatoCfg = (ctx.settings.contato ?? {}) as Record<string, string | null>;
     const docsCfg = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
     const verificacao = randomBytes(5).toString('hex').toUpperCase();
 
     const pdf = await buildLaudoAudiometria({
-      clinica: {
-        nome: ctx.branding.system_name,
-        endereco:
-          [contatoCfg.logradouro, contatoCfg.numero, contatoCfg.bairro, contatoCfg.cidade]
-            .filter(Boolean)
-            .join(', ') || null,
-        telefone: contatoCfg.telefone ?? null,
-        cor: ctx.branding.color_primary,
-      },
+      clinica: await cabecalhoDaClinica(ctx),
+
       emitidoEm,
       paciente: {
         nome: paciente.social_name ?? paciente.full_name,

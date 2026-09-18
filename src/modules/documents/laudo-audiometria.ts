@@ -1,5 +1,6 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import { desenharAudiograma, desenharLegenda } from './audiograma-pdf';
 import { lerLimiares, resumirOrelha, rotuloFrequencia, FREQUENCIAS } from './audiograma';
 
@@ -14,12 +15,7 @@ import { lerLimiares, resumirOrelha, rotuloFrequencia, FREQUENCIAS } from './aud
  */
 
 export interface DadosDoLaudo {
-  clinica: {
-    nome: string;
-    endereco: string | null;
-    telefone: string | null;
-    cor: string;
-  };
+  clinica: DadosDoCabecalho;
   emitidoEm: Date;
   paciente: {
     nome: string;
@@ -77,22 +73,23 @@ export async function buildLaudoAudiometria(d: DadosDoLaudo): Promise<Uint8Array
   let y = A4[1] - MARGEM;
   pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
 
-  // Cabecalho
-  pagina.drawText('AUDIOMETRIA TONAL OCUPACIONAL', {
-    x: MARGEM, y, size: 13, font: negrito, color: preto,
+  // Cabecalho comum a todo papel que sai da clinica.
+  y = await desenharCabecalho(pdf, pagina, d.clinica, {
+    titulo: 'AUDIOMETRIA',
+    fonte,
+    negrito,
+    margem: MARGEM,
+    largura: A4[0],
+    alturaDaPagina: A4[1],
   });
-  y -= 15;
-  pagina.drawText(d.clinica.nome, { x: MARGEM, y, size: 8, font: negrito, color: cor });
+
   const data = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(d.emitidoEm);
+  pagina.drawText('Tonal ocupacional', { x: MARGEM, y, size: 9, font: negrito, color: cor });
   pagina.drawText(`Data do exame: ${data}`, {
-    x: A4[0] - MARGEM - 110, y, size: 8.5, font: negrito, color: preto,
+    x: A4[0] - MARGEM - negrito.widthOfTextAtSize(`Data do exame: ${data}`, 8.5),
+    y, size: 8.5, font: negrito, color: preto,
   });
-  y -= 10;
-  for (const linha of [d.clinica.endereco, d.clinica.telefone].filter(Boolean)) {
-    pagina.drawText(String(linha), { x: MARGEM, y, size: 7, font: fonte, color: cinza });
-    y -= 8.5;
-  }
-  y -= 8;
+  y -= 16;
 
   const faixa = (titulo: string) => {
     pagina.drawRectangle({ x: MARGEM, y: y - 12, width: largura, height: 15, color: rgb(0.9, 0.92, 0.93) });

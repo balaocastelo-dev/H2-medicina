@@ -1,5 +1,6 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 
 /**
  * Guia de solicitacao de exame, no modelo "Guia de Exame.docx" da clinica.
@@ -15,7 +16,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
  */
 
 export interface DadosDaGuia {
-  clinica: { nome: string; cor: string; logo?: Uint8Array | null };
+  clinica: DadosDoCabecalho;
   colaborador: {
     nome: string;
     cpf: string | null;
@@ -46,64 +47,25 @@ const A4: [number, number] = [595.28, 841.89];
 const M = 52;
 const LARGURA = A4[0] - M * 2;
 
-function hexParaRgb(hex: string) {
-  const limpo = (hex ?? '').replace('#', '');
-  const cheio = limpo.length === 3 ? limpo.split('').map((c) => c + c).join('') : limpo;
-  const n = (i: number) => parseInt(cheio.slice(i, i + 2), 16) / 255;
-  const [r, g, b] = [n(0), n(2), n(4)];
-  return rgb(
-    Number.isFinite(r) ? r : 0.06,
-    Number.isFinite(g) ? g : 0.46,
-    Number.isFinite(b) ? b : 0.43,
-  );
-}
-
 export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const F = await pdf.embedFont(StandardFonts.Helvetica);
   const B = await pdf.embedFont(StandardFonts.HelveticaBold);
   const pagina = pdf.addPage(A4);
 
-  const cor = hexParaRgb(d.clinica.cor);
+  const cor = corDaMarca(d.clinica.cor);
   const preto = rgb(0.1, 0.1, 0.12);
   const cinza = rgb(0.42, 0.45, 0.5);
 
-  let y = A4[1] - M;
-  pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
-
-  // -------------------------------------------------------- cabecalho
-  if (d.clinica.logo) {
-    try {
-      const img = await pdf.embedPng(d.clinica.logo);
-      const altura = 34;
-      pagina.drawImage(img, {
-        x: M,
-        y: y - altura + 6,
-        width: (img.width / img.height) * altura,
-        height: altura,
-      });
-    } catch {
-      // Logo invalida nao pode impedir a guia de sair: o paciente esta
-      // esperando o papel no balcao.
-    }
-  }
-
-  pagina.drawText('GUIA DE EXAME', {
-    x: A4[0] - M - B.widthOfTextAtSize('GUIA DE EXAME', 16),
-    y: y - 6,
-    size: 16,
-    font: B,
-    color: preto,
+  // Cabecalho comum a todo papel que sai da clinica.
+  let y = await desenharCabecalho(pdf, pagina, d.clinica, {
+    titulo: 'GUIA DE EXAME',
+    fonte: F,
+    negrito: B,
+    margem: M,
+    largura: A4[0],
+    alturaDaPagina: A4[1],
   });
-  y -= 24;
-  pagina.drawText(d.clinica.nome, {
-    x: A4[0] - M - F.widthOfTextAtSize(d.clinica.nome, 8.5),
-    y,
-    size: 8.5,
-    font: F,
-    color: cinza,
-  });
-  y -= 22;
 
   // ------------------------------------------------------- utilitarios
   const faixa = (titulo: string) => {

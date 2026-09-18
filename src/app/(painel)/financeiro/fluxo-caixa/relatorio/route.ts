@@ -10,6 +10,7 @@ import {
   type Periodo,
 } from '@/modules/finance/fluxo-caixa';
 import { buildRelatorioFinanceiro } from '@/modules/finance/relatorio-pdf';
+import { cabecalhoDaClinica } from '@/modules/documents/cabecalho';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,15 +108,10 @@ export async function GET(request: Request) {
     });
   }
 
-  const empresaCfg = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
   const docsCfg = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
 
   const pdf = await buildRelatorioFinanceiro({
-    clinica: {
-      nome: empresaCfg.razao_social ?? ctx.branding.system_name,
-      cnpj: empresaCfg.cnpj ? `CNPJ ${empresaCfg.cnpj}` : null,
-      cor: ctx.branding.color_primary,
-    },
+    clinica: await cabecalhoDaClinica(ctx),
     periodo: { rotulo: ROTULO_PERIODO[periodo], inicio, fim },
     emitidoEm: new Date(),
     emitidoPor: ctx.profile.full_name || (ctx.email ?? 'sistema'),

@@ -1,6 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { LinhaPorCategoria, ResumoDoFluxo } from './fluxo-caixa';
+import { desenharCabecalho, type DadosDoCabecalho } from '@/modules/documents/cabecalho';
 
 /**
  * Relatorio financeiro do periodo, em PDF.
@@ -15,7 +16,7 @@ import type { LinhaPorCategoria, ResumoDoFluxo } from './fluxo-caixa';
  */
 
 export interface DadosDoRelatorio {
-  clinica: { nome: string; cnpj: string | null; cor: string };
+  clinica: DadosDoCabecalho;
   periodo: { rotulo: string; inicio: string; fim: string };
   emitidoEm: Date;
   emitidoPor: string;
@@ -28,18 +29,6 @@ export interface DadosDoRelatorio {
 const A4: [number, number] = [595.28, 841.89];
 const MARGEM = 46;
 const LARGURA = A4[0] - MARGEM * 2;
-
-function hexParaRgb(hex: string) {
-  const limpo = (hex ?? '').replace('#', '');
-  const cheio = limpo.length === 3 ? limpo.split('').map((c) => c + c).join('') : limpo;
-  const n = (i: number) => parseInt(cheio.slice(i, i + 2), 16) / 255;
-  const [r, g, b] = [n(0), n(2), n(4)];
-  return rgb(
-    Number.isFinite(r) ? r : 0.06,
-    Number.isFinite(g) ? g : 0.46,
-    Number.isFinite(b) ? b : 0.43,
-  );
-}
 
 /**
  * Dinheiro em texto que a fonte do PDF consegue escrever.
@@ -64,23 +53,19 @@ export async function buildRelatorioFinanceiro(d: DadosDoRelatorio): Promise<Uin
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
   const pagina = pdf.addPage(A4);
 
-  const cor = hexParaRgb(d.clinica.cor);
   const cinza = rgb(0.42, 0.45, 0.5);
   const preto = rgb(0.1, 0.1, 0.12);
   const verde = rgb(0.13, 0.6, 0.33);
   const vermelho = rgb(0.78, 0.2, 0.2);
 
-  let y = A4[1] - MARGEM;
-  pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
-
-  pagina.drawText('RELATÓRIO FINANCEIRO', { x: MARGEM, y, size: 15, font: negrito, color: preto });
-  y -= 17;
-  pagina.drawText(d.clinica.nome, { x: MARGEM, y, size: 9, font: negrito, color: cor });
-  y -= 11;
-  if (d.clinica.cnpj) {
-    pagina.drawText(d.clinica.cnpj, { x: MARGEM, y, size: 7.5, font: fonte, color: cinza });
-    y -= 10;
-  }
+  let y = await desenharCabecalho(pdf, pagina, d.clinica, {
+    titulo: 'RELATÓRIO FINANCEIRO',
+    fonte,
+    negrito,
+    margem: MARGEM,
+    largura: A4[0],
+    alturaDaPagina: A4[1],
+  });
 
   pagina.drawText(
     `Período: ${d.periodo.rotulo} — ${dataBr(d.periodo.inicio)} a ${dataBr(d.periodo.fim)}`,

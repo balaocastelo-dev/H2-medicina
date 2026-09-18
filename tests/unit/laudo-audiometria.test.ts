@@ -8,9 +8,12 @@ const PNG_1X1 =
 const base: DadosDoLaudo = {
   clinica: {
     nome: 'H2 Medicina Ocupacional',
+    razaoSocial: 'H2 Medicina Ocupacional Ltda',
+    cnpj: 'CNPJ 52.830.198/0001-34',
     endereco: 'R. Sacramento, 908 — Campinas/SP',
-    telefone: '(19) 99935-3599',
+    contato: '(19) 3235-3599 · (19) 99935-3599',
     cor: '#0F766E',
+    logo: null,
   },
   emitidoEm: new Date('2026-09-13T13:00:00Z'),
   paciente: {
@@ -77,7 +80,7 @@ describe('buildLaudoAudiometria', () => {
   it('aceita campos opcionais ausentes', async () => {
     const bytes = await buildLaudoAudiometria({
       ...base,
-      clinica: { ...base.clinica, endereco: null, telefone: null, cor: 'nao-e-cor' },
+      clinica: { ...base.clinica, endereco: null, contato: null, cnpj: null, razaoSocial: null, cor: 'nao-e-cor' },
       paciente: { ...base.paciente, cpf: null, idade: null, cargo: null, setor: null },
       empresa: null,
       aparelho: { modelo: null, fabricante: null, calibracao: null, repousoAuditivo: null },
@@ -110,5 +113,14 @@ describe('buildLaudoAudiometria', () => {
     });
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('gera a amostra para conferencia', async () => {
+    const { writeFileSync } = await import('node:fs');
+    writeFileSync(
+      'C:/Users/user/AppData/Roaming/Claude/local-agent-mode-sessions/40ff9b69-4816-4b03-bdba-1491423cf72e/8b9607bc-71e4-4c0c-a224-e0427495d82b/local_838cf626-e02e-49ce-a570-15c00a5f1125/outputs/exemplo-audiometria.pdf',
+      await buildLaudoAudiometria(base),
+    );
+    expect(true).toBe(true);
   });
 });

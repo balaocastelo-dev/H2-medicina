@@ -7,6 +7,7 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { buildGuiaDeExame } from './guia-exame';
+import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
 /**
@@ -85,11 +86,7 @@ export async function emitirGuiaDeExame(input: {
     const codigo = randomBytes(5).toString('hex').toUpperCase();
 
     const pdf = await buildGuiaDeExame({
-      clinica: {
-        nome: ctx.branding.system_name,
-        cor: ctx.branding.color_primary,
-        logo: null,
-      },
+      clinica: await cabecalhoDaClinica(ctx),
       colaborador: {
         nome: p.social_name ?? p.full_name,
         cpf: p.cpf ? formatCPF(p.cpf) : null,

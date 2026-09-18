@@ -5,7 +5,15 @@ import { buildGuiaDeExame, type DadosDaGuia } from '@/modules/documents/guia-exa
 
 /** Os mesmos dados do modelo que a clinica enviou, para comparar lado a lado. */
 const base: DadosDaGuia = {
-  clinica: { nome: 'H2 Medicina Ocupacional', cor: '#0F766E', logo: null },
+  clinica: {
+    nome: 'H2 Medicina Ocupacional',
+    razaoSocial: 'H2 Medicina Ocupacional Ltda',
+    cnpj: 'CNPJ 52.830.198/0001-34',
+    endereco: 'R. Sacramento, 908, Vila Itapura, Campinas, SP',
+    contato: '(19) 3235-3599 · (19) 99935-3599',
+    cor: '#0F766E',
+    logo: null,
+  },
   colaborador: {
     nome: 'Sebastião Geraldo de Azevedo',
     cpf: '048.215.328-83',
@@ -72,7 +80,7 @@ describe('buildGuiaDeExame', () => {
     // O paciente esta no balcao esperando o papel.
     const bytes = await buildGuiaDeExame({
       ...base,
-      clinica: { ...base.clinica, logo: new Uint8Array([1, 2, 3, 4]) },
+      clinica: { ...base.clinica, logo: { bytes: new Uint8Array([1, 2, 3, 4]), format: 'png' as const } },
     });
     expect(bytes.byteLength).toBeGreaterThan(1000);
   });

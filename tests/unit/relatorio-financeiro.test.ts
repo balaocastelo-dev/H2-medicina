@@ -20,9 +20,13 @@ const FIM = '2026-09-30';
 
 const base: DadosDoRelatorio = {
   clinica: {
-    nome: 'H2 Medicina Ocupacional Ltda',
+    nome: 'H2 Medicina Ocupacional',
+    razaoSocial: 'H2 Medicina Ocupacional Ltda',
     cnpj: 'CNPJ 52.830.198/0001-34',
+    endereco: 'R. Sacramento, 908, Vila Itapura, Campinas, SP',
+    contato: '(19) 3235-3599 · (19) 99935-3599',
     cor: '#0F766E',
+    logo: null,
   },
   periodo: { rotulo: 'Mês', inicio: INICIO, fim: FIM },
   emitidoEm: new Date('2026-09-13T15:00:00Z'),
@@ -57,7 +61,7 @@ describe('buildRelatorioFinanceiro', () => {
   it('aceita campos opcionais ausentes', async () => {
     const bytes = await buildRelatorioFinanceiro({
       ...base,
-      clinica: { nome: 'X', cnpj: null, cor: 'nao-e-cor' },
+      clinica: { ...base.clinica, razaoSocial: null, cnpj: null, endereco: null, contato: null, cor: 'nao-e-cor' },
       rodape: null,
     });
     expect(bytes.byteLength).toBeGreaterThan(1000);
