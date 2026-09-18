@@ -29,43 +29,48 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle<Profile>();
+  // Tudo que depende so do usuario vai junto com o perfil.
+  //
+  // Antes o perfil ia sozinho e os papeis esperavam por ele, sem precisar:
+  // `user_roles` e `user_permissions` sao chaveados por user.id, que ja
+  // temos aqui. Eram quatro idas ao banco em sequencia antes de qualquer
+  // tela comecar; agora sao tres. Com o banco em outro continente, cada ida
+  // a menos vale quase dois decimos de segundo em TODA navegacao.
+  const [profileRes, rolesRes, userPermsRes] = await Promise.all([
+    supabase.from('profiles').select('*').eq('id', user.id).maybeSingle<Profile>(),
+    supabase
+      .from('user_roles')
+      .select('role_id, roles!inner(id, code, name)')
+      .eq('user_id', user.id)
+      .returns<{ role_id: string; roles: { id: string; code: string; name: string } }[]>(),
+    supabase
+      .from('user_permissions')
+      .select('permission_code, is_granted')
+      .eq('user_id', user.id)
+      .returns<{ permission_code: string; is_granted: boolean }[]>(),
+  ]);
 
+  const profile = profileRes.data;
   if (!profile || !profile.is_active || profile.blocked_at || !profile.tenant_id) return null;
 
-  const [tenantRes, brandingRes, settingsRes, modulesRes, rolesRes, userPermsRes] =
-    await Promise.all([
-      supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle<Tenant>(),
-      supabase
-        .from('tenant_branding')
-        .select('*')
-        .eq('tenant_id', profile.tenant_id)
-        .maybeSingle<TenantBranding>(),
-      supabase
-        .from('tenant_settings')
-        .select('*')
-        .eq('tenant_id', profile.tenant_id)
-        .returns<TenantSetting[]>(),
-      supabase
-        .from('tenant_modules')
-        .select('*')
-        .eq('tenant_id', profile.tenant_id)
-        .returns<TenantModule[]>(),
-      supabase
-        .from('user_roles')
-        .select('role_id, roles!inner(id, code, name)')
-        .eq('user_id', user.id)
-        .returns<{ role_id: string; roles: { id: string; code: string; name: string } }[]>(),
-      supabase
-        .from('user_permissions')
-        .select('permission_code, is_granted')
-        .eq('user_id', user.id)
-        .returns<{ permission_code: string; is_granted: boolean }[]>(),
-    ]);
+  const [tenantRes, brandingRes, settingsRes, modulesRes] = await Promise.all([
+    supabase.from('tenants').select('*').eq('id', profile.tenant_id).maybeSingle<Tenant>(),
+    supabase
+      .from('tenant_branding')
+      .select('*')
+      .eq('tenant_id', profile.tenant_id)
+      .maybeSingle<TenantBranding>(),
+    supabase
+      .from('tenant_settings')
+      .select('*')
+      .eq('tenant_id', profile.tenant_id)
+      .returns<TenantSetting[]>(),
+    supabase
+      .from('tenant_modules')
+      .select('*')
+      .eq('tenant_id', profile.tenant_id)
+      .returns<TenantModule[]>(),
+  ]);
 
   const tenant = tenantRes.data;
   if (!tenant) return null;
