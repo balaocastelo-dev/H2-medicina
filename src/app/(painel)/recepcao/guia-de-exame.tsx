@@ -39,33 +39,60 @@ export function BlocoGuiaDeExame({
       .map((t) => t.trim())
       .filter(Boolean);
 
-  const exames = [
-    ...(temRaioX ? linhasDe(raioX) : []),
-    ...(temLaboratorio ? linhasDe(laboratorio) : []),
-  ];
+  const examesRaioX = temRaioX ? linhasDe(raioX) : [];
+  const examesLab = temLaboratorio ? linhasDe(laboratorio) : [];
+  const total = examesRaioX.length + examesLab.length;
 
+  /** Emite uma guia e abre para impressão. Devolve se deu certo. */
+  const emitirUma = async (
+    lista: string[],
+    destino: 'laboratorio' | 'clinica',
+  ): Promise<boolean> => {
+    const r = await emitirGuiaDeExame({
+      attendanceId,
+      exames: lista,
+      preparos: preparos.trim() || null,
+      destino,
+    });
+    if (!r.ok || !r.data) {
+      setMsg({ ok: false, texto: r.ok ? 'Guia não retornou identificador.' : r.error });
+      return false;
+    }
+    // Falhar ao abrir não perde a guia — ela já está salva em Documentos.
+    const link = await getDocumentUrl(r.data.documentId);
+    if (link.ok && link.data) window.open(link.data.url, '_blank', 'noopener');
+    return true;
+  };
+
+  /**
+   * Uma guia por destino.
+   *
+   * Raio X é feito no laboratório da Tiradentes; a coleta de sangue é
+   * feita aqui na clínica. São papéis diferentes porque mandam o paciente
+   * a lugares diferentes — juntar os dois numa guia só faria alguém andar
+   * até o laboratório para colher sangue que seria colhido aqui.
+   */
   const imprimir = () =>
     iniciar(async () => {
-      const r = await emitirGuiaDeExame({
-        attendanceId,
-        exames,
-        preparos: preparos.trim() || null,
+      setMsg(null);
+      const emitidas: string[] = [];
+
+      if (examesRaioX.length > 0) {
+        if (!(await emitirUma(examesRaioX, 'laboratorio'))) return;
+        emitidas.push('Raio X');
+      }
+      if (examesLab.length > 0) {
+        if (!(await emitirUma(examesLab, 'clinica'))) return;
+        emitidas.push('coleta laboratorial');
+      }
+
+      setMsg({
+        ok: true,
+        texto:
+          emitidas.length > 1
+            ? `Duas guias emitidas (${emitidas.join(' e ')}) — os locais são diferentes.`
+            : `Guia de ${emitidas[0]} emitida.`,
       });
-      if (!r.ok || !r.data) {
-        setMsg({ ok: false, texto: r.ok ? 'Guia não retornou identificador.' : r.error });
-        return;
-      }
-      setMsg({ ok: true, texto: 'Guia emitida. Abrindo para impressão…' });
-      // Abre numa aba: a recepcao confere e manda imprimir.
-      // Falhar aqui nao perde a guia -- ela ja esta salva em Documentos.
-      const link = await getDocumentUrl(r.data.documentId);
-      if (link.ok && link.data) window.open(link.data.url, '_blank', 'noopener');
-      else {
-        setMsg({
-          ok: false,
-          texto: 'Guia salva, mas não abriu sozinha. Abra pela tela de Documentos.',
-        });
-      }
     });
 
   return (
@@ -73,8 +100,8 @@ export function BlocoGuiaDeExame({
       <div>
         <p className="text-sm font-medium text-slate-800">Guia de exame</p>
         <p className="text-xs text-slate-600">
-          Estes exames não são feitos na clínica. Descreva o que foi pedido e imprima a guia — o
-          paciente leva ao laboratório.
+          Descreva o que foi pedido e imprima. O Raio X é feito no laboratório; a coleta de sangue
+          é feita aqui, e por isso a guia dela sai com o endereço da clínica.
         </p>
       </div>
 
@@ -120,15 +147,17 @@ export function BlocoGuiaDeExame({
 
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-slate-500">
-          {exames.length === 0
+          {total === 0
             ? 'Escreva ao menos um exame para habilitar a impressão.'
-            : `${exames.length} exame(s) na guia.`}
+            : examesRaioX.length > 0 && examesLab.length > 0
+              ? `${total} exames. Saem duas guias: o Raio X vai ao laboratório, a coleta é aqui.`
+              : `${total} exame(s) na guia.`}
         </span>
         <Button
           size="sm"
           variant="outline"
           loading={pendente}
-          disabled={exames.length === 0}
+          disabled={total === 0}
           onClick={imprimir}
         >
           <Printer className="h-4 w-4" /> Imprimir guia

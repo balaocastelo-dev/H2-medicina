@@ -105,8 +105,22 @@ export const REGRAS: Record<OriginKind, RegraProcedencia> = {
  * Nao entram em fila nem ocupam sala. Ate 15/09 entravam, e ficavam presos
  * numa sala inexistente -- a Izabella esperou 42 minutos por um raio-X que
  * nunca ia ser chamado. O resultado volta depois, pelo laboratorio.
+ *
+ * A coleta laboratorial (LAB) NAO esta aqui, e isso foi um erro meu ate
+ * 18/09. Ela e feita na Sala 5 da clinica -- "somente a guia da coleta de
+ * sangue deve sair com o endereco da rua sacramento", disse a clinica em
+ * 13/09, justamente porque a coleta acontece aqui. O que ela nao tem e
+ * ficha de preenchimento na sala.
  */
-export const FORA_DA_CLINICA = new Set(['RAIOX', 'LAB']);
+export const FORA_DA_CLINICA = new Set(['RAIOX']);
+
+/**
+ * Exames cuja solicitacao sai em guia impressa no balcao.
+ *
+ * Raio X porque e feito fora; coleta laboratorial porque a analise e feita
+ * fora, mesmo o sangue sendo colhido aqui.
+ */
+export const GERA_GUIA = new Set(['RAIOX', 'LAB']);
 
 export function regraDe(kind: string | null | undefined): RegraProcedencia {
   return REGRAS[(kind ?? 'particular') as OriginKind] ?? REGRAS.particular;

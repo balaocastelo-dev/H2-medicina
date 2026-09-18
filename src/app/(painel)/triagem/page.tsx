@@ -26,6 +26,17 @@ export default async function TriagemPage() {
 
   const rows = data ?? [];
 
+  // Salas de triagem, para a chamada sair com o nome certo na TV.
+  const { data: salasDeTriagem } = await supabase
+    .from('rooms')
+    .select('id, name')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('kind', 'triagem')
+    .eq('is_active', true)
+    .is('deleted_at', null)
+    .order('sort_order')
+    .returns<{ id: string; name: string }[]>();
+
   // Exames de bancada destes pacientes: sao feitos aqui mesmo, sem o
   // paciente sair da triagem para entrar numa fila e voltar depois.
   let bancada: ExameDeBancada[] = [];
@@ -72,7 +83,7 @@ export default async function TriagemPage() {
           />
         </Card>
       ) : (
-        <TriageWorkspace rows={rows} bancada={bancada} />
+        <TriageWorkspace rows={rows} bancada={bancada} salas={salasDeTriagem ?? []} />
       )}
     </div>
   );

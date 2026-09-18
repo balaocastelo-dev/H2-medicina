@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
+import { PhoneCall } from 'lucide-react';
 import {
   Alert,
   Button,
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui';
 import { calcAge, elapsedFrom, formatTime } from '@/lib/format';
 import { saveTriage } from '@/modules/clinical/actions';
+import { chamarParaTriagem, repetirChamadaDaTriagem } from '@/modules/clinical/triagem-actions';
 import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
 import type { ActionResult } from '@/lib/action-result';
 import type { ExameDeBancada, TriageRow } from './types';
@@ -20,9 +22,11 @@ import type { ExameDeBancada, TriageRow } from './types';
 export function TriageWorkspace({
   rows,
   bancada,
+  salas,
 }: {
   rows: TriageRow[];
   bancada: ExameDeBancada[];
+  salas: { id: string; name: string }[];
 }) {
   const [selectedId, setSelectedId] = useState(rows[0]?.id ?? null);
   const selected = rows.find((r) => r.id === selectedId) ?? null;
@@ -55,6 +59,8 @@ export function TriageWorkspace({
       </Card>
 
       <div className="space-y-4 lg:col-span-2">
+        {selected && <ChamarParaTriagem key={`chamar-${selected.id}`} row={selected} salas={salas} />}
+
         {selected ? <TriageForm key={selected.id} row={selected} /> : null}
 
         {/*
@@ -89,6 +95,81 @@ export function TriageWorkspace({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Chamada do paciente para a triagem.
+ *
+ * A senha aparece na TV da sala de espera e o atendimento entra em
+ * triagem. Sem isto a tela virava só um formulário: dava para preencher,
+ * mas não para avisar o paciente de que era a vez dele.
+ */
+function ChamarParaTriagem({
+  row,
+  salas,
+}: {
+  row: TriageRow;
+  salas: { id: string; name: string }[];
+}) {
+  const [sala, setSala] = useState(salas[0]?.id ?? '');
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  const jaChamado = row.stage_code === 'em_triagem';
+
+  return (
+    <Card>
+      <CardBody className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium">
+            {row.queue_tickets[0]?.code ?? '—'} · {row.patients?.full_name ?? 'Paciente'}
+          </p>
+          <p className="text-xs text-slate-500">
+            {jaChamado ? 'Já chamado — em triagem' : 'Aguardando ser chamado'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {salas.length > 1 && (
+            <select
+              value={sala}
+              onChange={(e) => setSala(e.target.value)}
+              aria-label="Sala de triagem"
+              className="h-9 rounded-lg border border-slate-300 px-2 text-sm"
+            >
+              {salas.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <Button
+            loading={pendente}
+            variant={jaChamado ? 'outline' : 'primary'}
+            onClick={() =>
+              iniciar(async () => {
+                const r = jaChamado
+                  ? await repetirChamadaDaTriagem(row.id)
+                  : await chamarParaTriagem(row.id, sala || null);
+                setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Chamado.') : r.error });
+              })
+            }
+          >
+            <PhoneCall className="h-4 w-4" />
+            {jaChamado ? 'Repetir chamada' : 'Chamar paciente'}
+          </Button>
+        </div>
+
+        {msg && (
+          <div className="w-full">
+            <Alert variant={msg.ok ? 'success' : 'error'}>{msg.texto}</Alert>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }
 

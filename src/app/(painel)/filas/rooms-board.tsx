@@ -70,7 +70,13 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {rooms.map((room) => {
           const roomExams = examsForRoom(room);
-          const active = roomExams.find((e) => ['chamado', 'em_andamento'].includes(e.status));
+          // Todos os exames do paciente chamado nesta sala, e nao um so.
+          //
+          // "se o paciente tem varios exames para fazer em uma sala, ao
+          //  chamar ele na primeira vez ja aparecer todas as fichas e nao
+          //  precisar chamar a senha varias vezes" -- Isabella, 18/09.
+          const ativos = roomExams.filter((e) => ['chamado', 'em_andamento'].includes(e.status));
+          const active = ativos[0];
           const queue = roomExams
             .filter((e) => ['pendente', 'em_fila'].includes(e.status))
             // Ordem de chegada, pura. A clinica deixou de usar preferencia.
@@ -110,82 +116,102 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                       {active.attendances?.queue_tickets?.[0]?.code ?? '—'} ·{' '}
                       {active.attendances?.patients?.full_name ?? '—'}
                     </p>
-                    <p className="text-sm text-slate-600">{active.exam_types?.name}</p>
-                    {active.notes && (
-                      <p className="mt-1 rounded bg-white/70 p-2 text-xs text-slate-700">
-                        <strong>Solicitado:</strong> {active.notes}
-                      </p>
-                    )}
+                    <p className="text-sm text-slate-600">
+                      {ativos.length === 1
+                        ? active.exam_types?.name
+                        : `${ativos.length} exames nesta sala`}
+                    </p>
+
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {active.status === 'chamado' && (
-                        <>
-                          <Button
-                            size="sm"
-                            loading={pending}
-                            onClick={() => run(() => updateExamStatus(active.id, 'em_andamento'))}
-                          >
-                            <Play className="h-4 w-4" /> Iniciar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            loading={pending}
-                            onClick={() => run(() => recallTicket(active.attendance_id, room.id))}
-                          >
-                            <RotateCcw className="h-4 w-4" /> Rechamar
-                          </Button>
-                        </>
-                      )}
-                      {active.status === 'em_andamento' && (
-                        <Button
-                          size="sm"
-                          variant="success"
-                          loading={pending}
-                          onClick={() => concluir(active.id, active.exam_types?.code)}
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          {TEM_LAUDO.has(active.exam_types?.code ?? '')
-                            ? 'Concluir e emitir laudo'
-                            : 'Concluir'}
-                        </Button>
-                      )}
                       <Button
                         size="sm"
                         variant="outline"
                         loading={pending}
-                        onClick={() => run(() => updateExamStatus(active.id, 'pendente'))}
+                        onClick={() => run(() => recallTicket(active.attendance_id, room.id))}
                       >
-                        Devolver a fila
+                        <RotateCcw className="h-4 w-4" /> Rechamar
                       </Button>
                       <Button
                         size="sm"
-                        variant="danger"
+                        variant="outline"
                         loading={pending}
-                        onClick={() => {
-                          const reason = window.prompt('Motivo do não comparecimento/realizacao:');
-                          if (reason !== null) {
-                            run(() => updateExamStatus(active.id, 'nao_realizado', reason));
-                          }
-                        }}
+                        onClick={() =>
+                          run(async () => {
+                            // Devolve o paciente inteiro, não um exame só:
+                            // deixar metade chamada prende a sala.
+                            for (const e of ativos) await updateExamStatus(e.id, 'pendente');
+                            return { ok: true as const, message: 'Devolvido à fila.' };
+                          })
+                        }
                       >
-                        <XCircle className="h-4 w-4" /> Não realizado
+                        Devolver à fila
                       </Button>
-
                     </div>
 
-                    {/* "anexar fichas de cada exame respectivo nas abas para
-                        preenchimento manual durante realizacao do examinador" */}
-                    <div className="mt-3 rounded-lg bg-white p-3">
-                      <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                        Ficha do exame
-                      </p>
-                      <FichaDeExameForm
-                        key={active.id}
-                        patientExamId={active.id}
-                        codigoExame={active.exam_types?.code}
-                        valoresIniciais={active.exam_results?.[0]?.values ?? {}}
-                        conclusaoInicial={active.exam_results?.[0]?.conclusion ?? ''}
-                      />
+                    {/* Uma ficha por exame, todas na mesma chamada. */}
+                    <div className="mt-3 space-y-3">
+                      {ativos.map((exame) => (
+                        <div key={exame.id} className="rounded-lg bg-white p-3">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
+                              {exame.exam_types?.name ?? 'Exame'}
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {exame.status === 'chamado' && (
+                                <Button
+                                  size="sm"
+                                  loading={pending}
+                                  onClick={() => run(() => updateExamStatus(exame.id, 'em_andamento'))}
+                                >
+                                  <Play className="h-4 w-4" /> Iniciar
+                                </Button>
+                              )}
+                              {exame.status === 'em_andamento' && (
+                                <Button
+                                  size="sm"
+                                  variant="success"
+                                  loading={pending}
+                                  onClick={() => concluir(exame.id, exame.exam_types?.code)}
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  {TEM_LAUDO.has(exame.exam_types?.code ?? '')
+                                    ? 'Concluir e emitir laudo'
+                                    : 'Concluir'}
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="danger"
+                                loading={pending}
+                                onClick={() => {
+                                  const reason = window.prompt(
+                                    `Motivo de não realizar ${exame.exam_types?.name ?? 'o exame'}:`,
+                                  );
+                                  if (reason !== null) {
+                                    run(() => updateExamStatus(exame.id, 'nao_realizado', reason));
+                                  }
+                                }}
+                              >
+                                <XCircle className="h-4 w-4" /> Não realizado
+                              </Button>
+                            </div>
+                          </div>
+
+                          {exame.notes && (
+                            <p className="mb-2 rounded bg-slate-50 p-2 text-xs text-slate-700">
+                              <strong>Solicitado:</strong> {exame.notes}
+                            </p>
+                          )}
+
+                          <FichaDeExameForm
+                            key={exame.id}
+                            patientExamId={exame.id}
+                            codigoExame={exame.exam_types?.code}
+                            valoresIniciais={exame.exam_results?.[0]?.values ?? {}}
+                            conclusaoInicial={exame.exam_results?.[0]?.conclusion ?? ''}
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : (

@@ -132,5 +132,21 @@ begin
        and et.is_active
     on conflict do nothing;
 
+    -- ----------------------------------------------------------------
+    -- Exame que nao ocupa sala da clinica
+    --
+    -- Consulta clinica e atendida pela fila do modulo medico; raio X e
+    -- feito no laboratorio. Nenhum dos dois entra na fila de salas -- se
+    -- entrar, fica com sala nula e prende o paciente, sem cartao que o
+    -- mostre e sem botao que o alcance.
+    --
+    -- Precisa estar aqui e nao so na migration 0030: numa instalacao nova
+    -- o seed roda depois das migrations, quando os exames ainda nem
+    -- existiam para serem marcados.
+    -- ----------------------------------------------------------------
+    update public.exam_types
+       set ocupa_sala = (code not in ('RAIOX', 'CLINICO'))
+     where tenant_id = v_tenant;
+
   end loop;
 end$$;

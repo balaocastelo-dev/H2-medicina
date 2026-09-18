@@ -21,14 +21,31 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
  * Agora a recepcao imprime a guia e o paciente segue o caminho dele.
  */
 
-/** Endereco do laboratorio, quando a clinica nao configurou outro. */
-const LOCAL_PADRAO = 'R. Tiradentes, 164 – Vila Itapura – SP, 13023-190';
+/**
+ * Onde cada guia manda o paciente.
+ *
+ * "o segundo e o laboratorio onde o cliente vai realizar o exame, somente
+ *  a guia da coleta de sangue deve sair com o endereco da rua sacramento"
+ *                                                  -- Isabella, 13/09
+ *
+ * Ou seja: raio X e feito no laboratorio da Tiradentes; a coleta de sangue
+ * e feita aqui na clinica, e por isso a guia dela traz o endereco daqui.
+ * Mandar o paciente ao lugar errado e o pior defeito possivel numa guia.
+ */
+const LOCAL_DO_LABORATORIO = 'R. Tiradentes, 164 – Vila Itapura – SP, 13023-190';
 
 export async function emitirGuiaDeExame(input: {
   attendanceId: string;
   /** Uma linha por exame pedido. Para laboratorial, o que a recepcao digitou. */
   exames: string[];
   preparos?: string | null;
+  /**
+   * Para onde o paciente vai com esta guia.
+   *
+   * `laboratorio` = raio X, feito na Tiradentes.
+   * `clinica` = coleta de sangue, feita aqui mesmo.
+   */
+  destino?: 'laboratorio' | 'clinica';
 }): Promise<ActionResult<{ documentId: string }>> {
   try {
     const ctx = await assertPermission('documentos.emitir');
@@ -84,9 +101,10 @@ export async function emitirGuiaDeExame(input: {
     const guiaCfg = (ctx.settings.guia_exame ?? {}) as Record<string, string | null>;
 
     const codigo = randomBytes(5).toString('hex').toUpperCase();
+    const cabecalho = await cabecalhoDaClinica(ctx);
 
     const pdf = await buildGuiaDeExame({
-      clinica: await cabecalhoDaClinica(ctx),
+      clinica: cabecalho,
       colaborador: {
         nome: p.social_name ?? p.full_name,
         cpf: p.cpf ? formatCPF(p.cpf) : null,
@@ -109,7 +127,10 @@ export async function emitirGuiaDeExame(input: {
       exames,
       agendadoPara: formatDate(atendimento.checkin_at),
       preparos: input.preparos ?? null,
-      localDoExame: guiaCfg.local_do_exame || LOCAL_PADRAO,
+      localDoExame:
+        input.destino === 'clinica'
+          ? (cabecalho.endereco ?? 'Na própria clínica')
+          : guiaCfg.local_do_exame || LOCAL_DO_LABORATORIO,
       rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
     });
 
@@ -127,7 +148,7 @@ export async function emitirGuiaDeExame(input: {
       .insert({
         tenant_id: ctx.tenant.id,
         kind: 'guia_exame',
-        title: `Guia de exame — ${exames[0]}${exames.length > 1 ? ` (+${exames.length - 1})` : ''}`,
+        title: `Guia de exame${input.destino === 'clinica' ? ' (coleta)' : ''} — ${exames[0]}${exames.length > 1 ? ` (+${exames.length - 1})` : ''}`,
         patient_id: atendimento.patient_id,
         attendance_id: atendimento.id,
         company_id: atendimento.company_id,

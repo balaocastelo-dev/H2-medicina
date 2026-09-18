@@ -11,7 +11,13 @@ export interface QueueExam {
   attendance_id: string;
   /** O que a recepcao pediu neste exame (analises, incidencias). */
   notes: string | null;
-  exam_types: { name: string; code: string; default_room_id: string | null } | null;
+  exam_types: {
+    name: string;
+    code: string;
+    default_room_id: string | null;
+    /** Falso para o que nao e feito em sala da clinica (consulta, raio X). */
+    ocupa_sala: boolean | null;
+  } | null;
   exam_results: { values: Record<string, string>; conclusion: string | null }[];
   attendances: {
     id: string;

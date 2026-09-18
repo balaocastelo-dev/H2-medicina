@@ -37,7 +37,7 @@ export default async function FilasPage() {
     supabase
       .from('patient_exams')
       .select(
-        'id, status, priority, queued_at, called_at, started_at, room_id, exam_type_id, attendance_id, notes, exam_types(name, code, default_room_id), exam_results(values, conclusion), attendances!inner(id, checkin_at, stage_code, patients(full_name), queue_tickets(code))',
+        'id, status, priority, queued_at, called_at, started_at, room_id, exam_type_id, attendance_id, notes, exam_types(name, code, default_room_id, ocupa_sala), exam_results(values, conclusion), attendances!inner(id, checkin_at, stage_code, patients(full_name), queue_tickets(code))',
       )
       .eq('tenant_id', ctx.tenant.id)
       .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
@@ -62,6 +62,11 @@ export default async function FilasPage() {
 
   const idsDeTriagem = new Set((salasDeTriagem ?? []).map((s) => s.id));
   const exams = (examsRes.data ?? []).filter((e) => {
+    // Consulta clínica e raio X não são feitos em sala daqui. Entravam
+    // com sala nula e ficavam presos: nenhum cartão os mostrava e nenhum
+    // botão os alcançava. "raio x tambem esta ficando preso sem sala
+    // perdido no processo" — Isabella, 18/09.
+    if (e.exam_types?.ocupa_sala === false) return false;
     const sala = e.room_id ?? e.exam_types?.default_room_id ?? null;
     return sala === null || !idsDeTriagem.has(sala);
   });
