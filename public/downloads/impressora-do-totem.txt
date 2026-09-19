@@ -1,91 +1,75 @@
-TOTEM - IMPRESSAO DO TICKET EM BOBINA DE 80 MM
-==============================================
+IMPRESSORA DO TOTEM — bobina de 80 mm
+=====================================
+
+O objetivo: o paciente toca o CPF, confirma, e a senha sai sozinha.
+Nenhuma janela do Windows, nenhum clique, nenhum papel sobrando.
+
+São três ajustes. Os três precisam estar feitos.
 
 
-O QUE O SISTEMA JA FAZ
-----------------------
-
-O ticket sai formatado para bobina termica de 80 mm:
-
-  - largura de papel de 80 mm com area util de 72 mm (os 4 mm de cada lado
-    sao a margem mecanica do mecanismo de impressao);
-
-  - altura automatica. O papel e continuo, e fixar altura faria a impressora
-    avancar bobina a toa depois do corte;
-
-  - tudo em preto puro, sem fundo colorido. A cabeca termica so queima o
-    papel, nao imprime cinza: fundo escuro sairia como borrao e gastaria
-    bobina;
-
-  - espaco em branco antes do corte, porque a lamina fica alguns milimetros
-    acima da cabeca de impressao e comeria a ultima linha.
-
-Depois do check-in a impressao e disparada sozinha, sem ninguem clicar.
-
-
-O QUE O SISTEMA NAO CONSEGUE FAZER SOZINHO
-------------------------------------------
-
-Nenhuma pagina da web consegue fechar a caixa de dialogo de impressao.
-
-Isso nao e limitacao deste sistema: e uma trava do navegador, e existe
-justamente para um site nao conseguir imprimir sem o usuario saber. Nao ha
-codigo que contorne isso.
-
-Quem resolve e o navegador, na hora de abrir. O Chrome tem um modo proprio
-para totem que imprime direto na impressora padrao, sem perguntar nada.
-
-
-COMO DEIXAR A IMPRESSAO AUTOMATICA
+1. ABRIR O TOTEM PELO ATALHO CERTO
 ----------------------------------
+Use o arquivo totem-quiosque.bat, que está para baixar no menu do
+sistema, ao lado de "Totem".
 
-1. Deixe a impressora termica como IMPRESSORA PADRAO DO WINDOWS.
+Ele abre o Chrome com um comando (--kiosk-printing) que manda imprimir
+direto na impressora padrão, sem perguntar.
 
-   Configuracoes > Bluetooth e dispositivos > Impressoras e scanners >
-   selecione a termica > Definir como padrao.
+Se você abrir o totem pelo Chrome normal, o Windows vai pedir
+confirmação a cada senha. Não é defeito do sistema: é o navegador
+protegendo o usuário de impressão automática.
 
-2. No driver da impressora, confira o tamanho do papel:
-   80 mm x recibo, ou 80 mm x altura automatica.
+Como saber se está certo: emita uma senha de teste. Se aparecer a
+janela "Imprimir", o totem foi aberto pelo caminho errado.
 
-   Se estiver em A4, o ticket sai numa folha inteira.
-
-3. Baixe o arquivo totem-quiosque.bat (esta no mesmo menu, logo acima) e
-   deixe na area de trabalho do totem. Abra o totem sempre por ele.
-
-   Se preferir montar o atalho a mao, o comando e:
-
-     "C:\Program Files\Google\Chrome\Application\chrome.exe"
-       --kiosk
-       --kiosk-printing
-       --disable-pinch
-       --overscroll-history-navigation=0
-       --app=https://h2-medicina.vercel.app/totem
-
-   O que cada parte faz:
-
-     --kiosk .......................... abre em tela cheia, sem barra de
-                                        endereco
-     --kiosk-printing ................. remove a caixa de dialogo
-     --disable-pinch .................. evita zoom por gesto de toque
-     --overscroll-history-navigation=0  evita o paciente sair da tela
-                                        arrastando o dedo
-
-4. Para o totem ja ligar no sistema, coloque o atalho em:
-
-   C:\Users\<usuario>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+Para sair do modo quiosque: Alt + F4.
 
 
-CONFERENCIA
------------
+2. DEIXAR A TÉRMICA COMO IMPRESSORA PADRÃO DO WINDOWS
+-----------------------------------------------------
+Configurações > Bluetooth e dispositivos > Impressoras e scanners.
 
-Faca um check-in de teste.
+Abra a impressora térmica e marque "Definir como padrão".
 
-  - Saiu numa folha A4?
-    O tamanho de papel do driver esta errado. Volte ao passo 2.
+IMPORTANTE: desligue "Permitir que o Windows gerencie minha impressora
+padrão". Com essa opção ligada, o Windows troca a padrão sozinho para a
+última usada — e um dia a senha sai na impressora do escritório.
 
-  - Apareceu a caixa de dialogo?
-    O Chrome nao foi aberto com --kiosk-printing. Volte ao passo 3 e
-    confira se o atalho esta sendo usado mesmo, e nao um Chrome ja aberto
-    por outro caminho.
 
-Para sair do modo quiosque no totem: Alt + F4.
+3. CONFIGURAR O PAPEL E O CORTE NO DRIVER
+-----------------------------------------
+Ainda em Impressoras e scanners, abra a térmica >
+"Preferências de impressão".
+
+  Tamanho do papel .... 80 x 297 mm (ou "Roll Paper 80mm" / "Recibo")
+  Margens ............. 0 em todos os lados
+  Orientação .......... Retrato
+  Qualidade ........... padrão
+
+Na aba do fabricante (costuma se chamar "Ferramentas", "Utilitários"
+ou "Device Settings"), procure o corte:
+
+  Cortar papel ........ Após cada documento
+  Tipo de corte ....... Parcial
+  Avanço antes do corte  o MENOR valor disponível (0 a 2 mm)
+
+É esse "avanço antes do corte" que decide o desperdício. O sistema já
+faz a sua parte: o rodapé do ticket foi reduzido a 3 mm e a quebra de
+página só acontece entre uma senha e outra. Se ainda sobrar papel em
+branco, o valor que falta baixar está aqui, no driver.
+
+Se o corte estiver cortando dentro da última linha impressa, aumente o
+avanço em 1 mm por vez até parar.
+
+
+CONFERÊNCIA FINAL
+-----------------
+Emita três senhas seguidas pelo totem. O certo é:
+
+  - nenhuma janela de impressão apareceu;
+  - as três saíram na térmica;
+  - cada uma foi cortada logo abaixo da última linha;
+  - não sobrou bobina em branco entre elas.
+
+Se algum desses quatro falhar, o item correspondente acima é o que
+está faltando.

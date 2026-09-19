@@ -295,26 +295,48 @@ export function PainelContratos({
               const situacao = situacaoDoContrato(dias);
               const { cor, rotulo } = CORES_SITUACAO[situacao];
               return (
-                <button
+                <div
                   key={c.id}
-                  type="button"
-                  onClick={() => setRascunho(paraRascunho(c))}
-                  className={`w-full p-3 text-left hover:bg-slate-50 ${
-                    rascunho?.id === c.id ? 'bg-slate-100' : ''
-                  }`}
+                  className={`p-3 ${rascunho?.id === c.id ? 'bg-slate-100' : 'hover:bg-slate-50'}`}
                 >
-                  <p className="truncate text-sm font-medium">
-                    {c.companies?.trade_name ?? c.companies?.legal_name ?? 'Empresa'}
-                  </p>
-                  <p className="truncate text-xs text-slate-500">{c.name}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <Badge color={cor}>{rotulo}</Badge>
-                    {c.status !== 'ativo' && <Badge color="#94A3B8">{c.status}</Badge>}
-                    {c.ends_on && (
-                      <span className="text-[11px] text-slate-500">até {formatDate(c.ends_on)}</span>
-                    )}
+                  <button
+                    type="button"
+                    onClick={() => setRascunho(paraRascunho(c))}
+                    className="w-full text-left"
+                  >
+                    <p className="truncate text-sm font-medium">
+                      {c.companies?.trade_name ?? c.companies?.legal_name ?? 'Empresa'}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">{c.name}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <Badge color={cor}>{rotulo}</Badge>
+                      {c.status !== 'ativo' && <Badge color="#94A3B8">{c.status}</Badge>}
+                      {c.ends_on && (
+                        <span className="text-[11px] text-slate-500">
+                          até {formatDate(c.ends_on)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+
+                  {/*
+                    O PDF na própria lista.
+
+                    Ele existia só dentro do formulário de edição, depois de
+                    clicar no contrato — "Aba contratos nao esta gerando o
+                    PDF" (18/09) era, na verdade, não achar o botão.
+                  */}
+                  <div className="mt-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      loading={pendente}
+                      onClick={() => gerarPdf(c.id as string)}
+                    >
+                      <FileDown className="h-3.5 w-3.5" /> PDF
+                    </Button>
                   </div>
-                </button>
+                </div>
               );
             })}
             {contratos.length === 0 && (

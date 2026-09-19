@@ -179,6 +179,50 @@ for (const file of files) {
   }
 }
 
+// ---------------------------------------------------------------------
+// Tipo de documento que nao existe no banco.
+//
+// `documents.kind` e um enum do Postgres. Um valor novo declarado so no
+// TypeScript passa por tsc, lint e testes, e falha na hora de gravar --
+// depois do PDF ja montado, com "erro" generico na tela de quem usa.
+//
+// Aconteceu com 'guia_exame' em 18/09: a recepcao tentava imprimir a guia
+// e tomava erro sem nenhuma pista do motivo.
+// ---------------------------------------------------------------------
+const tiposNoBanco = new Set();
+for (const arquivo of readdirSync(join(ROOT, 'supabase/migrations')).filter((f) =>
+  f.endsWith('.sql'),
+)) {
+  const sql = readFileSync(join(ROOT, 'supabase/migrations', arquivo), 'utf8');
+
+  // create type document_kind as enum ('a','b',...)
+  const criacao = sql.match(/create type document_kind as enum\s*\(([\s\S]*?)\)/i);
+  if (criacao) {
+    for (const m of criacao[1].matchAll(/'([a-z_]+)'/g)) tiposNoBanco.add(m[1]);
+  }
+  // alter type document_kind add value [if not exists] 'x'
+  for (const m of sql.matchAll(
+    /alter type document_kind add value\s+(?:if not exists\s+)?'([a-z_]+)'/gi,
+  )) {
+    tiposNoBanco.add(m[1]);
+  }
+}
+
+if (tiposNoBanco.size > 0) {
+  const entities = readFileSync(join(ROOT, 'src/types/entities.ts'), 'utf8');
+  const bloco = entities.match(/export type DocumentKind =([\s\S]*?);/);
+  if (bloco) {
+    for (const m of bloco[1].matchAll(/'([a-z_]+)'/g)) {
+      if (!tiposNoBanco.has(m[1])) {
+        problems.push(
+          `DocumentKind "${m[1]}" nao existe no enum document_kind do banco ` +
+            '(a gravacao do documento vai falhar em producao)',
+        );
+      }
+    }
+  }
+}
+
 console.log(`Arquivos analisados: ${files.length} (${clientFiles.size} client components)`);
 if (problems.length) {
   console.error(`\n${problems.length} problema(s) que quebrariam o build:\n`);
