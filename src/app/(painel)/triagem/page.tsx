@@ -60,15 +60,23 @@ export default async function TriagemPage() {
         'attendance_id',
         candidatos.map((r) => r.id),
       )
-      .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
+      // Sem filtro de status de propósito: o exame já concluído continua na
+      // tela para o examinador conferir e corrigir. Se ele sumisse ao
+      // salvar, quem preencheu ficaria sem saber se gravou.
+      .not('status', 'in', '("cancelado")')
       .returns<(ExameDeBancada & { exam_types: { rooms: { kind: string } | null } | null })[]>();
 
     bancada = (exames ?? []).filter((e) => e.exam_types?.rooms?.kind === 'triagem');
   }
 
-  const comBancada = new Set(bancada.map((e) => e.attendance_id));
+  // Quem ainda tem bancada POR FAZER é que continua aparecendo na lista.
+  const porFazer = new Set(
+    bancada
+      .filter((e) => ['pendente', 'em_fila', 'chamado', 'em_andamento'].includes(e.status))
+      .map((e) => e.attendance_id),
+  );
   const rows = candidatos.filter(
-    (r) => r.stage_code !== 'aguardando_exames' || comBancada.has(r.id),
+    (r) => r.stage_code !== 'aguardando_exames' || porFazer.has(r.id),
   );
 
   return (

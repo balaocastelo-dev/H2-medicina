@@ -19,6 +19,66 @@ function num(value: FormDataEntryValue | null): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Para onde o paciente vai quando a triagem e finalizada.
+ *
+ * O banco tem um gatilho que faz isto, e ele continua valendo. Aqui a
+ * mesma decisao e tomada pela aplicacao, de proposito: em 21/09 a clinica
+ * passou a manha com pacientes que nao saiam da triagem por mais que
+ * clicassem em finalizar. Depender de uma unica engrenagem para uma coisa
+ * que trava o atendimento inteiro nao se justifica.
+ *
+ * A regra e a mesma dos exames: fila se ha exame de sala por fazer, medico
+ * se ha consulta marcada, pagamento se nao ha nem um nem outro.
+ */
+async function encaminharDepoisDaTriagem(
+  ctx: { tenant: { id: string }; userId: string },
+  attendanceId: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data: exames } = await supabase
+    .from('patient_exams')
+    .select('status, exam_types(code, ocupa_sala)')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('attendance_id', attendanceId)
+    .returns<{ status: string; exam_types: { code: string; ocupa_sala: boolean } | null }[]>();
+
+  const ativos = ['pendente', 'em_fila', 'chamado', 'em_andamento'];
+  const pendentes = (exames ?? []).filter((e) => ativos.includes(e.status));
+  const naFila = pendentes.some((e) => e.exam_types?.ocupa_sala !== false);
+  const temConsulta = pendentes.some((e) => e.exam_types?.code === 'CLINICO');
+
+  const etapa = naFila
+    ? 'aguardando_exames'
+    : temConsulta
+      ? 'aguardando_medico'
+      : 'aguardando_pagamento';
+
+  const { error } = await supabase
+    .from('attendances')
+    .update({
+      stage_code: etapa,
+      triage_finished_at: new Date().toISOString(),
+      in_service: false,
+      current_room_id: null,
+      updated_by: ctx.userId,
+    })
+    .eq('id', attendanceId)
+    .eq('tenant_id', ctx.tenant.id);
+  if (error) return toFriendlyError(error);
+
+  // A sala de triagem tem de voltar a ficar livre, senao a proxima chamada
+  // encontra a sala ocupada por quem ja saiu.
+  await supabase
+    .from('rooms')
+    .update({ status: 'disponivel', current_attendance_id: null })
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('current_attendance_id', attendanceId);
+
+  return null;
+}
+
 /** Cria ou atualiza a triagem do atendimento. */
 export async function saveTriage(_prev: unknown, formData: FormData): Promise<ActionResult> {
   try {
@@ -60,20 +120,32 @@ export async function saveTriage(_prev: unknown, formData: FormData): Promise<Ac
       .eq('attendance_id', parsed.data.attendance_id)
       .maybeSingle<{ id: string }>();
 
+    const agora = new Date().toISOString();
+
+    // `finished_at` so e escrito quando se finaliza. Antes ele era zerado a
+    // cada gravacao simples, e salvar uma correcao depois de concluir
+    // desfazia a conclusao sem avisar ninguem.
     const payload = {
       ...parsed.data,
       tenant_id: ctx.tenant.id,
       patient_id: attendance.patient_id,
       professional_id: ctx.userId,
-      finished_at: finish ? new Date().toISOString() : null,
       updated_by: ctx.userId,
+      ...(finish ? { finished_at: agora } : {}),
     };
 
     const { error } = existing
       ? await supabase.from('triages').update(payload).eq('id', existing.id)
-      : await supabase.from('triages').insert({ ...payload, created_by: ctx.userId });
+      : await supabase
+          .from('triages')
+          .insert({ ...payload, created_by: ctx.userId, finished_at: finish ? agora : null });
 
     if (error) return fail(toFriendlyError(error));
+
+    if (finish) {
+      const erroEtapa = await encaminharDepoisDaTriagem(ctx, parsed.data.attendance_id);
+      if (erroEtapa) return fail(erroEtapa);
+    }
 
     await audit(ctx, {
       action: existing ? 'update' : 'create',
@@ -136,6 +208,12 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // Blocos de selecao da ficha clinica, remontados em jsonb.
     const blocos = lerBlocos(formData);
 
+    const agoraConsulta = new Date().toISOString();
+
+    // `finished_at` e `signed_at` so sao escritos ao finalizar. Antes eram
+    // zerados a cada gravacao: o medico que assinasse a consulta e depois
+    // corrigisse uma observacao desfazia a propria assinatura, e o paciente
+    // voltava a ficar parado em "aguardando documentos".
     const payload = {
       ...parsed.data,
       ...blocos,
@@ -144,14 +222,18 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       patient_id: attendance.patient_id,
       doctor_id: ctx.userId,
       room_id: salaDaConsulta,
-      finished_at: finish ? new Date().toISOString() : null,
-      signed_at: finish ? new Date().toISOString() : null,
       updated_by: ctx.userId,
+      ...(finish ? { finished_at: agoraConsulta, signed_at: agoraConsulta } : {}),
     };
 
     const { error } = existing
       ? await supabase.from('medical_consultations').update(payload).eq('id', existing.id)
-      : await supabase.from('medical_consultations').insert({ ...payload, created_by: ctx.userId });
+      : await supabase.from('medical_consultations').insert({
+          ...payload,
+          created_by: ctx.userId,
+          finished_at: finish ? agoraConsulta : null,
+          signed_at: finish ? agoraConsulta : null,
+        });
 
     if (error) return fail(toFriendlyError(error));
 
@@ -224,12 +306,26 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
   }
 }
 
-/** Registra resultado de um exame executado. */
+/**
+ * Registra resultado de um exame executado.
+ *
+ * `concluir` existe por causa da bancada da triagem. Nas salas do quadro de
+ * Filas, concluir e um botao proprio: o exame foi chamado, esta em
+ * andamento, e alguem decide quando terminou. Na bancada nao ha chamada nem
+ * botao de concluir — acuidade, visao de cores, Romberg e fadiga sao
+ * preenchidos ali e acabou.
+ *
+ * Ate 21/09 salvar a ficha da bancada nao mexia no status do exame. Ele
+ * ficava 'pendente' para sempre, e desde 15/09 — quando as salas de triagem
+ * sairam do quadro de Filas — nao havia sala nenhuma que pudesse chama-lo.
+ * O paciente ficava parado com "exames 0/15" e nao ia para lugar nenhum.
+ */
 export async function saveExamResult(
   patientExamId: string,
   values: Record<string, string>,
   conclusion: string,
   isAltered: boolean,
+  concluir = false,
 ): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('exames.preencher');
@@ -237,10 +333,15 @@ export async function saveExamResult(
 
     const { data: exam } = await supabase
       .from('patient_exams')
-      .select('id, patient_id')
+      .select('id, patient_id, status, started_at')
       .eq('id', patientExamId)
       .eq('tenant_id', ctx.tenant.id)
-      .maybeSingle<{ id: string; patient_id: string }>();
+      .maybeSingle<{
+        id: string;
+        patient_id: string;
+        status: string;
+        started_at: string | null;
+      }>();
     if (!exam) return fail('Exame não encontrado.');
 
     const { data: existing } = await supabase
@@ -266,16 +367,34 @@ export async function saveExamResult(
 
     if (error) return fail(toFriendlyError(error));
 
+    if (concluir && !['concluido', 'cancelado', 'nao_realizado'].includes(exam.status)) {
+      const agora = new Date().toISOString();
+      const { error: erroStatus } = await supabase
+        .from('patient_exams')
+        .update({
+          status: 'concluido',
+          started_at: exam.started_at ?? agora,
+          finished_at: agora,
+          professional_id: ctx.userId,
+          updated_by: ctx.userId,
+        })
+        .eq('id', patientExamId)
+        .eq('tenant_id', ctx.tenant.id);
+      if (erroStatus) return fail(toFriendlyError(erroStatus));
+    }
+
     await audit(ctx, {
       action: existing ? 'update' : 'create',
       entity: 'exam_results',
       entityId: existing?.id,
       patientId: exam.patient_id,
-      description: 'Resultado de exame registrado',
+      description: concluir ? 'Exame concluído na bancada' : 'Resultado de exame registrado',
     });
 
     revalidatePath('/filas');
-    return ok(undefined, 'Resultado registrado.');
+    revalidatePath('/triagem');
+    revalidatePath('/crm');
+    return ok(undefined, concluir ? 'Exame concluído.' : 'Resultado registrado.');
   } catch (error) {
     return fail(toFriendlyError(error));
   }

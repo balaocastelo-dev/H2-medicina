@@ -83,6 +83,10 @@ export function TriageWorkspace({
                     {exame.exam_types?.name ?? 'Exame'}
                   </p>
                   <FichaDeExameForm
+                    // Aqui nao ha chamada de sala nem botao de concluir:
+                    // preencher a ficha e fazer o exame. Sem isto ele ficava
+                    // pendente para sempre e prendia o paciente.
+                    concluirAoSalvar
                     patientExamId={exame.id}
                     codigoExame={exame.exam_types?.code}
                     valoresIniciais={exame.exam_results?.[0]?.values ?? {}}

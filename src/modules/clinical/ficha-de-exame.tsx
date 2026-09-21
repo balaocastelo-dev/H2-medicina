@@ -18,12 +18,21 @@ export function FichaDeExameForm({
   valoresIniciais = {},
   conclusaoInicial = '',
   aoSalvar,
+  concluirAoSalvar = false,
 }: {
   patientExamId: string;
   codigoExame: string | null | undefined;
   valoresIniciais?: Record<string, string>;
   conclusaoInicial?: string;
   aoSalvar?: () => void;
+  /**
+   * Salvar tambem conclui o exame.
+   *
+   * Vale na bancada da triagem, onde nao ha chamada de sala nem botao de
+   * concluir: preencher a ficha e o exame. Nas salas do quadro de Filas
+   * continua sendo o operador quem decide quando o exame terminou.
+   */
+  concluirAoSalvar?: boolean;
 }) {
   const ficha = fichaDoExame(codigoExame);
   // Os padroes so valem para campo que ninguem preencheu ainda: reabrir um
@@ -47,6 +56,7 @@ export function FichaDeExameForm({
         valores,
         conclusao,
         alertas.length > 0,
+        concluirAoSalvar,
       );
       setAviso({
         ok: resultado.ok,
@@ -165,7 +175,8 @@ export function FichaDeExameForm({
       </Field>
 
       <Button size="sm" loading={pendente} onClick={salvar}>
-        <Save className="h-4 w-4" /> Salvar ficha
+        <Save className="h-4 w-4" />
+        {concluirAoSalvar ? 'Salvar e concluir exame' : 'Salvar ficha'}
       </Button>
     </div>
   );
