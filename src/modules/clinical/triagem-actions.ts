@@ -48,7 +48,10 @@ export async function chamarParaTriagem(
     ]);
 
     if (!atendimento) return fail('Atendimento não encontrado.');
-    if (!['aguardando_triagem', 'em_triagem'].includes(atendimento.stage_code)) {
+    // 'aguardando_exames' entra porque a tela tambem lista quem tem exame de
+    // bancada por fazer sem ter sido encaminhado a triagem. Se o botao
+    // recusasse, o paciente apareceria na lista e nao poderia ser chamado.
+    if (!['aguardando_triagem', 'em_triagem', 'aguardando_exames'].includes(atendimento.stage_code)) {
       return fail('Este paciente não está aguardando triagem.');
     }
 

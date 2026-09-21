@@ -12,19 +12,28 @@ export default async function TriagemPage() {
   const ctx = await requirePermission('triagem.preencher');
   const supabase = await createClient();
 
+  // Alem de quem foi encaminhado a triagem, entra tambem quem tem exame de
+  // bancada por fazer e nao passou por aqui.
+  //
+  // Acuidade, visao de cores, Romberg e fadiga sao feitos nesta mesa. As
+  // salas de triagem sairam do quadro de Filas e salas em 15/09, entao um
+  // paciente com esses exames e sem encaminhamento a triagem nao aparecia
+  // em tela nenhuma — nem aqui, nem nas salas, nem na fila do medico. A
+  // recepcao passou a encaminhar sozinha; esta lista pega quem ja estava
+  // parado e qualquer outro caminho que leve ao mesmo lugar.
   const { data } = await supabase
     .from('attendances')
     .select(
       'id, stage_code, priority, checkin_at, patients(id, full_name, birth_date), companies(trade_name, legal_name), queue_tickets(code), triages(*)',
     )
     .eq('tenant_id', ctx.tenant.id)
-    .in('stage_code', ['aguardando_triagem', 'em_triagem'])
+    .in('stage_code', ['aguardando_triagem', 'em_triagem', 'aguardando_exames'])
     .is('finished_at', null)
     .is('deleted_at', null)
     .order('checkin_at')
     .returns<TriageRow[]>();
 
-  const rows = data ?? [];
+  const candidatos = data ?? [];
 
   // Salas de triagem, para a chamada sair com o nome certo na TV.
   const { data: salasDeTriagem } = await supabase
@@ -40,7 +49,7 @@ export default async function TriagemPage() {
   // Exames de bancada destes pacientes: sao feitos aqui mesmo, sem o
   // paciente sair da triagem para entrar numa fila e voltar depois.
   let bancada: ExameDeBancada[] = [];
-  if (rows.length > 0) {
+  if (candidatos.length > 0) {
     const { data: exames } = await supabase
       .from('patient_exams')
       .select(
@@ -49,13 +58,18 @@ export default async function TriagemPage() {
       .eq('tenant_id', ctx.tenant.id)
       .in(
         'attendance_id',
-        rows.map((r) => r.id),
+        candidatos.map((r) => r.id),
       )
       .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
       .returns<(ExameDeBancada & { exam_types: { rooms: { kind: string } | null } | null })[]>();
 
     bancada = (exames ?? []).filter((e) => e.exam_types?.rooms?.kind === 'triagem');
   }
+
+  const comBancada = new Set(bancada.map((e) => e.attendance_id));
+  const rows = candidatos.filter(
+    (r) => r.stage_code !== 'aguardando_exames' || comBancada.has(r.id),
+  );
 
   return (
     <div>

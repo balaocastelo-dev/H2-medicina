@@ -50,6 +50,18 @@ export function formatMoney(value: number | string | null | undefined): string {
 const DATA_PURA = /^(\d{4})-(\d{2})-(\d{2})$/;
 
 /**
+ * Texto que o banco devolve: sempre comeca por AAAA-MM-DD.
+ *
+ * Qualquer outra coisa e recusada de proposito. `new Date("12/05/1990")` nao
+ * falha: o JavaScript le no formato americano e devolve 5 de dezembro. Uma
+ * data brasileira que caisse aqui sairia impressa com o dia e o mes
+ * trocados, sem erro nenhum, e ninguem descobriria olhando a tela.
+ *
+ * Travessao e um defeito visivel. Data trocada e um defeito invisivel.
+ */
+const COMECA_EM_ISO = /^\d{4}-\d{2}-\d{2}/;
+
+/**
  * Data no formato brasileiro.
  *
  * Data de nascimento, admissao e vencimento sao colunas `date` no banco:
@@ -77,15 +89,25 @@ export function formatDate(value: string | Date | null | undefined): string {
     }
   }
 
-  const d = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return '—';
+  const d = instanteDoBanco(value);
+  if (!d) return '—';
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(d);
+}
+
+/** Converte um valor do banco em instante, recusando texto ambiguo. */
+function instanteDoBanco(value: string | Date): Date | null {
+  if (typeof value === 'string') {
+    if (!COMECA_EM_ISO.test(value)) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  return Number.isNaN(value.getTime()) ? null : value;
 }
 
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  const d = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return '—';
+  const d = instanteDoBanco(value);
+  if (!d) return '—';
   return new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     dateStyle: 'short',
@@ -95,8 +117,8 @@ export function formatDateTime(value: string | Date | null | undefined): string 
 
 export function formatTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
-  const d = typeof value === 'string' ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return '—';
+  const d = instanteDoBanco(value);
+  if (!d) return '—';
   return new Intl.DateTimeFormat('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     hour: '2-digit',

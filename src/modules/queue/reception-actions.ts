@@ -237,9 +237,9 @@ export async function finishReception(input: {
     // veio so fazer um eletroencefalograma termina e vai embora.
     const { data: escolhidos } = await supabase
       .from('exam_types')
-      .select('code')
+      .select('code, rooms:default_room_id(kind)')
       .in('id', input.examTypeIds.length > 0 ? input.examTypeIds : ['00000000-0000-0000-0000-000000000000'])
-      .returns<{ code: string }[]>();
+      .returns<{ code: string; rooms: { kind: string } | null }[]>();
 
     const codigos = new Set((escolhidos ?? []).map((e) => e.code));
     const temConsulta = codigos.has('CLINICO');
@@ -248,9 +248,20 @@ export async function finishReception(input: {
       (c) => c !== 'CLINICO' && !FORA_DA_CLINICA.has(c),
     );
 
+    // Acuidade, visao de cores, Romberg e fadiga sao feitos na bancada da
+    // triagem. Desde 15/09 as salas de triagem sairam do quadro de Filas e
+    // salas, e quem preenche esses exames e a tela de Triagem -- que so
+    // lista quem esta em 'aguardando_triagem' ou 'em_triagem'.
+    //
+    // Sem esta linha, marcar acuidade e desmarcar a triagem deixava o
+    // paciente em 'aguardando_exames' sem aparecer em tela nenhuma: nem no
+    // quadro de salas, nem na triagem, nem na fila do medico.
+    const temExameDeBancada = (escolhidos ?? []).some((e) => e.rooms?.kind === 'triagem');
+    const precisaTriagem = input.needsTriage || temExameDeBancada;
+
     const proximaEtapa = proximaEtapaDaRecepcao({
       originKind,
-      needsTriage: input.needsTriage,
+      needsTriage: precisaTriagem,
       temExames: temExamesNaClinica,
       temConsulta,
     });
@@ -259,7 +270,7 @@ export async function finishReception(input: {
       .from('attendances')
       .update({
         stage_code: proximaEtapa,
-        needs_triage: input.needsTriage,
+        needs_triage: precisaTriagem,
         origin_kind: originKind,
         procedure_code: input.procedureCode || null,
         priority: input.priority,
