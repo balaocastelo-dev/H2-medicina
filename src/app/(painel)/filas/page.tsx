@@ -81,9 +81,15 @@ export default async function FilasPage() {
   // Esses exames nao aparecem em fila nenhuma — e preciso avisar.
   const { data: presos } = await supabase
     .from('patient_exams')
-    .select('id, attendance_id, exam_types(name), attendances!inner(stage_code), patients(full_name)')
+    .select(
+      'id, attendance_id, exam_types!inner(name, ocupa_sala), attendances!inner(stage_code), patients(full_name)',
+    )
     .eq('tenant_id', ctx.tenant.id)
     .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
+    // Raio X e consulta ficam pendentes de propósito — são o registro do
+    // que foi pedido, não tarefa de sala. Sem esta exclusão, o paciente
+    // que terminou tudo continuava aparecendo como tendo exame pendente.
+    .eq('exam_types.ocupa_sala', true)
     .not('attendances.stage_code', 'in', '("aguardando_exames","em_exames")')
     .not('attendances.stage_code', 'in', '("finalizado","cancelado","ausente")')
     .returns<

@@ -46,8 +46,37 @@ export function formatMoney(value: number | string | null | undefined): string {
   return currencyFormatter.format(Number.isFinite(n) ? n : 0);
 }
 
+/** "1963-12-02" e uma data pura: dia, sem hora e sem fuso. */
+const DATA_PURA = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Data no formato brasileiro.
+ *
+ * Data de nascimento, admissao e vencimento sao colunas `date` no banco:
+ * chegam como "1963-12-02", sem hora. `new Date("1963-12-02")` le isso
+ * como meia-noite em UTC, e converter para Sao Paulo (UTC-3) devolve o
+ * DIA ANTERIOR.
+ *
+ * Era por isso que toda data de nascimento saia um dia atrasada nos
+ * documentos -- inclusive no A.S.O. Uma data pura nao tem fuso para
+ * converter: ela e escrita como esta.
+ */
 export function formatDate(value: string | Date | null | undefined): string {
   if (!value) return '—';
+
+  if (typeof value === 'string') {
+    const puro = DATA_PURA.exec(value.slice(0, 10));
+    if (puro) {
+      const [, ano, mes, dia] = puro;
+      // Confere que e um dia que existe: "2026-02-31" nao vira 03/03.
+      const teste = new Date(`${ano}-${mes}-${dia}T12:00:00Z`);
+      if (teste.getUTCMonth() + 1 !== Number(mes) || teste.getUTCDate() !== Number(dia)) {
+        return '—';
+      }
+      return `${dia}/${mes}/${ano}`;
+    }
+  }
+
   const d = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return '—';
   return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo' }).format(d);
@@ -92,15 +121,33 @@ export function elapsedFrom(value: string | Date | null | undefined): string {
   return formatDuration((Date.now() - d.getTime()) / 1000);
 }
 
+/**
+ * Idade em anos completos.
+ *
+ * Le a data pura sem passar por fuso, pelo mesmo motivo de `formatDate`:
+ * quem nasceu em 01/01 aparecia com um ano a menos no dia do aniversario.
+ */
 export function calcAge(birthDate: string | null | undefined): number | null {
   if (!birthDate) return null;
-  const b = new Date(birthDate);
-  if (Number.isNaN(b.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - b.getFullYear();
-  const m = today.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < b.getDate())) age--;
-  return age;
+
+  const puro = DATA_PURA.exec(String(birthDate).slice(0, 10));
+  if (!puro) return null;
+
+  const [, anoStr, mesStr, diaStr] = puro;
+  const ano = Number(anoStr);
+  const mes = Number(mesStr);
+  const dia = Number(diaStr);
+
+  // Hoje no fuso da clinica, nao no do servidor.
+  const hojeSP = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(
+    new Date(),
+  );
+  const [anoH, mesH, diaH] = hojeSP.split('-').map(Number);
+  if (!anoH || !mesH || !diaH) return null;
+
+  let idade = anoH - ano;
+  if (mesH < mes || (mesH === mes && diaH < dia)) idade--;
+  return idade >= 0 && idade < 130 ? idade : null;
 }
 
 /** Primeiro nome + inicial do sobrenome, para o painel de TV. */
