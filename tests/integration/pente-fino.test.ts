@@ -207,6 +207,8 @@ let empresaB = '';
 
 const registros = new Map<string, Registro>();
 const chamadas: Chamada[] = [];
+/** Etapa dos pacientes no instante em que a bancada estava sendo preenchida. */
+const estadoDuranteATriagem: string[] = [];
 
 const um = <T,>(sql: string) => amb.um<T>(sql);
 const linhas = async <T,>(sql: string): Promise<T[]> => (await amb.db.query<T>(sql)).rows;
@@ -502,6 +504,24 @@ async function triagemDeBancada(): Promise<void> {
          and a.cancelled_at is null`);
   });
 
+  // A ficha de triagem e aberta antes: e a tela de Triagem que preenche os
+  // exames de bancada, com o paciente ali na frente.
+  await comoRecepcao(async () => {
+    const paraAbrir = await linhas<{ id: string; patient_id: string }>(`
+      select id, patient_id from public.attendances
+       where tenant_id = '${amb.tenant}' and stage_code in ('aguardando_triagem','em_triagem')
+         and cancelled_at is null`);
+
+    for (const a of paraAbrir) {
+      await amb.db.exec(`
+        insert into public.triages
+          (tenant_id, attendance_id, patient_id, professional_id, blood_pressure_systolic,
+           blood_pressure_diastolic, weight_kg, height_cm, heart_rate, created_by)
+        values ('${amb.tenant}', '${a.id}', '${a.patient_id}', '${recepcionista}',
+                120, 80, 78.5, 172.0, 72, '${recepcionista}')`);
+    }
+  });
+
   await comoRecepcao(async () => {
     for (const exame of pendentes) {
       await amb.db.exec(`
@@ -520,23 +540,17 @@ async function triagemDeBancada(): Promise<void> {
          where id = '${exame.id}'`);
     }
 
-    // A ficha de triagem propriamente dita, para quem foi encaminhado a ela.
-    const paraTriar = await linhas<{ id: string; patient_id: string }>(`
-      select id, patient_id from public.attendances
-       where tenant_id = '${amb.tenant}' and stage_code in ('aguardando_triagem','em_triagem')
-         and cancelled_at is null`);
+    // Enquanto o examinador preenche a bancada, o paciente nao pode sumir
+    // da lista da triagem: e ali que a ficha esta aberta.
+    const durante = await linhas<{ stage_code: string }>(`
+      select a.stage_code from public.attendances a
+        join public.triages t on t.attendance_id = a.id
+       where a.tenant_id = '${amb.tenant}' and t.finished_at is null`);
+    estadoDuranteATriagem.push(...durante.map((x) => x.stage_code));
 
-    for (const a of paraTriar) {
-      await amb.db.exec(`
-        insert into public.triages
-          (tenant_id, attendance_id, patient_id, professional_id, blood_pressure_systolic,
-           blood_pressure_diastolic, weight_kg, height_cm, heart_rate, created_by)
-        values ('${amb.tenant}', '${a.id}', '${a.patient_id}', '${recepcionista}',
-                120, 80, 78.5, 172.0, 72, '${recepcionista}')`);
-      await amb.db.exec(`
-        update public.triages set finished_at = now(), updated_by = '${recepcionista}'
-         where attendance_id = '${a.id}'`);
-    }
+    await amb.db.exec(`
+      update public.triages set finished_at = now(), updated_by = '${recepcionista}'
+       where tenant_id = '${amb.tenant}' and finished_at is null`);
 
     await amb.db.exec(`
       update public.rooms set status = 'disponivel', current_attendance_id = null
@@ -1454,6 +1468,17 @@ describe('11. o que o pente fino encontrou', () => {
     for (const linha of r) expect(linha.status).toBe('concluido');
   });
 
+  it('preencher a bancada nao tira o paciente da tela de triagem', () => {
+    // A tela de Triagem lista 'aguardando_triagem', 'em_triagem' e quem tem
+    // bancada por fazer. Concluir o primeiro exame de bancada jogava o
+    // paciente em 'em_exames' -- e ele sumia da lista com a ficha aberta na
+    // frente do examinador.
+    expect(estadoDuranteATriagem.length).toBeGreaterThan(0);
+    for (const etapa of estadoDuranteATriagem) {
+      expect(['aguardando_triagem', 'em_triagem']).toContain(etapa);
+    }
+  });
+
   it('nenhuma consulta ficou pendente num atendimento encerrado', async () => {
     const r = await linhas<{ nome: string }>(`
       select p.full_name as nome
@@ -1714,6 +1739,56 @@ describe('15. cabecalho dos documentos', () => {
 // =====================================================================
 // 16. Permissoes
 // =====================================================================
+
+/**
+ * 17. O dia fechado em numeros.
+ *
+ * Nao e enfeite: e a foto do dia inteiro numa linha so. Se alguma
+ * alteracao mudar a forma do percurso — um exame a mais, uma cobranca a
+ * menos, uma consulta que nao acontece — o numero muda aqui antes de
+ * mudar na clinica.
+ */
+describe('17. o dia fechado em numeros', () => {
+  it('a foto do dia e exatamente esta', async () => {
+    const r = await um<Record<string, string>>(`
+      select
+        (select count(*) from public.patients where tenant_id = '${amb.tenant}')::text as pacientes,
+        (select count(*) from public.attendances where tenant_id = '${amb.tenant}')::text as atendimentos,
+        (select count(*) from public.patient_exams where tenant_id = '${amb.tenant}')::text as exames,
+        (select count(*) from public.patient_exams where tenant_id = '${amb.tenant}' and status = 'concluido')::text as concluidos,
+        (select count(*) from public.exam_results where tenant_id = '${amb.tenant}')::text as fichas,
+        (select count(*) from public.tv_calls where tenant_id = '${amb.tenant}')::text as chamadas,
+        (select count(*) from public.medical_consultations where tenant_id = '${amb.tenant}')::text as consultas,
+        (select count(*) from public.triages where tenant_id = '${amb.tenant}')::text as triagens,
+        (select count(*) from public.documents where tenant_id = '${amb.tenant}')::text as documentos,
+        (select count(*) from public.payments where tenant_id = '${amb.tenant}')::text as cobrancas,
+        (select coalesce(sum(net_amount),0) from public.payments where tenant_id = '${amb.tenant}')::text as receita,
+        (select coalesce(sum(fee),0) from public.fee_entries where tenant_id = '${amb.tenant}')::text as repasse,
+        (select count(*) from public.crm_movements where tenant_id = '${amb.tenant}')::text as movimentos,
+        (select count(*) from public.queue_events where tenant_id = '${amb.tenant}')::text as eventos`);
+
+    expect(r).toMatchObject({
+      pacientes: '10',
+      atendimentos: '10',
+      exames: '28',
+      // 28 menos o raio X (feito fora) e os dois do paciente que foi embora.
+      concluidos: '25',
+      // Uma ficha por exame de sala concluido; consulta e raio X nao tem.
+      fichas: '18',
+      consultas: '7',
+      triagens: '2',
+      documentos: '9',
+      cobrancas: '9',
+      receita: '2630.00',
+      repasse: '420.00',
+    });
+
+    expect(chamadas).toHaveLength(14);
+    expect(Number(r.chamadas)).toBe(chamadas.length + 2); // as duas da triagem
+    expect(Number(r.movimentos)).toBeGreaterThan(50);
+    expect(Number(r.eventos)).toBeGreaterThan(20);
+  });
+});
 
 describe('16. permissoes', () => {
   let semPermissao = '';
