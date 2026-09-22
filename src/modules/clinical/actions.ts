@@ -182,10 +182,15 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
     const { data: attendance } = await supabase
       .from('attendances')
-      .select('id, patient_id, current_room_id')
+      .select('id, patient_id, current_room_id, procedure_code')
       .eq('id', parsed.data.attendance_id)
       .eq('tenant_id', ctx.tenant.id)
-      .maybeSingle<{ id: string; patient_id: string; current_room_id: string | null }>();
+      .maybeSingle<{
+        id: string;
+        patient_id: string;
+        current_room_id: string | null;
+        procedure_code: string | null;
+      }>();
     if (!attendance) return fail('Atendimento não encontrado.');
 
     // A sala e lida agora, antes de qualquer gravacao. O gatilho
@@ -264,19 +269,14 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // Ao finalizar, o A.S.O. sai sozinho: e o documento que a empresa espera.
     let avisoAso = '';
     if (finish) {
-      const aso = await gerarAso(
-        ctx,
-        parsed.data.attendance_id,
-        (formData.get('signatario_id') as string) || null,
-      );
+      // Assina quem esta logado. A escolha saiu da tela em 22/09 — ninguem
+      // assina documento medico no lugar de outro.
+      const aso = await gerarAso(ctx, parsed.data.attendance_id, ctx.userId);
       avisoAso = aso.ok ? ' O A.S.O. foi gerado.' : ` (${aso.error})`;
 
-      // O repasse do medico nasce do atendimento, nao de digitacao no financeiro.
-      await lancarRepasse(
-        ctx,
-        parsed.data.attendance_id,
-        (formData.get('procedure_code') as string) || null,
-      );
+      // O repasse do medico nasce do atendimento, nao de digitacao no
+      // financeiro: o procedimento e o que a recepcao escolheu.
+      await lancarRepasse(ctx, parsed.data.attendance_id, attendance.procedure_code);
     }
 
     await sincronizarAgendamento(ctx.tenant.id, parsed.data.attendance_id);

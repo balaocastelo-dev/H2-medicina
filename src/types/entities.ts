@@ -187,6 +187,11 @@ export interface Company {
   situation: string;
   /** Falso dispensa a ficha clinica: sai apenas o A.S.O. e os laudos. */
   emite_ficha_clinica: boolean;
+  /** Responsavel pelo PCMSO desta empresa; sai impresso no A.S.O. */
+  pcmso_doctor_name: string | null;
+  pcmso_doctor_council: string | null;
+  pcmso_doctor_number: string | null;
+  pcmso_doctor_state: string | null;
   allow_marketing: boolean;
   legal_basis: string | null;
   last_campaign_at: string | null;

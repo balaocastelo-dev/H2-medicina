@@ -15,10 +15,11 @@ import { getDocumentUrl } from '@/modules/documents/actions';
  */
 export async function abrirDocumentoEmNovaAba(
   documentId: string,
+  formato: 'pdf' | 'docx' = 'pdf',
 ): Promise<{ ok: true; url: string; abriu: boolean } | { ok: false; error: string }> {
   const janela = typeof window !== 'undefined' ? window.open('', '_blank', 'noopener') : null;
 
-  const resultado = await getDocumentUrl(documentId);
+  const resultado = await getDocumentUrl(documentId, formato);
 
   if (!resultado.ok || !resultado.data) {
     janela?.close();

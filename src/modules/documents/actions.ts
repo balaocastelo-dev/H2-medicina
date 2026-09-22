@@ -11,6 +11,7 @@ import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '
 import { regraDe } from '@/modules/queue/origin-kind';
 import { avaliarFichaClinica } from './ficha-clinica';
 import { montarComprovanteImpresso } from './comprovante-texto';
+import { umDo, type Embutido } from '@/lib/embed';
 import type { SessionContext } from '@/lib/auth';
 import {
   BLOCO_PSICOSSOCIAL,
@@ -36,7 +37,8 @@ interface AttendanceForDocument {
   patients: { full_name: string; cpf: string | null; birth_date: string | null } | null;
   companies: { trade_name: string | null; legal_name: string; emite_ficha_clinica: boolean } | null;
   patient_exams: { status: string; exam_types: { name: string } | null }[];
-  medical_consultations: {
+  // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
+  medical_consultations: Embutido<{
     verdict: string | null;
     valid_until: string | null;
     conclusion: string | null;
@@ -46,7 +48,7 @@ interface AttendanceForDocument {
     exame_fisico: Record<string, string> | null;
     psicossocial: Record<string, string> | null;
     alteracoes_exame_fisico: string | null;
-  }[];
+  }>;
 }
 
 interface PagamentoDoAtendimento {
@@ -228,7 +230,7 @@ export async function generateAttendanceDocument(
       });
     }
 
-    const consultation = attendance.medical_consultations?.[0];
+    const consultation = umDo(attendance.medical_consultations);
 
     // Ficha clinica: o que o medico marcou na consulta.
     // "opc de imprimir a ficha com os dados que o medico preencheu"
@@ -379,13 +381,13 @@ export async function emitirDocumentosDeSaida(
       .maybeSingle<{
         id: string;
         origin_kind: string | null;
-        medical_consultations: { verdict: string | null }[];
+        medical_consultations: Embutido<{ verdict: string | null }>;
       }>();
 
     if (!at) return fail('Atendimento não encontrado.');
 
     const ehParticular = (at.origin_kind ?? 'particular') === 'particular';
-    const temParecer = Boolean(at.medical_consultations?.[0]?.verdict);
+    const temParecer = Boolean(umDo(at.medical_consultations)?.verdict);
 
     const kinds: { kind: DocumentKind; nome: string }[] = [
       { kind: 'comprovante_comparecimento', nome: 'comprovante de comparecimento' },
@@ -466,23 +468,44 @@ export async function emitirDocumentosDeSaida(
   }
 }
 
-/** URL assinada temporaria (documentos clinicos nunca sao publicos). */
-export async function getDocumentUrl(documentId: string): Promise<ActionResult<{ url: string }>> {
+/**
+ * URL assinada temporaria (documentos clinicos nunca sao publicos).
+ *
+ * `formato` existe por causa do A.S.O., que e gravado em PDF e tambem em
+ * Word. O PDF e o documento emitido; o .docx e a copia que a clinica edita
+ * antes de imprimir.
+ */
+export async function getDocumentUrl(
+  documentId: string,
+  formato: 'pdf' | 'docx' = 'pdf',
+): Promise<ActionResult<{ url: string }>> {
   try {
     const ctx = await assertPermission('documentos.emitir');
     const supabase = await createClient();
 
     const { data: doc } = await supabase
       .from('documents')
-      .select('id, bucket, file_path, patient_id')
+      .select('id, bucket, file_path, patient_id, payload')
       .eq('id', documentId)
       .eq('tenant_id', ctx.tenant.id)
-      .maybeSingle<{ id: string; bucket: string; file_path: string; patient_id: string | null }>();
+      .maybeSingle<{
+        id: string;
+        bucket: string;
+        file_path: string;
+        patient_id: string | null;
+        payload: Record<string, unknown> | null;
+      }>();
     if (!doc?.file_path) return fail('Documento não encontrado.');
+
+    const caminhoDocx =
+      typeof doc.payload?.docx_path === 'string' ? doc.payload.docx_path : null;
+    if (formato === 'docx' && !caminhoDocx) {
+      return fail('Este documento não tem versão em Word.');
+    }
 
     const { data, error } = await supabase.storage
       .from(doc.bucket)
-      .createSignedUrl(doc.file_path, 300);
+      .createSignedUrl(formato === 'docx' ? caminhoDocx! : doc.file_path, 300);
     if (error || !data) return fail('Não foi possível gerar o link.');
 
     await supabase.from('document_views').insert({

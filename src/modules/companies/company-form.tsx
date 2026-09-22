@@ -104,6 +104,54 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
         </CardBody>
       </Card>
 
+      {/*
+        "aba empresa precisa ter um campo para incluir o medico do PCMSO,
+         nome e crm / assim no aso vai sair o nome do responsavel do PCMSO"
+                                                   — Isabella, 21/09.
+
+        Cada empresa contrata o seu responsavel: o mesmo colaborador pode
+        aparecer em duas empresas com medicos diferentes no A.S.O.
+      */}
+      <Card>
+        <CardHeader
+          title="Responsável pelo PCMSO"
+          description="Sai impresso no A.S.O. dos colaboradores desta empresa."
+        />
+        <CardBody className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nome do médico" error={errors?.pcmso_doctor_name}>
+            <Input
+              name="pcmso_doctor_name"
+              defaultValue={company?.pcmso_doctor_name ?? ''}
+              placeholder="Como deve sair no documento"
+            />
+          </Field>
+          <Field label="Conselho" error={errors?.pcmso_doctor_council}>
+            <Input
+              name="pcmso_doctor_council"
+              defaultValue={company?.pcmso_doctor_council ?? ''}
+              placeholder="CRM"
+            />
+          </Field>
+          <Field label="Número do registro" error={errors?.pcmso_doctor_number}>
+            <Input
+              name="pcmso_doctor_number"
+              defaultValue={company?.pcmso_doctor_number ?? ''}
+            />
+          </Field>
+          <Field label="UF do registro" error={errors?.pcmso_doctor_state}>
+            <Input
+              name="pcmso_doctor_state"
+              maxLength={2}
+              defaultValue={company?.pcmso_doctor_state ?? ''}
+              placeholder="SP"
+            />
+          </Field>
+          <p className="text-xs text-slate-500 sm:col-span-2">
+            Em branco, o A.S.O. usa o responsável cadastrado em Configurações.
+          </p>
+        </CardBody>
+      </Card>
+
       <Card>
         <CardHeader
           title="Documentos do atendimento"

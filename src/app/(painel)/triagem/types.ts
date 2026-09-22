@@ -1,5 +1,6 @@
 /** Tipos compartilhados entre a pagina (servidor) e os componentes client. */
 import type { Triage } from '@/types/entities';
+import type { Embutido } from '@/lib/embed';
 
 export interface TriageRow {
   id: string;
@@ -9,7 +10,8 @@ export interface TriageRow {
   patients: { id: string; full_name: string; birth_date: string | null } | null;
   companies: { trade_name: string | null; legal_name: string } | null;
   queue_tickets: { code: string }[];
-  triages: Triage[];
+  // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
+  triages: Embutido<Triage>;
 }
 
 /**

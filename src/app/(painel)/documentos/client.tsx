@@ -139,7 +139,14 @@ export function GenerateDocumentCard({
   );
 }
 
-export function DocumentActions({ documentId }: { documentId: string }) {
+export function DocumentActions({
+  documentId,
+  temWord = false,
+}: {
+  documentId: string;
+  /** O A.S.O. e gravado tambem em Word, para a clinica editar antes de imprimir. */
+  temWord?: boolean;
+}) {
   const [pending, startTransition] = useTransition();
   const [url, setUrl] = useState<string | null>(null);
 
@@ -158,20 +165,23 @@ export function DocumentActions({ documentId }: { documentId: string }) {
     );
   }
 
+  const abrir = (formato: 'pdf' | 'docx') =>
+    startTransition(async () => {
+      const r = await abrirDocumentoEmNovaAba(documentId, formato);
+      if (!r.ok) window.alert(r.error);
+      else if (!r.abriu) setUrl(r.url);
+    });
+
   return (
-    <Button
-      size="sm"
-      variant="outline"
-      loading={pending}
-      onClick={() =>
-        startTransition(async () => {
-          const r = await abrirDocumentoEmNovaAba(documentId);
-          if (!r.ok) window.alert(r.error);
-          else if (!r.abriu) setUrl(r.url);
-        })
-      }
-    >
-      <Download className="h-4 w-4" /> Abrir
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" variant="outline" loading={pending} onClick={() => abrir('pdf')}>
+        <Download className="h-4 w-4" /> Abrir
+      </Button>
+      {temWord && (
+        <Button size="sm" variant="outline" loading={pending} onClick={() => abrir('docx')}>
+          <FileText className="h-4 w-4" /> Word
+        </Button>
+      )}
+    </div>
   );
 }

@@ -135,18 +135,28 @@ begin
     -- ----------------------------------------------------------------
     -- Exame que nao ocupa sala da clinica
     --
-    -- Consulta clinica e atendida pela fila do modulo medico; raio X e
-    -- feito no laboratorio. Nenhum dos dois entra na fila de salas -- se
-    -- entrar, fica com sala nula e prende o paciente, sem cartao que o
-    -- mostre e sem botao que o alcance.
+    -- Consulta clinica e psicossocial sao perguntados pelo medico na
+    -- propria consulta; raio X e feito fora. Nenhum dos tres entra na fila
+    -- de salas -- se entrar, fica com sala nula e prende o paciente, sem
+    -- cartao que o mostre e sem botao que o alcance.
     --
-    -- Precisa estar aqui e nao so na migration 0030: numa instalacao nova
-    -- o seed roda depois das migrations, quando os exames ainda nem
-    -- existiam para serem marcados.
+    -- Precisa estar aqui e nao so nas migrations: numa instalacao nova o
+    -- seed roda depois delas, quando os exames ainda nem existiam para
+    -- serem marcados.
     -- ----------------------------------------------------------------
     update public.exam_types
-       set ocupa_sala = (code not in ('RAIOX', 'CLINICO'))
+       set ocupa_sala = (code not in ('RAIOX', 'CLINICO', 'PSICO'))
      where tenant_id = v_tenant;
+
+    -- O psicossocial saiu da bancada da triagem em 22/09: quem pergunta e
+    -- o medico. "pode deixar somente no modulo medico" -- Isabella.
+    delete from public.room_exam_types ret
+     using public.exam_types et
+     where et.id = ret.exam_type_id and et.tenant_id = v_tenant and et.code = 'PSICO';
+
+    update public.exam_types
+       set default_room_id = null
+     where tenant_id = v_tenant and code = 'PSICO';
 
   end loop;
 end$$;

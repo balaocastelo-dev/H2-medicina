@@ -180,6 +180,33 @@ for (const file of files) {
 }
 
 // ---------------------------------------------------------------------
+// Vinculo um-para-um lido como se fosse lista.
+//
+// `triages` e `medical_consultations` tem `unique (attendance_id)`. Para o
+// PostgREST isso e um-para-um, e o embed vem como OBJETO. Ler `?.[0]` de um
+// objeto devolve `undefined` -- sem erro, sem aviso, sem log.
+//
+// Foi assim que a tela do medico passou a dizer "Sem triagem registrada"
+// para um paciente recem-triado e que o A.S.O. passou a recusar a emissao
+// alegando falta da conclusao de aptidao que estava preenchida ao lado.
+// Tres reclamacoes da clinica, uma causa so, invisivel em tsc e em lint.
+//
+// Quem le esses vinculos usa `umDo()` de '@/lib/embed'.
+// ---------------------------------------------------------------------
+for (const file of files) {
+  // O proprio helper explica o defeito no comentario; nao e uso.
+  if (rel(file).endsWith('lib/embed.ts') || rel(file).endsWith('lib\\embed.ts')) continue;
+
+  const src = readFileSync(file, 'utf8');
+  for (const m of src.matchAll(/\.(triages|medical_consultations)\s*\?\.\[0\]/g)) {
+    problems.push(
+      `${rel(file)}: le ".${m[1]}?.[0]" — esse vinculo e um-para-um e vem como objeto; ` +
+        "use umDo() de '@/lib/embed'",
+    );
+  }
+}
+
+// ---------------------------------------------------------------------
 // Tipo de documento que nao existe no banco.
 //
 // `documents.kind` e um enum do Postgres. Um valor novo declarado so no

@@ -3,11 +3,13 @@ import { randomBytes } from 'node:crypto';
 import { createClient } from '@/lib/supabase/server';
 import type { SessionContext } from '@/lib/auth';
 import { audit } from '@/lib/audit';
-import { buildAsoPdf } from './aso-pdf';
+import { buildAsoPdf, type DadosAso } from './aso-pdf';
+import { buildAsoDocx, MIME_DOCX } from './aso-docx';
 import { idadeNaData, montarRiscos, perfilParaCargo, type PerfilDeRisco } from './riscos';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { urlDeVerificacao } from './verificacao';
+import { umDo, type Embutido } from '@/lib/embed';
 import { publicEnv } from '@/lib/env';
 
 /**
@@ -47,15 +49,21 @@ interface AtendimentoAso {
     city: string | null;
     state: string | null;
     zip_code: string | null;
+    /** Responsavel pelo PCMSO desta empresa; sai impresso no A.S.O. */
+    pcmso_doctor_name: string | null;
+    pcmso_doctor_council: string | null;
+    pcmso_doctor_number: string | null;
+    pcmso_doctor_state: string | null;
   } | null;
   appointments: { attendance_kind: string } | null;
-  medical_consultations: {
+  // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
+  medical_consultations: Embutido<{
     verdict: string | null;
     restrictions: string | null;
     valid_until: string | null;
     observations: string | null;
     conclusion: string | null;
-  }[];
+  }>;
   patient_exams: {
     status: string;
     finished_at: string | null;
@@ -87,7 +95,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code, pcmso_doctor_name, pcmso_doctor_council, pcmso_doctor_number, pcmso_doctor_state), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -95,7 +103,7 @@ export async function gerarAso(
 
     if (!at?.patients) return fail('Atendimento não encontrado.');
 
-    const consulta = at.medical_consultations?.[0];
+    const consulta = umDo(at.medical_consultations);
     if (!consulta?.verdict) {
       return fail('O A.S.O. exige a conclusão de aptidão preenchida.');
     }
@@ -145,7 +153,7 @@ export async function gerarAso(
     );
     await supabase.from('attendances').update({ riscos }).eq('id', attendanceId);
 
-    const pdf = await buildAsoPdf({
+    const dadosDoAso: DadosAso = {
       clinica: {
         nome: ctx.branding.system_name,
         razaoSocial: empresaCfg.razao_social ?? ctx.tenant.legal_name,
@@ -178,11 +186,16 @@ export async function gerarAso(
         cargo: paciente.job_title ?? null,
         setor: paciente.department ?? null,
       },
+      // O responsavel pelo PCMSO e o da EMPRESA do trabalhador. Cada uma
+      // contrata o seu, e o mesmo colaborador pode aparecer em duas
+      // empresas com responsaveis diferentes. Sem cadastro na empresa,
+      // vale o da configuracao do sistema, como era antes de 22/09.
       medicoPcmso: {
-        nome: pcmsoCfg.nome ?? respCfg.nome ?? null,
-        conselho: pcmsoCfg.conselho ?? respCfg.conselho ?? 'CRM',
-        numero: pcmsoCfg.numero ?? respCfg.numero ?? null,
-        uf: pcmsoCfg.uf ?? respCfg.uf ?? null,
+        nome: empresa?.pcmso_doctor_name ?? pcmsoCfg.nome ?? respCfg.nome ?? null,
+        conselho:
+          empresa?.pcmso_doctor_council ?? pcmsoCfg.conselho ?? respCfg.conselho ?? 'CRM',
+        numero: empresa?.pcmso_doctor_number ?? pcmsoCfg.numero ?? respCfg.numero ?? null,
+        uf: empresa?.pcmso_doctor_state ?? pcmsoCfg.uf ?? respCfg.uf ?? null,
         rqe: pcmsoCfg.rqe ?? null,
         endereco: pcmsoCfg.endereco ?? null,
         bairro: pcmsoCfg.bairro ?? null,
@@ -218,9 +231,12 @@ export async function gerarAso(
       codigoVerificacao: codigo,
       urlVerificacao: urlDeVerificacao(docsCfg.url_verificacao, publicEnv.NEXT_PUBLIC_APP_URL),
       rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
-    });
+    };
 
-    const caminho = `${ctx.tenant.id}/atendimentos/${attendanceId}/aso-${Date.now()}.pdf`;
+    const pdf = await buildAsoPdf(dadosDoAso);
+
+    const agora = Date.now();
+    const caminho = `${ctx.tenant.id}/atendimentos/${attendanceId}/aso-${agora}.pdf`;
     const { error: erroUpload } = await supabase.storage
       .from('clinical-documents')
       .upload(caminho, new Blob([new Uint8Array(pdf)], { type: 'application/pdf' }), {
@@ -228,6 +244,26 @@ export async function gerarAso(
         upsert: false,
       });
     if (erroUpload) return fail(`Falha ao salvar o A.S.O.: ${erroUpload.message}`);
+
+    // A mesma informacao em Word, para a clinica editar antes de imprimir.
+    // "lembrando que o ASO precisa ser um arquivo em docx" -- Isabella.
+    //
+    // Falha aqui nao impede a emissao: o A.S.O. e o PDF, e documento que
+    // nao sai atrapalha o atendimento.
+    let caminhoDocx: string | null = null;
+    try {
+      const docx = await buildAsoDocx(dadosDoAso);
+      const alvo = `${ctx.tenant.id}/atendimentos/${attendanceId}/aso-${agora}.docx`;
+      const { error: erroDocx } = await supabase.storage
+        .from('clinical-documents')
+        .upload(alvo, new Blob([new Uint8Array(docx)], { type: MIME_DOCX }), {
+          contentType: MIME_DOCX,
+          upsert: false,
+        });
+      if (!erroDocx) caminhoDocx = alvo;
+    } catch {
+      caminhoDocx = null;
+    }
 
     const { data: doc, error } = await supabase
       .from('documents')
@@ -240,6 +276,9 @@ export async function gerarAso(
         bucket: 'clinical-documents',
         file_path: caminho,
         size_bytes: pdf.byteLength,
+        // Onde esta a copia em Word. Guardado no proprio documento para o
+        // botao de baixar nao precisar adivinhar o nome do arquivo.
+        payload: caminhoDocx ? { docx_path: caminhoDocx } : {},
         verification_code: codigo,
         is_patient_visible: true,
         signed_by: signatario.id,

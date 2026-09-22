@@ -27,25 +27,15 @@ import {
 export function ConsultationForm({
   attendanceId,
   consultation,
-  procedimentos = [],
-  procedimentoPadrao,
-  procedimentoDaRecepcao = false,
-  medicos = [],
-  medicoPadrao,
+  assinante,
   psicossocialSolicitado = false,
 }: {
   attendanceId: string;
   consultation: MedicalConsultation | null;
   /** A recepcao marcou o exame psicossocial para este paciente. */
   psicossocialSolicitado?: boolean;
-  /** Catalogo de repasse; vazio esconde o campo. */
-  procedimentos?: { code: string; name: string }[];
-  procedimentoPadrao?: string;
-  /** Ja veio escolhido da recepcao; aqui e so conferencia. */
-  procedimentoDaRecepcao?: boolean;
-  /** Quem pode assinar o A.S.O.; vazio esconde o campo. */
-  medicos?: { id: string; nome: string; registro: string | null; temAssinatura: boolean }[];
-  medicoPadrao?: string;
+  /** Quem esta logado — e quem vai assinar o A.S.O. */
+  assinante?: { nome: string; registro: string | null; temAssinatura: boolean } | null;
 }) {
   const [state, formAction, pending] = useActionState<ActionResult | null, FormData>(
     saveConsultation,
@@ -205,24 +195,12 @@ export function ConsultationForm({
             </Field>
           </div>
 
-          {procedimentos.length > 0 && (
-            <Field
-              label="Procedimento"
-              hint={
-                procedimentoDaRecepcao
-                  ? 'Escolhido na recepção. Só altere se o atendimento mudou de natureza.'
-                  : 'Define o valor do repasse lançado ao finalizar a consulta'
-              }
-            >
-              <Select name="procedure_code" defaultValue={procedimentoPadrao ?? ''}>
-                {procedimentos.map((p) => (
-                  <option key={p.code} value={p.code}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          )}
+          {/*
+            O procedimento saiu daqui em 22/09. "essa opcao nos selecionamos
+            na recepcao, e deve mostrar pro medico apenas o que foi
+            selecionado, sem opcao de alterar" — Isabella. Ele agora aparece
+            ao lado do nome do paciente, como informacao.
+          */}
 
           <Field label="Observacoes">
             <Textarea
@@ -232,21 +210,20 @@ export function ConsultationForm({
             />
           </Field>
 
-          {medicos.length > 0 && (
-            <Field
-              label="Médico que assina o A.S.O."
-              hint="O documento sai com o nome, o registro e a assinatura de quem for escolhido"
-            >
-              <Select name="signatario_id" defaultValue={medicoPadrao ?? ''}>
-                {medicos.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nome}
-                    {m.registro ? ` — ${m.registro}` : ''}
-                    {m.temAssinatura ? '' : ' (sem assinatura registrada)'}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+          {/*
+            Quem assina o A.S.O. e quem esta logado. A escolha saiu em
+            22/09: "se estou logada como dra wania, automaticamente ela
+            assinara". Alem de ser o que a clinica pediu, e o unico modelo
+            honesto — ninguem assina documento medico no lugar de outro.
+          */}
+          {assinante && (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              O A.S.O. sairá assinado por <strong>{assinante.nome}</strong>
+              {assinante.registro ? ` — ${assinante.registro}` : ''}.
+              {assinante.temAssinatura
+                ? ''
+                : ' Nenhuma assinatura foi registrada ainda: cadastre a sua em Perfil.'}
+            </p>
           )}
 
           <div className="flex gap-2">

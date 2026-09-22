@@ -67,6 +67,14 @@ export async function carregarLogo(
 ): Promise<{ bytes: Uint8Array; format: 'png' | 'jpg' } | null> {
   if (!url) return null;
   try {
+    // Caminho que tenta sair da pasta publica nao vira requisicao de rede.
+    //
+    // A leitura do disco ja recusava `/../../package.json`, mas o codigo
+    // seguia adiante e buscava o mesmo caminho pela URL do proprio app --
+    // devolvendo a trava para quem a tinha acabado de fechar, e deixando o
+    // documento pendurado no tempo de resposta da rede.
+    if (/(^|[/\\])\.\.([/\\]|$)/.test(url) || /%2e%2e/i.test(url)) return null;
+
     // Arquivo do proprio app: le do disco. Sai mais rapido e nao depende de
     // a URL do deploy responder sem autenticacao.
     if (url.startsWith('/')) {

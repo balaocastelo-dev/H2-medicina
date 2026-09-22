@@ -123,6 +123,11 @@ export const companySchema = z.object({
   legal_basis: optionalText,
   allow_marketing: z.boolean().default(false),
   emite_ficha_clinica: z.boolean().default(true),
+  // Responsavel pelo PCMSO desta empresa, impresso no A.S.O.
+  pcmso_doctor_name: optionalText,
+  pcmso_doctor_council: optionalText,
+  pcmso_doctor_number: optionalText,
+  pcmso_doctor_state: ufSchema.optional().nullable(),
   notes: optionalText,
 });
 export type CompanyInput = z.infer<typeof companySchema>;

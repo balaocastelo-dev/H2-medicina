@@ -17,6 +17,7 @@ import { saveTriage } from '@/modules/clinical/actions';
 import { chamarParaTriagem, repetirChamadaDaTriagem } from '@/modules/clinical/triagem-actions';
 import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
 import type { ActionResult } from '@/lib/action-result';
+import { umDo } from '@/lib/embed';
 import type { ExameDeBancada, TriageRow } from './types';
 
 export function TriageWorkspace({
@@ -182,7 +183,7 @@ function TriageForm({ row }: { row: TriageRow }) {
     saveTriage,
     null,
   );
-  const triage = row.triages?.[0];
+  const triage = umDo(row.triages);
   const errors = state && !state.ok ? state.fieldErrors : undefined;
 
   return (

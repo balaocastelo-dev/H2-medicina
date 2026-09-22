@@ -5,11 +5,22 @@ import { auditClinicalAccess } from '@/lib/audit';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui';
 import { calcAge, formatCPF, formatDate, formatDateTime } from '@/lib/format';
+import { umDo, type Embutido } from '@/lib/embed';
 import { ConsultationForm } from '@/modules/clinical/consultation-form';
 import { fichaDoExame, preenchidos } from '@/modules/clinical/fichas-de-exame';
 import type { MedicalConsultation, Triage } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
+
+/** Rotulos do tipo de atendimento, como a clinica fala. */
+const TIPO_DE_ATENDIMENTO: Record<string, string> = {
+  admissional: 'Admissional',
+  periodico: 'Periódico',
+  demissional: 'Demissional',
+  mudanca_funcao: 'Mudança de função',
+  retorno_trabalho: 'Retorno ao trabalho',
+  consulta: 'Consulta',
+};
 
 interface AttendanceDetail {
   id: string;
@@ -28,8 +39,10 @@ interface AttendanceDetail {
     department: string | null;
   } | null;
   companies: { trade_name: string | null; legal_name: string } | null;
-  triages: Triage[];
-  medical_consultations: MedicalConsultation[];
+  appointments: Embutido<{ attendance_kind: string }>;
+  // Um por atendimento: o PostgREST entrega como objeto, nao como lista.
+  triages: Embutido<Triage>;
+  medical_consultations: Embutido<MedicalConsultation>;
   patient_exams: {
     id: string;
     status: string;
@@ -53,39 +66,25 @@ export default async function MedicoAtendimentoPage({
   const ctx = await requirePermission('medico.atender');
   const supabase = await createClient();
 
-  // Catalogo de repasse: alimenta o campo de procedimento da consulta.
-  const { data: procedimentos } = await supabase
-    .from('procedure_types')
-    .select('code, name')
-    .eq('tenant_id', ctx.tenant.id)
-    .eq('is_active', true)
-    .order('sort_order')
-    .returns<{ code: string; name: string }[]>();
-
-  // Quem pode assinar o A.S.O.: profissional ativo com registro no conselho.
-  const { data: medicos } = await supabase
+  // Quem assina o A.S.O. e quem esta logado. Nao ha escolha: alem de ser o
+  // que a clinica pediu em 22/09, e o unico modelo honesto — ninguem assina
+  // documento medico no lugar de outro.
+  const { data: eu } = await supabase
     .from('profiles')
-    .select('id, full_name, council_type, council_number, council_state, signature_path')
-    .eq('tenant_id', ctx.tenant.id)
-    .eq('is_active', true)
-    .is('deleted_at', null)
-    .not('council_number', 'is', null)
-    .order('full_name')
-    .returns<
-      {
-        id: string;
-        full_name: string;
-        council_type: string | null;
-        council_number: string | null;
-        council_state: string | null;
-        signature_path: string | null;
-      }[]
-    >();
+    .select('full_name, council_type, council_number, council_state, signature_path')
+    .eq('id', ctx.userId)
+    .maybeSingle<{
+      full_name: string;
+      council_type: string | null;
+      council_number: string | null;
+      council_state: string | null;
+      signature_path: string | null;
+    }>();
 
   const { data } = await supabase
     .from('attendances')
     .select(
-      'id, stage_code, priority, checkin_at, notes, procedure_code, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
+      'id, stage_code, priority, checkin_at, notes, procedure_code, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), appointments(attendance_kind), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
     )
     .eq('id', id)
     .eq('tenant_id', ctx.tenant.id)
@@ -95,17 +94,47 @@ export default async function MedicoAtendimentoPage({
 
   await auditClinicalAccess(ctx, data.patients.id, 'prontuario', id);
 
-  const triage = data.triages?.[0];
-  const consultation = data.medical_consultations?.[0];
+  const triage = umDo(data.triages);
+  const consultation = umDo(data.medical_consultations);
 
   // "incluir perguntas de exame psicossocial, caso essa opcao tenha sido
   //  flegada na aba recepcao"
   const psicossocialSolicitado = data.patient_exams.some((e) => e.exam_types?.code === 'PSICO');
 
+  // O que a recepcao escolheu, em bom portugues, ao lado do nome.
+  //
+  // "deve mostrar pro medico apenas o que foi selecionado, sem opcao de
+  //  alterar, deve mostrar proximo ao nome, por exemplo 'izabella de
+  //  oliveira - admissao', sendo uma informacao interna, nao deve aparecer
+  //  nas senhas" — Isabella, 21/09.
+  const tipoDeAtendimento = TIPO_DE_ATENDIMENTO[umDo(data.appointments)?.attendance_kind ?? ''];
+  const nomeDoProcedimento = data.procedure_code
+    ? ((
+        await supabase
+          .from('procedure_types')
+          .select('name')
+          .eq('tenant_id', ctx.tenant.id)
+          .eq('code', data.procedure_code)
+          .maybeSingle<{ name: string }>()
+      ).data?.name ?? null)
+    : null;
+
+  const selo = [tipoDeAtendimento, nomeDoProcedimento].filter(Boolean).join(' · ');
+
+  const assinante = eu
+    ? {
+        nome: eu.full_name,
+        registro: eu.council_number
+          ? `${eu.council_type ?? 'CRM'} ${eu.council_number}${eu.council_state ? '/' + eu.council_state : ''}`
+          : null,
+        temAssinatura: !!eu.signature_path,
+      }
+    : null;
+
   return (
     <div>
       <PageHeader
-        title={data.patients.full_name}
+        title={selo ? `${data.patients.full_name} — ${selo}` : data.patients.full_name}
         description={[
           data.patients.cpf ? formatCPF(data.patients.cpf) : null,
           calcAge(data.patients.birth_date) !== null
@@ -226,25 +255,7 @@ export default async function MedicoAtendimentoPage({
             psicossocialSolicitado={psicossocialSolicitado}
             attendanceId={id}
             consultation={consultation ?? null}
-            procedimentos={procedimentos ?? []}
-            /* O procedimento agora vem da recepcao. O medico so precisa
-               mexer se o atendimento mudar de natureza no meio — uma
-               consulta que vira junta medica, por exemplo. */
-            procedimentoPadrao={
-              data.procedure_code ??
-              (ctx.settings.repasse?.procedimento_padrao as string | undefined) ??
-              'consulta_ocupacional'
-            }
-            procedimentoDaRecepcao={!!data.procedure_code}
-            medicos={(medicos ?? []).map((m) => ({
-              id: m.id,
-              nome: m.full_name,
-              registro: m.council_number
-                ? `${m.council_type ?? 'CRM'} ${m.council_number}${m.council_state ? '/' + m.council_state : ''}`
-                : null,
-              temAssinatura: !!m.signature_path,
-            }))}
-            medicoPadrao={ctx.userId}
+            assinante={assinante}
           />
         </div>
       </div>

@@ -15,6 +15,8 @@ export interface DocRow {
   title: string;
   verification_code: string | null;
   generated_at: string;
+  /** Guarda o caminho da copia em Word do A.S.O., quando existe. */
+  payload: { docx_path?: string } | null;
   patients: { full_name: string } | null;
   attendances: { finished_at: string | null } | null;
 }
@@ -50,7 +52,7 @@ export default async function DocumentosPage({
   let consulta = supabase
     .from('documents')
     .select(
-      'id, kind, title, verification_code, generated_at, patients(full_name), attendances(finished_at)',
+      'id, kind, title, verification_code, generated_at, payload, patients(full_name), attendances(finished_at)',
     )
     .eq('tenant_id', ctx.tenant.id)
     .is('deleted_at', null)
@@ -192,7 +194,10 @@ export default async function DocumentosPage({
                   <Td className="font-mono text-xs">{d.verification_code ?? '—'}</Td>
                   <Td className="text-slate-500">{formatDateTime(d.generated_at)}</Td>
                   <Td>
-                    <DocumentActions documentId={d.id} />
+                    <DocumentActions
+                      documentId={d.id}
+                      temWord={typeof d.payload?.docx_path === 'string'}
+                    />
                   </Td>
                 </tr>
               ))}

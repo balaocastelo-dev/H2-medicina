@@ -1506,7 +1506,8 @@ const CATALOGO = [
   { codigo: 'CLINICO', sala: false, guia: false },
   { codigo: 'ACUIDADE', sala: true, guia: false },
   { codigo: 'ISHIHARA', sala: true, guia: false },
-  { codigo: 'PSICO', sala: true, guia: false },
+  // Perguntado pelo medico na consulta desde 22/09, nao na bancada.
+  { codigo: 'PSICO', sala: false, guia: false },
   { codigo: 'ROMBERG', sala: true, guia: false },
   { codigo: 'FADIGA', sala: true, guia: false },
   { codigo: 'DINAMO_PAL', sala: true, guia: false },

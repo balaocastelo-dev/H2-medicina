@@ -13,6 +13,7 @@ import {
   isOriginKind,
   proximaEtapaDaRecepcao,
   regraDe,
+  RESPONDIDOS_PELO_MEDICO,
   type OriginKind,
 } from '@/modules/queue/origin-kind';
 
@@ -242,10 +243,10 @@ export async function finishReception(input: {
       .returns<{ code: string; rooms: { kind: string } | null }[]>();
 
     const codigos = new Set((escolhidos ?? []).map((e) => e.code));
-    const temConsulta = codigos.has('CLINICO');
-    // Consulta e exame de fora nao ocupam sala nenhuma aqui dentro.
+    const temConsulta = [...codigos].some((c) => RESPONDIDOS_PELO_MEDICO.has(c));
+    // O que o medico responde e o que e feito fora nao ocupam sala aqui.
     const temExamesNaClinica = [...codigos].some(
-      (c) => c !== 'CLINICO' && !FORA_DA_CLINICA.has(c),
+      (c) => !RESPONDIDOS_PELO_MEDICO.has(c) && !FORA_DA_CLINICA.has(c),
     );
 
     // Acuidade, visao de cores, Romberg e fadiga sao feitos na bancada da

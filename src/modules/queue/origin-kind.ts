@@ -136,6 +136,18 @@ export function isOriginKind(value: unknown): value is OriginKind {
  * `needsTriage` chega da tela porque a recepcao pode contrariar o padrao
  * num caso pontual — a procedencia define a sugestao, nao uma prisao.
  */
+/**
+ * Itens respondidos pelo medico na propria consulta.
+ *
+ * Nao ocupam sala e nao entram em fila: quem os "faz" e o medico. Marcar um
+ * deles significa que o paciente passa pelo consultorio.
+ *
+ * O psicossocial entrou aqui em 22/09. Ate entao ele era perguntado na
+ * bancada da triagem E de novo na consulta -- o paciente respondia duas
+ * vezes as mesmas perguntas, inclusive as de ideacao suicida.
+ */
+export const RESPONDIDOS_PELO_MEDICO = new Set(['CLINICO', 'PSICO']);
+
 export function proximaEtapaDaRecepcao(input: {
   originKind: OriginKind;
   needsTriage: boolean;
