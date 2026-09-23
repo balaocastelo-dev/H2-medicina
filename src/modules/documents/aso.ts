@@ -49,11 +49,6 @@ interface AtendimentoAso {
     city: string | null;
     state: string | null;
     zip_code: string | null;
-    /** Responsavel pelo PCMSO desta empresa; sai impresso no A.S.O. */
-    pcmso_doctor_name: string | null;
-    pcmso_doctor_council: string | null;
-    pcmso_doctor_number: string | null;
-    pcmso_doctor_state: string | null;
   } | null;
   appointments: { attendance_kind: string } | null;
   // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
@@ -95,7 +90,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code, pcmso_doctor_name, pcmso_doctor_council, pcmso_doctor_number, pcmso_doctor_state), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -129,6 +124,33 @@ export async function gerarAso(
         }
       }
     }
+
+    /**
+     * Responsavel pelo PCMSO desta empresa.
+     *
+     * Consultado a parte, e nao junto com o resto da empresa, de proposito:
+     * as colunas nascem num script que a clinica executa a mao. Enquanto o
+     * script nao roda, pedir essas colunas na consulta principal derrubaria
+     * a consulta inteira e o A.S.O. deixaria de sair — trocando um campo em
+     * branco por um documento que nao existe.
+     */
+    const pcmsoDaEmpresa = at.company_id
+      ? (
+          await supabase
+            .from('companies')
+            .select(
+              'pcmso_doctor_name, pcmso_doctor_council, pcmso_doctor_number, pcmso_doctor_state',
+            )
+            .eq('id', at.company_id)
+            .eq('tenant_id', ctx.tenant.id)
+            .maybeSingle<{
+              pcmso_doctor_name: string | null;
+              pcmso_doctor_council: string | null;
+              pcmso_doctor_number: string | null;
+              pcmso_doctor_state: string | null;
+            }>()
+        ).data
+      : null;
 
     const codigo = randomBytes(5).toString('hex').toUpperCase();
     const paciente = at.patients;
@@ -191,11 +213,11 @@ export async function gerarAso(
       // empresas com responsaveis diferentes. Sem cadastro na empresa,
       // vale o da configuracao do sistema, como era antes de 22/09.
       medicoPcmso: {
-        nome: empresa?.pcmso_doctor_name ?? pcmsoCfg.nome ?? respCfg.nome ?? null,
+        nome: pcmsoDaEmpresa?.pcmso_doctor_name ?? pcmsoCfg.nome ?? respCfg.nome ?? null,
         conselho:
-          empresa?.pcmso_doctor_council ?? pcmsoCfg.conselho ?? respCfg.conselho ?? 'CRM',
-        numero: empresa?.pcmso_doctor_number ?? pcmsoCfg.numero ?? respCfg.numero ?? null,
-        uf: empresa?.pcmso_doctor_state ?? pcmsoCfg.uf ?? respCfg.uf ?? null,
+          pcmsoDaEmpresa?.pcmso_doctor_council ?? pcmsoCfg.conselho ?? respCfg.conselho ?? 'CRM',
+        numero: pcmsoDaEmpresa?.pcmso_doctor_number ?? pcmsoCfg.numero ?? respCfg.numero ?? null,
+        uf: pcmsoDaEmpresa?.pcmso_doctor_state ?? pcmsoCfg.uf ?? respCfg.uf ?? null,
         rqe: pcmsoCfg.rqe ?? null,
         endereco: pcmsoCfg.endereco ?? null,
         bairro: pcmsoCfg.bairro ?? null,

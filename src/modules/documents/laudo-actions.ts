@@ -8,11 +8,22 @@ import { audit } from '@/lib/audit';
 import { formatCNPJ, formatCPF, formatDate } from '@/lib/format';
 import { idadeNaData } from './riscos';
 import { buildLaudoAudiometria } from './laudo-audiometria';
+import { buildLaudoDeFicha } from './laudo-de-ficha';
+import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
 import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
-/** Exames que tem laudo proprio. Os demais saem na ficha do atendimento. */
-const COM_LAUDO_PROPRIO = new Set(['AUDIO']);
+/**
+ * Exames com laudo desenhado a mao.
+ *
+ * So a audiometria: e a unica com grafico de limiares. Todo o resto sai do
+ * gerador generico, montado a partir da propria ficha de preenchimento.
+ *
+ * Ate 23/09 esta lista era a unica porta: dinamometria, Romberg, fadiga e
+ * psicossocial eram preenchidos na sala e o resultado nunca virava papel.
+ * "Nao ta gerando a ficha da Dinamometria palmar..." -- Isabella.
+ */
+const COM_LAUDO_DESENHADO = new Set(['AUDIO']);
 
 interface ExameParaLaudo {
   id: string;
@@ -79,8 +90,12 @@ export async function gerarLaudoDeExame(
     if (!exame?.attendances?.patients) return fail('Exame não encontrado.');
 
     const codigo = exame.exam_types?.code ?? '';
-    if (!COM_LAUDO_PROPRIO.has(codigo)) {
-      return fail('Este exame ainda não tem laudo próprio. Use a ficha do atendimento.');
+    const ficha = fichaDoExame(codigo);
+    if (!COM_LAUDO_DESENHADO.has(codigo) && !ficha) {
+      return fail(
+        `${exame.exam_types?.name ?? 'Este exame'} não tem ficha de preenchimento: ` +
+          'o resultado vem do próprio aparelho ou do laboratório.',
+      );
     }
     if (exame.status !== 'concluido') {
       return fail('O laudo sai depois que o exame é concluído.');
@@ -131,47 +146,69 @@ export async function gerarLaudoDeExame(
     const docsCfg = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
     const verificacao = randomBytes(5).toString('hex').toUpperCase();
 
-    const pdf = await buildLaudoAudiometria({
-      clinica: await cabecalhoDaClinica(ctx),
+    const clinica = await cabecalhoDaClinica(ctx);
+    const dadosDoPaciente = {
+      nome: paciente.social_name ?? paciente.full_name,
+      cpf: paciente.cpf ? formatCPF(paciente.cpf) : null,
+      nascimento: formatDate(paciente.birth_date),
+      idade: idadeNaData(paciente.birth_date, emitidoEm),
+      sexo: paciente.gender,
+      cargo: paciente.job_title ?? null,
+      setor: paciente.department ?? null,
+    };
+    const dadosDaEmpresa = empresa
+      ? {
+          razaoSocial: empresa.legal_name,
+          cnpj: empresa.document ? formatCNPJ(empresa.document) : null,
+        }
+      : null;
+    const tipoExame =
+      TIPO_EXAME[exame.attendances.appointments?.attendance_kind ?? ''] ?? 'Ocupacional';
+    const profissional = {
+      nome: perfil?.full_name ?? ctx.profile.full_name,
+      conselho: perfil?.council_type ?? 'CRM',
+      numero: perfil?.council_number ?? null,
+      uf: perfil?.council_state ?? null,
+    };
 
-      emitidoEm,
-      paciente: {
-        nome: paciente.social_name ?? paciente.full_name,
-        cpf: paciente.cpf ? formatCPF(paciente.cpf) : null,
-        nascimento: formatDate(paciente.birth_date),
-        idade: idadeNaData(paciente.birth_date, emitidoEm),
-        sexo: paciente.gender,
-        cargo: paciente.job_title ?? null,
-        setor: paciente.department ?? null,
-      },
-      empresa: empresa
-        ? {
-            razaoSocial: empresa.legal_name,
-            cnpj: empresa.document ? formatCNPJ(empresa.document) : null,
-          }
-        : null,
-      tipoExame: TIPO_EXAME[exame.attendances.appointments?.attendance_kind ?? ''] ?? 'Ocupacional',
-      aparelho: {
-        modelo: texto('aparelho'),
-        fabricante: texto('fabricante'),
-        calibracao: texto('calibracao'),
-        repousoAuditivo: texto('repouso_auditivo'),
-      },
-      medicoes: valores,
-      meatoscopia: { od: texto('meatoscopia_od'), oe: texto('meatoscopia_oe') },
-      conclusao: resultado?.conclusion ?? null,
-      medico: {
-        nome: perfil?.full_name ?? ctx.profile.full_name,
-        conselho: perfil?.council_type ?? 'CRM',
-        numero: perfil?.council_number ?? null,
-        uf: perfil?.council_state ?? null,
-      },
-      assinaturaMedico: assinatura,
-      codigoVerificacao: verificacao,
-      rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
-    });
+    const pdf = ficha
+      ? await buildLaudoDeFicha({
+          clinica,
+          ficha,
+          valores,
+          conclusao: resultado?.conclusion ?? null,
+          emitidoEm,
+          paciente: dadosDoPaciente,
+          empresa: dadosDaEmpresa,
+          tipoExame,
+          profissional,
+          assinatura,
+          codigoVerificacao: verificacao,
+          rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
+        })
+      : await buildLaudoAudiometria({
+          clinica,
+          emitidoEm,
+          paciente: dadosDoPaciente,
+          empresa: dadosDaEmpresa,
+          tipoExame,
+          aparelho: {
+            modelo: texto('aparelho'),
+            fabricante: texto('fabricante'),
+            calibracao: texto('calibracao'),
+            repousoAuditivo: texto('repouso_auditivo'),
+          },
+          medicoes: valores,
+          meatoscopia: { od: texto('meatoscopia_od'), oe: texto('meatoscopia_oe') },
+          conclusao: resultado?.conclusion ?? null,
+          medico: profissional,
+          assinaturaMedico: assinatura,
+          codigoVerificacao: verificacao,
+          rodape: docsCfg.rodape ?? ctx.branding.footer_text ?? null,
+        });
 
-    const caminho = `${ctx.tenant.id}/atendimentos/${exame.attendance_id}/laudo-audiometria-${Date.now()}.pdf`;
+    const apelido = codigo.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const caminho = `${ctx.tenant.id}/atendimentos/${exame.attendance_id}/laudo-${apelido}-${Date.now()}.pdf`;
     const { error: erroUpload } = await supabase.storage
       .from('clinical-documents')
       .upload(caminho, new Blob([new Uint8Array(pdf)], { type: 'application/pdf' }), {
@@ -192,6 +229,9 @@ export async function gerarLaudoDeExame(
         bucket: 'clinical-documents',
         file_path: caminho,
         size_bytes: pdf.byteLength,
+        // Diz de qual exame e este laudo. O kit de saida usa isso para saber
+        // o que ja saiu e nao emitir o mesmo laudo duas vezes.
+        payload: { patient_exam_id: patientExamId },
         verification_code: verificacao,
         is_patient_visible: true,
         signed_by: ctx.userId,

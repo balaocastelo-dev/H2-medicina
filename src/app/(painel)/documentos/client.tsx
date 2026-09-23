@@ -19,6 +19,9 @@ const KINDS: { value: DocumentKind; label: string }[] = [
   { value: 'resumo_atendimento', label: 'Resumo do atendimento' },
   { value: 'relacao_exames', label: 'Relacao dos exames' },
   { value: 'ficha_clinica', label: 'Ficha clínica' },
+  // Folha propria desde 23/09: saia dentro da ficha clinica, que vai para a
+  // empresa contratante.
+  { value: 'avaliacao_psicossocial', label: 'Avaliação psicossocial' },
   { value: 'documento_final', label: 'Documento final consolidado' },
   { value: 'recibo', label: 'Recibo de pagamento' },
   { value: 'comprovante_agendamento', label: 'Comprovante de agendamento' },

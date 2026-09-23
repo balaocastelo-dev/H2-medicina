@@ -83,7 +83,15 @@ export type DocumentKind =
   | 'comprovante_agendamento'
   | 'contrato_empresa'
   /** Guia de solicitacao de exame feito fora da clinica (raio-X, laboratorio). */
-  | 'guia_exame';
+  | 'guia_exame'
+  /**
+   * Questionario psicossocial, em folha propria.
+   *
+   * Saia dentro da ficha clinica ate 23/09. Sao dois papeis com destinos
+   * diferentes: a ficha vai para a empresa contratante, e este traz
+   * pergunta sobre ideacao suicida, sono e humor.
+   */
+  | 'avaliacao_psicossocial';
 
 /** Procedencia do paciente: P (particular), E (estado), S (SISPER), I (ingresso). */
 export type PatientOriginKind = 'particular' | 'estado' | 'sisper' | 'ingresso';

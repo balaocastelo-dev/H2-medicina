@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import { formatDate, formatMoney } from '@/lib/format';
 import {
+  ajustarValorDoRepasse,
   marcarRepassePago,
   restaurarCatalogo,
   salvarProcedimento,
@@ -68,60 +69,127 @@ export function BaixaDeRepasse({
     marcarRepassePago,
     null,
   );
+  const [ajuste, ajusteAction, ajustando] = useActionState<ActionResult | null, FormData>(
+    ajustarValorDoRepasse,
+    null,
+  );
+  const [editando, setEditando] = useState<LinhaRepasse | null>(null);
   const abertos = lancamentos.filter((l) => l.status === 'a_pagar');
 
   return (
-    <form action={formAction}>
-      {state?.ok && <Alert variant="success">{state.message}</Alert>}
-      {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
+    <div>
+      {ajuste?.ok && <Alert variant="success">{ajuste.message}</Alert>}
+      {ajuste && !ajuste.ok && <Alert variant="error">{ajuste.error}</Alert>}
 
-      <Table>
-        <thead>
-          <tr>
-            {podeBaixar && <Th className="w-10" />}
-            <Th>Paciente</Th>
-            <Th>Procedimento</Th>
-            <Th>Data</Th>
-            <Th>Valor</Th>
-            <Th>Status</Th>
-          </tr>
-        </thead>
-        <tbody>
-          {lancamentos.map((l) => (
-            <tr key={l.id} className="hover:bg-slate-50">
-              {podeBaixar && (
-                <Td>
-                  {l.status === 'a_pagar' && (
-                    <input
-                      type="checkbox"
-                      name="ids"
-                      value={l.id}
-                      defaultChecked
-                      aria-label={`Selecionar ${l.paciente}`}
-                    />
-                  )}
-                </Td>
-              )}
-              <Td className="font-medium">{l.paciente}</Td>
-              <Td className="text-slate-600">{l.procedimento}</Td>
-              <Td className="text-slate-500">{formatDate(l.data)}</Td>
-              <Td className="font-medium">{formatMoney(l.valor)}</Td>
-              <Td>
-                <Badge color={l.status === 'pago' ? '#22C55E' : '#FB923C'}>{l.status}</Badge>
-              </Td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-
-      {podeBaixar && abertos.length > 0 && (
-        <div className="mt-3">
-          <Button type="submit" size="sm" loading={pending}>
-            Marcar selecionados como pagos
-          </Button>
-        </div>
+      {/*
+        "aba financeiro, nao sta dando opcao para editar o valor de repasse
+         medico" — Isabella, 23/09. O valor vem da tabela do procedimento,
+        mas acontece de um atendimento valer diferente.
+      */}
+      {editando && (
+        <form
+          action={ajusteAction}
+          onSubmit={() => setEditando(null)}
+          className="mb-3 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-4"
+        >
+          <input type="hidden" name="id" value={editando.id} />
+          <div className="md:col-span-4 text-sm text-slate-600">
+            Corrigindo o repasse de <strong>{editando.paciente}</strong> —{' '}
+            {editando.procedimento}, hoje {formatMoney(editando.valor)}.
+          </div>
+          <Field label="Novo valor">
+            <Input
+              name="fee"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={editando.valor}
+              autoFocus
+            />
+          </Field>
+          <Field label="Motivo (fica registrado)" className="md:col-span-2">
+            <Input name="motivo" placeholder="Ex.: acordo com o médico para este plantão" />
+          </Field>
+          <div className="flex items-end gap-2">
+            <Button type="submit" loading={ajustando}>
+              Salvar valor
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setEditando(null)}>
+              Cancelar
+            </Button>
+          </div>
+        </form>
       )}
-    </form>
+
+      <form action={formAction}>
+        {state?.ok && <Alert variant="success">{state.message}</Alert>}
+        {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
+
+        <Table>
+          <thead>
+            <tr>
+              {podeBaixar && <Th className="w-10" />}
+              <Th>Paciente</Th>
+              <Th>Procedimento</Th>
+              <Th>Data</Th>
+              <Th>Valor</Th>
+              <Th>Status</Th>
+              {podeBaixar && <Th />}
+            </tr>
+          </thead>
+          <tbody>
+            {lancamentos.map((l) => (
+              <tr key={l.id} className="hover:bg-slate-50">
+                {podeBaixar && (
+                  <Td>
+                    {l.status === 'a_pagar' && (
+                      <input
+                        type="checkbox"
+                        name="ids"
+                        value={l.id}
+                        defaultChecked
+                        aria-label={`Selecionar ${l.paciente}`}
+                      />
+                    )}
+                  </Td>
+                )}
+                <Td className="font-medium">{l.paciente}</Td>
+                <Td className="text-slate-600">{l.procedimento}</Td>
+                <Td className="text-slate-500">{formatDate(l.data)}</Td>
+                <Td className="font-medium">{formatMoney(l.valor)}</Td>
+                <Td>
+                  <Badge color={l.status === 'pago' ? '#22C55E' : '#FB923C'}>{l.status}</Badge>
+                </Td>
+                {podeBaixar && (
+                  <Td>
+                    {/* Repasse pago e historico: corrigir valor pago
+                        desacertaria o que o medico ja recebeu. */}
+                    {l.status === 'a_pagar' && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditando(l)}
+                      >
+                        Editar valor
+                      </Button>
+                    )}
+                  </Td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+
+        {podeBaixar && abertos.length > 0 && (
+          <div className="mt-3">
+            <Button type="submit" size="sm" loading={pending}>
+              Marcar selecionados como pagos
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }
 

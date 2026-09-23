@@ -79,6 +79,16 @@ export interface DadosAso {
 
 const A4: [number, number] = [595.28, 841.89];
 const MARGEM = 38;
+
+/**
+ * Faixa reservada no pe da folha para carimbo e assinaturas.
+ *
+ * O bloco de assinatura e desenhado em posicao fixa (y = 130). O conteudo
+ * tem de parar acima dele. Ate 23/09 havia dois numeros para a mesma coisa
+ * — 150 na reserva e 210 na hora de assinar — e era o segundo que jogava o
+ * A.S.O. para a folha dois mesmo quando o conteudo cabia.
+ */
+const RESERVA_ASSINATURA = 185;
 const LARGURA = A4[0] - MARGEM * 2;
 
 const PORTARIAS =
@@ -136,7 +146,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   };
 
   const espaco = (altura: number) => {
-    if (y - altura < 150) novaPagina();
+    if (y - altura < RESERVA_ASSINATURA) novaPagina();
   };
 
   /** Faixa de titulo de bloco, como no modelo em Word. */
@@ -236,47 +246,131 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   ]);
 
   // -------------------------------------------------------------------
+  // Daqui para baixo o conteudo tem tamanho variavel
+  //
+  // "esta saindo 2 folhas, precisa ficar tudo em uma folha so"
+  //                                              -- Isabella, 23/09.
+  //
+  // O que estoura a folha sao os riscos (cinco blocos de texto livre), a
+  // lista de exames e as observacoes. O resto tem altura conhecida.
+  //
+  // Em vez de cortar texto — o A.S.O. e documento legal, nao cabe apagar
+  // risco ocupacional para caber na folha — o que sobra de pagina e medido
+  // e os blocos variaveis sao comprimidos ate caberem. Ha um piso de
+  // legibilidade: abaixo dele o documento vai para a segunda folha, que e
+  // melhor do que uma folha ilegivel.
+  // -------------------------------------------------------------------
+  const linhasDeRisco = CATEGORIAS.map(({ chave }) =>
+    quebrar(d.riscos[chave], fonte, 7.5, LARGURA - 90),
+  );
+  const linhasPortarias = quebrar(PORTARIAS, fonte, 6.5, LARGURA - 8);
+  const examesParaImprimir = d.exames.length > 0 ? d.exames : [{ nome: 'Exame Clínico', data: null }];
+  const linhasRestricoes = d.restricoes
+    ? quebrar(`Restrições: ${d.restricoes}`, fonte, 8, LARGURA - 10)
+    : [];
+  const linhasObservacoes = quebrar(
+    d.observacoes?.trim() || '—',
+    fonte,
+    8,
+    LARGURA - 10,
+  ).slice(0, 8);
+
+  // Lista de exames em duas colunas quando e longa. Quinze nomes numa
+  // coluna so desperdicam metade da largura da folha e empurram a
+  // assinatura para a pagina seguinte; em duas colunas cabem sem apertar a
+  // letra de ninguem.
+  const colunasDeExame = examesParaImprimir.length > 6 ? 2 : 1;
+  const linhasDeExame = Math.ceil(examesParaImprimir.length / colunasDeExame);
+
+  /** Altura que os blocos variaveis ocupam sem compactar. */
+  const alturaNecessaria =
+    26 + // faixa dos riscos
+    linhasDeRisco.reduce((s, l) => s + Math.max(12, l.length * 9.5 + 3), 0) +
+    4 +
+    linhasPortarias.length * 8 +
+    20 +
+    26 + // faixa dos exames
+    linhasDeExame * 11.5 +
+    6 +
+    26 + // faixa do parecer
+    3 * 14 +
+    (d.validade ? 13 : 0) +
+    linhasRestricoes.length * 10 +
+    6 +
+    26 + // faixa das observacoes
+    linhasObservacoes.length * 10;
+
+  const disponivel = y - RESERVA_ASSINATURA;
+  const k = Math.min(1, Math.max(0.72, disponivel / Math.max(alturaNecessaria, 1)));
+
+  /** Passo vertical compactado. */
+  const dy = (v: number) => v * k;
+  /** Corpo de fonte compactado, com piso de legibilidade. */
+  const fs = (v: number) => Math.max(6.2, v * k);
+
+  // -------------------------------------------------------------------
   // Perigos e fatores de risco — exigencia da NR-7
   // -------------------------------------------------------------------
   faixa('Perigos / Fatores de Risco');
-  for (const { chave, rotulo } of CATEGORIAS) {
-    const linhas = quebrar(d.riscos[chave], fonte, 7.5, LARGURA - 90);
-    espaco(linhas.length * 10 + 4);
-    pagina.drawText(rotulo, { x: MARGEM + 4, y, size: 7.5, font: negrito, color: cinza });
-    linhas.forEach((linha, i) => {
-      pagina.drawText(linha, { x: MARGEM + 82, y: y - i * 9.5, size: 7.5, font: fonte, color: preto });
+  CATEGORIAS.forEach(({ rotulo }, i) => {
+    const linhas = linhasDeRisco[i] ?? [];
+    espaco(dy(linhas.length * 10 + 4));
+    pagina.drawText(rotulo, { x: MARGEM + 4, y, size: fs(7.5), font: negrito, color: cinza });
+    linhas.forEach((linha, j) => {
+      pagina.drawText(linha, {
+        x: MARGEM + 82,
+        y: y - j * dy(9.5),
+        size: fs(7.5),
+        font: fonte,
+        color: preto,
+      });
     });
-    y -= Math.max(12, linhas.length * 9.5 + 3);
-  }
-  y -= 4;
+    y -= Math.max(dy(12), linhas.length * dy(9.5) + 3);
+  });
+  y -= dy(4);
 
   // -------------------------------------------------------------------
   // Portarias e finalidade do exame
   // -------------------------------------------------------------------
-  espaco(40);
-  for (const linha of quebrar(PORTARIAS, fonte, 6.5, LARGURA - 8)) {
-    pagina.drawText(linha, { x: MARGEM + 4, y, size: 6.5, font: fonte, color: cinza });
-    y -= 8;
+  espaco(dy(40));
+  for (const linha of linhasPortarias) {
+    pagina.drawText(linha, { x: MARGEM + 4, y, size: fs(6.5), font: fonte, color: cinza });
+    y -= dy(8);
   }
-  pagina.drawText(d.tipoExame, { x: MARGEM + 4, y: y - 3, size: 11, font: negrito, color: preto });
-  y -= 20;
+  pagina.drawText(d.tipoExame, { x: MARGEM + 4, y: y - 3, size: fs(11), font: negrito, color: preto });
+  y -= dy(20);
 
   // -------------------------------------------------------------------
   // Avaliacao clinica e exames realizados
   // -------------------------------------------------------------------
   faixa('Avaliação Clínica e Exames Realizados');
-  const exames = d.exames.length > 0 ? d.exames : [{ nome: 'Exame Clínico', data: null }];
-  for (const exame of exames) {
-    espaco(13);
-    pagina.drawText(exame.nome, { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
+  const larguraColuna = LARGURA / colunasDeExame;
+  const yExames = y;
+  examesParaImprimir.forEach((exame, i) => {
+    const coluna = Math.floor(i / linhasDeExame);
+    const linha = i % linhasDeExame;
+    const x = MARGEM + 4 + coluna * larguraColuna;
+    const yLinha = yExames - linha * dy(11.5);
+
+    // Nome cortado antes de invadir a data da coluna ao lado.
+    const espacoNome = larguraColuna - (exame.data ? 62 : 10);
+    let nome = exame.nome;
+    while (fonte.widthOfTextAtSize(nome, fs(8)) > espacoNome && nome.length > 6) {
+      nome = nome.slice(0, -2);
+    }
+
+    pagina.drawText(nome, { x, y: yLinha, size: fs(8), font: fonte, color: preto });
     if (exame.data) {
       pagina.drawText(exame.data, {
-        x: A4[0] - MARGEM - 60, y, size: 8, font: fonte, color: preto,
+        x: MARGEM + (coluna + 1) * larguraColuna - 58,
+        y: yLinha,
+        size: fs(8),
+        font: fonte,
+        color: preto,
       });
     }
-    y -= 11.5;
-  }
-  y -= 6;
+  });
+  y = yExames - linhasDeExame * dy(11.5) - dy(6);
 
   // -------------------------------------------------------------------
   // Parecer, em caixas de marcar como no modelo da clinica
@@ -288,7 +382,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     ['apto', 'Apto para função'],
   ];
   for (const [chave, rotulo] of opcoes) {
-    espaco(15);
+    espaco(dy(15));
     const marcada = d.parecer === chave;
     pagina.drawRectangle({
       x: MARGEM + 5, y: y - 1.5, width: 9, height: 9,
@@ -298,43 +392,41 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     if (marcada) {
       pagina.drawText('X', { x: MARGEM + 7.2, y: y + 0.6, size: 8, font: negrito, color: rgb(1, 1, 1) });
     }
+    // O parecer nao encolhe junto: e a linha que a empresa procura.
     pagina.drawText(rotulo, {
       x: MARGEM + 20, y, size: marcada ? 9.5 : 8.5,
       font: marcada ? negrito : fonte, color: marcada ? preto : cinza,
     });
-    y -= 14;
+    y -= dy(14);
   }
 
   if (d.validade) {
     pagina.drawText(`Validade do exame: ${d.validade}`, {
-      x: MARGEM + 5, y, size: 8, font: negrito, color: preto,
+      x: MARGEM + 5, y, size: fs(8), font: negrito, color: preto,
     });
-    y -= 13;
+    y -= dy(13);
   }
-  if (d.restricoes) {
-    for (const linha of quebrar(`Restrições: ${d.restricoes}`, fonte, 8, LARGURA - 10)) {
-      espaco(11);
-      pagina.drawText(linha, { x: MARGEM + 5, y, size: 8, font: fonte, color: preto });
-      y -= 10;
-    }
+  for (const linha of linhasRestricoes) {
+    espaco(dy(11));
+    pagina.drawText(linha, { x: MARGEM + 5, y, size: fs(8), font: fonte, color: preto });
+    y -= dy(10);
   }
-  y -= 6;
+  y -= dy(6);
 
   // -------------------------------------------------------------------
   // Observacoes
   // -------------------------------------------------------------------
   faixa('Observações');
-  const observacoes = d.observacoes?.trim() || '—';
-  for (const linha of quebrar(observacoes, fonte, 8, LARGURA - 10).slice(0, 8)) {
-    espaco(11);
-    pagina.drawText(linha, { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
-    y -= 10;
+  for (const linha of linhasObservacoes) {
+    espaco(dy(11));
+    pagina.drawText(linha, { x: MARGEM + 4, y, size: fs(8), font: fonte, color: preto });
+    y -= dy(10);
   }
 
   // -------------------------------------------------------------------
   // Carimbo e assinatura
   // -------------------------------------------------------------------
-  if (y < 210) novaPagina();
+  if (y < RESERVA_ASSINATURA) novaPagina();
   const yAss = 130;
   const meia = LARGURA / 2;
 

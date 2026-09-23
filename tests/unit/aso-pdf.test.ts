@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PDFDocument } from 'pdf-lib';
 import { buildAsoPdf, type DadosAso } from '@/modules/documents/aso-pdf';
 import { montarRiscos } from '@/modules/documents/riscos';
+import { textoDoPdf } from '../integration/texto-do-pdf';
 
 /** PNG 1x1 transparente — serve de assinatura sem depender de arquivo externo. */
 const PNG_1X1 =
@@ -64,6 +65,90 @@ const base: DadosAso = {
   urlVerificacao: 'https://exemplo.com/v/a1b2c3d4e5',
   rodape: 'Documento emitido eletronicamente.',
 };
+
+/**
+ * "esta saindo 2 folhas, precisa ficar tudo em uma folha so"
+ *                                              -- Isabella, 23/09.
+ *
+ * O modelo em papel da clinica e de uma folha. O que estoura sao os riscos
+ * ocupacionais, a lista de exames e as observacoes — todos de tamanho
+ * variavel. Nenhum deles pode ser cortado: risco ocupacional apagado para
+ * caber na folha e informacao que some do documento legal.
+ */
+describe('cabe em uma folha', () => {
+  const texto = (n: number) =>
+    Array.from({ length: n }, (_, i) => `fator de risco número ${i + 1} descrito por extenso`).join(
+      ', ',
+    );
+
+  it('o caso comum sai em uma folha', async () => {
+    const doc = await PDFDocument.load(await buildAsoPdf(base));
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('riscos longos nas cinco categorias ainda cabem', async () => {
+    const bytes = await buildAsoPdf({
+      ...base,
+      riscos: {
+        fisicos: texto(4),
+        quimicos: texto(4),
+        biologicos: texto(3),
+        ergonomicos: texto(5),
+        acidentes: texto(4),
+      },
+    });
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('paciente com muitos exames ainda cabe', async () => {
+    const bytes = await buildAsoPdf({
+      ...base,
+      exames: Array.from({ length: 15 }, (_, i) => ({
+        nome: `Exame número ${i + 1}`,
+        data: '19/08/2026',
+      })),
+    });
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('o pior caso junto — riscos, exames, restrições e observações', async () => {
+    const bytes = await buildAsoPdf({
+      ...base,
+      riscos: {
+        fisicos: texto(4),
+        quimicos: texto(4),
+        biologicos: texto(3),
+        ergonomicos: texto(5),
+        acidentes: texto(4),
+      },
+      exames: Array.from({ length: 12 }, (_, i) => ({
+        nome: `Exame número ${i + 1}`,
+        data: '19/08/2026',
+      })),
+      restricoes: texto(3),
+      observacoes: texto(6),
+      parecer: 'apto_com_restricoes',
+    });
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+
+  it('nada é apagado para caber: o texto dos riscos continua no papel', async () => {
+    const riscos = {
+      fisicos: texto(4),
+      quimicos: texto(4),
+      biologicos: texto(3),
+      ergonomicos: texto(5),
+      acidentes: texto(4),
+    };
+    const impresso = textoDoPdf(await buildAsoPdf({ ...base, riscos }));
+    // A ultima palavra do ultimo risco: se ela esta la, nada foi cortado.
+    expect(impresso).toContain('fator de risco número 4 descrito por extenso');
+    expect(impresso).toContain('fator de risco número 5 descrito por extenso');
+  });
+});
 
 describe('buildAsoPdf', () => {
   it('gera um PDF em A4', async () => {

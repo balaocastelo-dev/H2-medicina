@@ -7,10 +7,19 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { buildDocumentPdf } from './pdf';
 import { marcaDoTenant } from './brand';
-import { formatCPF, formatDate, formatDuration, formatMoney, formatTime } from '@/lib/format';
+import {
+  formatCNPJ,
+  formatCPF,
+  formatDate,
+  formatDuration,
+  formatMoney,
+  formatTime,
+} from '@/lib/format';
 import { regraDe } from '@/modules/queue/origin-kind';
 import { avaliarFichaClinica } from './ficha-clinica';
 import { montarComprovanteImpresso } from './comprovante-texto';
+import { gerarLaudoDeExame } from './laudo-actions';
+import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
 import { umDo, type Embutido } from '@/lib/embed';
 import type { SessionContext } from '@/lib/auth';
 import {
@@ -34,8 +43,23 @@ interface AttendanceForDocument {
   patient_id: string;
   origin_kind: string;
   procedure_code: string | null;
-  patients: { full_name: string; cpf: string | null; birth_date: string | null } | null;
-  companies: { trade_name: string | null; legal_name: string; emite_ficha_clinica: boolean } | null;
+  patients: {
+    full_name: string;
+    cpf: string | null;
+    birth_date: string | null;
+    gender: string;
+    job_title: string | null;
+    department: string | null;
+    admission_date: string | null;
+  } | null;
+  companies: {
+    trade_name: string | null;
+    legal_name: string;
+    document: string | null;
+    emite_ficha_clinica: boolean;
+  } | null;
+  appointments: Embutido<{ attendance_kind: string }>;
+  triages: Embutido<Record<string, unknown>>;
   patient_exams: { status: string; exam_types: { name: string } | null }[];
   // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
   medical_consultations: Embutido<{
@@ -75,7 +99,7 @@ export async function generateAttendanceDocument(
     const { data: attendance } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, procedure_code, patients(full_name, cpf, birth_date), companies(trade_name, legal_name, emite_ficha_clinica), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
+        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, procedure_code, patients(full_name, cpf, birth_date, gender, job_title, department, admission_date), companies(trade_name, legal_name, document, emite_ficha_clinica), appointments(attendance_kind), triages(*), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -122,22 +146,56 @@ export async function generateAttendanceDocument(
       resumo_atendimento: 'Resumo do atendimento',
       relacao_exames: 'Relacao de exames',
       ficha_clinica: 'Ficha clínica',
+      avaliacao_psicossocial: 'Avaliação psicossocial',
       documento_final: 'Documento final consolidado',
       recibo: 'Recibo de pagamento',
       comprovante_agendamento: 'Comprovante de agendamento',
     };
 
+    // "a ficha clinica precisa adicionar esses itens que nao esta saindo:
+    //  funcao, data de admissao, cnpj da empresa, Setor, sexo, tipo de exame
+    //  (admissional, demissional, periodico), resultados da triagem"
+    //                                              -- Isabella, 23/09.
+    //
+    // Sao os campos do modelo em papel da clinica. A ficha e o que vai para
+    // a empresa contratante: sem funcao, setor e tipo de exame ela nao diz
+    // de qual avaliacao esta falando.
+    const detalhado = kind === 'ficha_clinica' || kind === 'avaliacao_psicossocial';
     const identification = {
       title: 'Identificacao',
       lines: [
         { label: 'Paciente', value: patient.full_name },
         { label: 'CPF', value: patient.cpf ? formatCPF(patient.cpf) : 'não informado' },
         { label: 'Nascimento', value: formatDate(patient.birth_date) },
+        ...(detalhado
+          ? [
+              { label: 'Sexo', value: patient.gender || 'não informado' },
+              { label: 'Função', value: patient.job_title ?? 'não informada' },
+              { label: 'Setor', value: patient.department ?? 'não informado' },
+              { label: 'Admissão', value: formatDate(patient.admission_date) },
+            ]
+          : []),
         {
           label: 'Empresa',
           value:
             attendance.companies?.trade_name ?? attendance.companies?.legal_name ?? 'não informada',
         },
+        ...(detalhado
+          ? [
+              {
+                label: 'CNPJ da empresa',
+                value: attendance.companies?.document
+                  ? formatCNPJ(attendance.companies.document)
+                  : 'não informado',
+              },
+              {
+                label: 'Tipo de exame',
+                value:
+                  TIPO_DE_ATENDIMENTO[umDo(attendance.appointments)?.attendance_kind ?? ''] ??
+                  'Ocupacional',
+              },
+            ]
+          : []),
         {
           label: 'Procedência',
           value: `${regraDe(attendance.origin_kind).letter} — ${regraDe(attendance.origin_kind).label}`,
@@ -232,10 +290,42 @@ export async function generateAttendanceDocument(
 
     const consultation = umDo(attendance.medical_consultations);
 
+    // Resultados da triagem na ficha clinica: pressao, peso, altura e o que
+    // mais foi medido na entrada. Faziam parte do modelo em papel e nao
+    // saiam em lugar nenhum.
+    if (kind === 'ficha_clinica') {
+      const triagem = umDo(attendance.triages);
+      const medidas = triagem ? medidasDaTriagem(triagem) : [];
+      sections.push({
+        title: 'Triagem',
+        lines:
+          medidas.length > 0
+            ? medidas
+            : [{ label: 'Situação', value: 'sem triagem registrada neste atendimento' }],
+      });
+    }
+
+    // A avaliacao psicossocial saiu daqui em 23/09: "a avaliacao
+    // psicossocial que saiu nela, nao deve estar junto, precisa sair em uma
+    // ficha separada". Ela tem documento proprio agora.
+    if (kind === 'avaliacao_psicossocial' && consultation) {
+      const respostas = respondidos(
+        BLOCO_PSICOSSOCIAL,
+        consultation.psicossocial as Record<string, string> | null,
+      );
+      sections.push({
+        title: BLOCO_PSICOSSOCIAL.titulo,
+        lines:
+          respostas.length > 0
+            ? respostas.map((r) => ({ label: r.rotulo, value: r.valor }))
+            : [{ label: 'Situação', value: 'sem respostas registradas' }],
+      });
+    }
+
     // Ficha clinica: o que o medico marcou na consulta.
     // "opc de imprimir a ficha com os dados que o medico preencheu"
     if (kind === 'ficha_clinica' && consultation) {
-      for (const bloco of [...BLOCOS_FICHA, BLOCO_PSICOSSOCIAL]) {
+      for (const bloco of BLOCOS_FICHA) {
         const respostas = respondidos(
           bloco,
           consultation[bloco.chave] as Record<string, string> | null,
@@ -375,13 +465,16 @@ export async function emitirDocumentosDeSaida(
 
     const { data: at } = await supabase
       .from('attendances')
-      .select('id, origin_kind, medical_consultations(verdict)')
+      .select('id, origin_kind, medical_consultations(verdict, psicossocial)')
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
         origin_kind: string | null;
-        medical_consultations: Embutido<{ verdict: string | null }>;
+        medical_consultations: Embutido<{
+          verdict: string | null;
+          psicossocial: Record<string, unknown> | null;
+        }>;
       }>();
 
     if (!at) return fail('Atendimento não encontrado.');
@@ -397,6 +490,15 @@ export async function emitirDocumentosDeSaida(
       //  preenchidas" -- Isabella, 15/09.
       { kind: 'ficha_clinica', nome: 'ficha clínica' },
     ];
+
+    // O psicossocial so entra no kit se o medico respondeu: emitir folha em
+    // branco nao ajuda ninguem, e o documento nao vale para quem nao fez.
+    const psicossocialRespondido = Object.values(
+      (umDo(at.medical_consultations)?.psicossocial ?? {}) as Record<string, unknown>,
+    ).some((v) => String(v ?? '').trim() !== '');
+    if (psicossocialRespondido) {
+      kinds.push({ kind: 'avaliacao_psicossocial', nome: 'avaliação psicossocial' });
+    }
 
     const emitidos: string[] = [];
     const falhas: string[] = [];
@@ -429,24 +531,67 @@ export async function emitirDocumentosDeSaida(
     }
 
     // -----------------------------------------------------------------
-    // O que ja estava pronto tambem faz parte do kit.
+    // Laudo de cada exame que foi feito.
     //
     // "conferir que todos os exames feitos estao aparecendo os documentos
-    //  no kit de saida" -- o laudo de audiometria sai quando o exame e
-    //  concluido, e a guia sai no balcao. Nao se emite de novo; se lista,
-    //  senao a recepcao acha que sumiram.
+    //  no kit de saida" -- Isabella, 15/09.
+    //
+    // Ate 23/09 so a audiometria tinha laudo, e dinamometria, Romberg,
+    // fadiga e psicossocial eram preenchidos na sala sem nunca virar papel.
+    // Agora todo exame com ficha gera laudo; o que ja saiu nao sai de novo.
+    // -----------------------------------------------------------------
+    const { data: jaTemLaudo } = await supabase
+      .from('documents')
+      .select('payload')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', attendanceId)
+      .eq('kind', 'resultado_exame')
+      .is('deleted_at', null)
+      .returns<{ payload: { patient_exam_id?: string } | null }[]>();
+
+    const comLaudo = new Set(
+      (jaTemLaudo ?? [])
+        .map((d) => d.payload?.patient_exam_id)
+        .filter((x): x is string => typeof x === 'string'),
+    );
+
+    const { data: exames } = await supabase
+      .from('patient_exams')
+      .select('id, exam_types(code, name)')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', attendanceId)
+      .eq('status', 'concluido')
+      .returns<{ id: string; exam_types: { code: string; name: string } | null }[]>();
+
+    for (const exame of exames ?? []) {
+      if (comLaudo.has(exame.id)) continue;
+      if (!fichaDoExame(exame.exam_types?.code)) continue;
+
+      const laudo = await gerarLaudoDeExame(exame.id);
+      const nome = `laudo de ${(exame.exam_types?.name ?? 'exame').toLowerCase()}`;
+      if (laudo.ok) emitidos.push(nome);
+      else falhas.push(`${nome} (${laudo.error})`);
+    }
+
+    // -----------------------------------------------------------------
+    // O que ja estava pronto tambem faz parte do kit: a guia sai no balcao
+    // e o laudo pode ter saido na sala. Nao se emite de novo; se lista,
+    // senao a recepcao acha que sumiram.
     // -----------------------------------------------------------------
     const { data: existentes } = await supabase
       .from('documents')
-      .select('title, kind')
+      .select('title, kind, payload')
       .eq('tenant_id', ctx.tenant.id)
       .eq('attendance_id', attendanceId)
       .in('kind', ['resultado_exame', 'guia_exame', 'aso'])
       .is('deleted_at', null)
-      .returns<{ title: string; kind: string }[]>();
+      .returns<{ title: string; kind: string; payload: { patient_exam_id?: string } | null }[]>();
 
     const jaExistiam = (existentes ?? [])
       .filter((d) => d.kind !== 'aso' || !emitidos.includes('A.S.O.'))
+      // Laudo recem-emitido acima ja esta em `emitidos`: contar de novo aqui
+      // faria o kit anunciar o dobro de documentos.
+      .filter((d) => d.kind !== 'resultado_exame' || comLaudo.has(d.payload?.patient_exam_id ?? ''))
       .map((d) => d.title);
 
     if (emitidos.length === 0) {
@@ -519,6 +664,61 @@ export async function getDocumentUrl(
   } catch (error) {
     return fail(toFriendlyError(error));
   }
+}
+
+/** Rotulos do tipo de atendimento, como a clinica fala. */
+const TIPO_DE_ATENDIMENTO: Record<string, string> = {
+  admissional: 'Admissional',
+  periodico: 'Periódico',
+  demissional: 'Demissional',
+  mudanca_funcao: 'Mudança de função',
+  retorno_trabalho: 'Retorno ao trabalho',
+  consulta: 'Consulta',
+};
+
+/**
+ * O que a triagem mediu, em linhas prontas para o documento.
+ *
+ * So sai o que foi preenchido: ficha com dez linhas de "—" nao informa
+ * nada e ocupa a folha que a clinica quer enxuta.
+ */
+function medidasDaTriagem(t: Record<string, unknown>): { label: string; value: string }[] {
+  const texto = (chave: string) => {
+    const v = t[chave];
+    return v === null || v === undefined || v === '' ? null : String(v);
+  };
+  const linhas: { label: string; value: string }[] = [];
+  const por = (label: string, valor: string | null, unidade = '') => {
+    if (valor) linhas.push({ label, value: `${valor}${unidade}` });
+  };
+
+  const sis = texto('blood_pressure_systolic');
+  const dia = texto('blood_pressure_diastolic');
+  if (sis || dia) por('Pressão arterial', `${sis ?? '—'}/${dia ?? '—'}`, ' mmHg');
+
+  por('Peso', texto('weight_kg'), ' kg');
+  por('Altura', texto('height_cm'), ' cm');
+  por('IMC', texto('bmi'));
+  por('Frequência cardíaca', texto('heart_rate'), ' bpm');
+  por('Frequência respiratória', texto('respiratory_rate'), ' irpm');
+  por('Saturação', texto('oxygen_saturation'), '%');
+  por('Temperatura', texto('temperature_c'), ' °C');
+  por('Glicemia', texto('glucose'), ' mg/dL');
+  por('Acuidade O.D.', texto('acuidade_od'));
+  por('Acuidade O.E.', texto('acuidade_oe'));
+
+  if (t.diabetes !== null && t.diabetes !== undefined) {
+    linhas.push({ label: 'Diabetes', value: t.diabetes ? 'sim' : 'não' });
+  }
+  if (t.hipertenso !== null && t.hipertenso !== undefined) {
+    linhas.push({ label: 'Hipertenso', value: t.hipertenso ? 'sim' : 'não' });
+  }
+
+  por('Alertas', texto('alerts'));
+  por('Restrições', texto('restrictions'));
+  por('Observações', texto('observations'));
+
+  return linhas;
 }
 
 /** Dados da clinica usados no comprovante, vindos das configuracoes. */

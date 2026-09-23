@@ -64,6 +64,7 @@ export function mascararNome(nome: string | null | undefined): string {
 export const NOME_DO_TIPO: Record<string, string> = {
   aso: 'Atestado de Saúde Ocupacional (A.S.O.)',
   ficha_clinica: 'Ficha clínica',
+  avaliacao_psicossocial: 'Avaliação psicossocial',
   resultado_exame: 'Laudo de exame',
   guia_exame: 'Guia de exame',
   comprovante_comparecimento: 'Comprovante de comparecimento',

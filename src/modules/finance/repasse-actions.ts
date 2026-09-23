@@ -284,6 +284,101 @@ export async function marcarRepassePago(_prev: unknown, formData: FormData): Pro
   }
 }
 
+const ajusteSchema = z.object({
+  id: z.string().uuid(),
+  fee: z.coerce.number().min(0, 'Valor invalido'),
+  motivo: z.string().trim().max(240).optional(),
+});
+
+/**
+ * Corrige o valor de um repasse ja lancado.
+ *
+ * "aba financeiro, nao sta dando opcao para editar o valor de repasse
+ *  medico" -- Isabella, 23/09.
+ *
+ * O valor nasce da tabela do procedimento ou do cadastro do medico, e na
+ * maioria das vezes esta certo. Mas acontece de um atendimento valer
+ * diferente — plantao, acordo pontual, erro de cadastro descoberto depois
+ * — e ate aqui a unica saida era mexer no banco.
+ *
+ * So lancamento em aberto: repasse ja pago vira historico, e mudar valor
+ * pago desacerta o que o medico recebeu. Para esse caso, estorna-se e
+ * lanca-se de novo.
+ *
+ * A correcao fica registrada nas observacoes do lancamento e na auditoria:
+ * quem paga precisa saber por que o valor mudou.
+ */
+export async function ajustarValorDoRepasse(
+  _prev: unknown,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    const ctx = await assertPermission('financeiro.registrar');
+    const parsed = ajusteSchema.safeParse({
+      id: formData.get('id'),
+      fee: formData.get('fee'),
+      motivo: formData.get('motivo') ?? undefined,
+    });
+    if (!parsed.success) {
+      return fail('Verifique o valor informado.', z.flattenError(parsed.error).fieldErrors);
+    }
+
+    const supabase = await createClient();
+    const { data: atual } = await supabase
+      .from('fee_entries')
+      .select('id, fee, status, notes, procedure_name')
+      .eq('id', parsed.data.id)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{
+        id: string;
+        fee: number;
+        status: string;
+        notes: string | null;
+        procedure_name: string;
+      }>();
+    if (!atual) return fail('Lançamento não encontrado.');
+    if (atual.status !== 'a_pagar') {
+      return fail(
+        'Este repasse já foi pago. Para corrigir um valor já pago, estorne e lance de novo.',
+      );
+    }
+
+    const de = Number(atual.fee);
+    const para = parsed.data.fee;
+    if (de === para) return ok(undefined, 'O valor já era esse.');
+
+    const nota = [
+      atual.notes,
+      `Valor corrigido de ${de.toFixed(2)} para ${para.toFixed(2)}${
+        parsed.data.motivo ? ` — ${parsed.data.motivo}` : ''
+      }`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const { error } = await supabase
+      .from('fee_entries')
+      .update({ fee: para, notes: nota })
+      .eq('id', parsed.data.id)
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('status', 'a_pagar');
+    if (error) return fail(toFriendlyError(error));
+
+    await audit(ctx, {
+      action: 'update',
+      entity: 'fee_entries',
+      entityId: parsed.data.id,
+      description: `Repasse de ${atual.procedure_name}: valor corrigido de ${de.toFixed(
+        2,
+      )} para ${para.toFixed(2)}`,
+    });
+    revalidarFinanceiro();
+    return ok(undefined, 'Valor do repasse atualizado.');
+  } catch (e) {
+    return fail(toFriendlyError(e));
+  }
+}
+
 // ---------------------------------------------------------------------
 // Contas a pagar
 // ---------------------------------------------------------------------
