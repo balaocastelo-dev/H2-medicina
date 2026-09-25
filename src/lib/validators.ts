@@ -181,6 +181,10 @@ export const consultationSchema = z.object({
   conduct: optionalText,
   recommendations: optionalText,
   verdict: z.enum(['apto', 'apto_com_restricoes', 'inapto', 'inconclusivo']).nullable().optional(),
+  // Aptidoes adicionais, separadas da conclusao: NR-35 e NR-10 nao
+  // substituem "apto para a funcao", somam-se a ela.
+  apto_altura: z.boolean().default(false),
+  apto_eletricidade: z.boolean().default(false),
   restrictions: optionalText,
   valid_until: z.string().nullable().optional(),
   observations: optionalText,

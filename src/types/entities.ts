@@ -405,6 +405,14 @@ export interface MedicalConsultation {
   conduct: string | null;
   recommendations: string | null;
   verdict: MedicalVerdict | null;
+  /**
+   * Aptidoes adicionais, separadas da conclusao.
+   *
+   * NR-35 e NR-10 nao substituem "apto para a funcao": somam-se a ela. Um
+   * trabalhador e apto para o cargo E, alem disso, liberado para altura.
+   */
+  apto_altura: boolean;
+  apto_eletricidade: boolean;
   restrictions: string | null;
   valid_until: string | null;
   observations: string | null;

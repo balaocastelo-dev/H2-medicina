@@ -120,17 +120,24 @@ export function PatientForm({
           <Field label="Matricula" error={errors?.registration_number}>
             <Input name="registration_number" defaultValue={patient?.registration_number ?? ''} />
           </Field>
+          {/*
+            "precisa arrumar uma forma de essa divisão que eu coloquei de
+             riscos fisicos e quimicos ficarem subdividos certo no ASO
+             final" — Isabella, 23/09. Uma categoria por linha vai para a
+            casa certa do quadro; texto corrido continua indo inteiro em
+            Físicos, como antes.
+          */}
           <Field
             label="Risco ocupacional"
             className="sm:col-span-2"
             error={errors?.occupational_risks}
-            hint="Sai impresso no A.S.O. Deixe em branco para usar o perfil do cargo cadastrado na empresa."
+            hint="Uma categoria por linha (Físicos, Químicos, Biológicos, Ergonômicos, Acidentes) para sair em cada quadro do A.S.O. Em branco, vale o perfil do cargo cadastrado na empresa."
           >
             <Textarea
               name="occupational_risks"
-              rows={2}
+              rows={4}
               defaultValue={patient?.occupational_risks ?? ''}
-              placeholder="Ex.: Ruído contínuo acima de 85 dB(A); poeira mineral"
+              placeholder={'Físicos = Ruído contínuo acima de 85 dB(A)\nQuímicos = Poeira / Amianto'}
             />
           </Field>
           <Field label="Contato de emergencia">

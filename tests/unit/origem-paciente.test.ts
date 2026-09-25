@@ -5,6 +5,7 @@ import {
   isOriginKind,
   proximaEtapaDaRecepcao,
   regraDe,
+  VAI_AO_MEDICO,
 } from '@/modules/queue/origin-kind';
 
 describe('procedência do paciente', () => {
@@ -72,6 +73,62 @@ describe('procedência do paciente', () => {
           proximaEtapaDaRecepcao({ originKind: kind, needsTriage: false, temExames: true }),
         ).toBe('aguardando_medico');
       }
+    });
+
+    it('perícia, SISPER e ingresso vão ao médico mesmo sem consulta marcada', () => {
+      // "os pacientes que eu categorizo como sisper ao clicar em encaminhar
+      //  para o medico vao direto para a aba pagamentos" — Isabella, 24/09.
+      //
+      // A regra da consulta marcada existe para o particular. Para estas
+      // três procedências a avaliação médica é o motivo da visita, e ela
+      // não é cobrada como exame: não há o que marcar na recepção.
+      for (const kind of ['estado', 'sisper', 'ingresso'] as const) {
+        expect(
+          proximaEtapaDaRecepcao({
+            originKind: kind,
+            needsTriage: false,
+            temExames: false,
+            temConsulta: false,
+          }),
+        ).toBe('aguardando_medico');
+
+        expect(
+          proximaEtapaDaRecepcao({
+            originKind: kind,
+            needsTriage: false,
+            temExames: true,
+            temConsulta: false,
+          }),
+        ).toBe('aguardando_medico');
+      }
+    });
+
+    it('o particular sem consulta marcada continua indo ao pagamento', () => {
+      // A regra de 17/09 não pode ter sido desfeita: quem veio só fazer um
+      // eletroencefalograma termina e vai embora.
+      expect(
+        proximaEtapaDaRecepcao({
+          originKind: 'particular',
+          needsTriage: false,
+          temExames: false,
+          temConsulta: false,
+        }),
+      ).toBe('aguardando_pagamento');
+
+      expect(
+        proximaEtapaDaRecepcao({
+          originKind: 'particular',
+          needsTriage: false,
+          temExames: true,
+          temConsulta: false,
+        }),
+      ).toBe('aguardando_exames');
+    });
+
+    it('a lista do banco e a da aplicação são a mesma', () => {
+      // O gatilho do banco repete este critério. Se alguém mudar uma
+      // procedência de lado, as duas mudam juntas.
+      expect([...VAI_AO_MEDICO].sort()).toEqual(['estado', 'ingresso', 'sisper']);
     });
 
     it('não deixa ninguém parado na fila quando não há exame nenhum', () => {

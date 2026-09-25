@@ -172,6 +172,9 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       ...raw,
       verdict: raw.verdict || null,
       valid_until: raw.valid_until || null,
+      // Caixa desmarcada nao chega no FormData: ausencia significa "nao".
+      apto_altura: raw.apto_altura === 'on' || raw.apto_altura === 'true',
+      apto_eletricidade: raw.apto_eletricidade === 'on' || raw.apto_eletricidade === 'true',
     });
     if (!parsed.success) {
       return fail('Verifique os campos da consulta.', z.flattenError(parsed.error).fieldErrors);

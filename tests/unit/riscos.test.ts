@@ -2,12 +2,103 @@ import { describe, expect, it } from 'vitest';
 import {
   CATEGORIAS,
   SEM_RISCO_RELEVANTE,
+  dividirPorCategoria,
   idadeNaData,
   montarRiscos,
   perfilParaCargo,
   temRiscoRelevante,
   type PerfilDeRisco,
 } from '@/modules/documents/riscos';
+
+/**
+ * Risco escrito por categoria no cadastro do paciente.
+ *
+ * "precisa arrumar uma forma de essa divisão que eu coloquei de riscos
+ *  fisicos e quimicos ficarem subdividos certo no ASO final"
+ *                                              -- Isabella, 23/09.
+ *
+ * Ela escreveu duas linhas e as duas saíram juntas na casa de Físicos.
+ */
+describe('risco escrito por categoria', () => {
+  it('o caso exato que a clínica mandou', () => {
+    const r = montarRiscos(null, 'Fisicos = Ruido\nQuimicos = Poeira / Amianto');
+    expect(r.fisicos).toBe('Ruido');
+    expect(r.quimicos).toBe('Poeira / Amianto');
+    expect(r.biologicos).toBe(SEM_RISCO_RELEVANTE);
+    expect(r.ergonomicos).toBe(SEM_RISCO_RELEVANTE);
+    expect(r.acidentes).toBe(SEM_RISCO_RELEVANTE);
+  });
+
+  it('aceita acento, dois-pontos, singular e caixa alta', () => {
+    const r = montarRiscos(
+      null,
+      'FÍSICOS: Ruído\nquímico = Solvente\nErgonômicos = Postura em pé\nMecânicos = Queda',
+    );
+    expect(r.fisicos).toBe('Ruído');
+    expect(r.quimicos).toBe('Solvente');
+    expect(r.ergonomicos).toBe('Postura em pé');
+    // "Mecânicos" é como a NR chama a categoria de acidentes.
+    expect(r.acidentes).toBe('Queda');
+  });
+
+  it('linha sem categoria continua a anterior', () => {
+    const r = montarRiscos(
+      null,
+      'Químicos = Poeira mineral\ne vapores de solvente na cabine de pintura',
+    );
+    expect(r.quimicos).toBe('Poeira mineral e vapores de solvente na cabine de pintura');
+    expect(r.fisicos).toBe(SEM_RISCO_RELEVANTE);
+  });
+
+  it('todas as cinco de uma vez', () => {
+    const r = montarRiscos(
+      null,
+      [
+        'Físicos = Ruído',
+        'Químicos = Amianto',
+        'Biológicos = Material perfurocortante',
+        'Ergonômicos = Levantamento de peso',
+        'Acidentes = Empilhadeira',
+      ].join('\n'),
+    );
+    for (const { chave } of CATEGORIAS) {
+      expect(r[chave]).not.toBe(SEM_RISCO_RELEVANTE);
+    }
+    expect(r.biologicos).toBe('Material perfurocortante');
+  });
+
+  it('texto corrido continua indo inteiro em Físicos — nada mudou para quem já escrevia assim', () => {
+    const r = montarRiscos(null, 'Ruído contínuo acima de 85 dB(A); poeira mineral');
+    expect(r.fisicos).toBe('Ruído contínuo acima de 85 dB(A); poeira mineral');
+    expect(r.quimicos).toBe(SEM_RISCO_RELEVANTE);
+  });
+
+  it('frase com igual no meio não vira categoria', () => {
+    // "pressão = 4 bar" não é uma categoria: sem isso, um texto comum
+    // viraria um quadro em branco.
+    const r = montarRiscos(null, 'Trabalha com ar comprimido a pressão = 4 bar');
+    expect(r.fisicos).toBe('Trabalha com ar comprimido a pressão = 4 bar');
+  });
+
+  it('dividirPorCategoria devolve nulo quando não há categoria escrita', () => {
+    expect(dividirPorCategoria('Ruído e poeira')).toBeNull();
+    expect(dividirPorCategoria('')).toBeNull();
+  });
+
+  it('categoria escrita e deixada vazia sai com a frase padrão', () => {
+    const r = montarRiscos(null, 'Físicos = Ruído\nQuímicos =');
+    expect(r.fisicos).toBe('Ruído');
+    expect(r.quimicos).toBe(SEM_RISCO_RELEVANTE);
+  });
+
+  it('o risco do paciente continua vencendo o perfil do cargo', () => {
+    const r = montarRiscos(MOTORISTA, 'Físicos = Ruído de turbina');
+    expect(r.fisicos).toBe('Ruído de turbina');
+    // O perfil do cargo não se mistura: seria um A.S.O. que ninguém escreveu.
+    expect(r.ergonomicos).toBe(SEM_RISCO_RELEVANTE);
+    expect(r.acidentes).toBe(SEM_RISCO_RELEVANTE);
+  });
+});
 
 const GERAL: PerfilDeRisco = {
   cargo: null,

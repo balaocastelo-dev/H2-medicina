@@ -58,6 +58,8 @@ interface AtendimentoAso {
     valid_until: string | null;
     observations: string | null;
     conclusion: string | null;
+    apto_altura: boolean | null;
+    apto_eletricidade: boolean | null;
   }>;
   patient_exams: {
     status: string;
@@ -90,7 +92,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion), patient_exams(status, finished_at, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion, apto_altura, apto_eletricidade), patient_exams(status, finished_at, exam_types(name))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -246,6 +248,8 @@ export async function gerarAso(
       ],
       // O PDF marca a caixa certa, entao recebe o codigo e nao o rotulo.
       parecer: consulta.verdict,
+      aptoAltura: consulta.apto_altura ?? false,
+      aptoEletricidade: consulta.apto_eletricidade ?? false,
       restricoes: consulta.restrictions ?? null,
       validade: consulta.valid_until ? formatDate(consulta.valid_until) : null,
       observacoes: consulta.observations ?? consulta.conclusion ?? null,

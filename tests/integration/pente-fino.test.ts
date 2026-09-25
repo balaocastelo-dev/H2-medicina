@@ -26,7 +26,7 @@ import { montarRiscos } from '@/modules/documents/riscos';
 import { resumirFluxo } from '@/modules/finance/fluxo-caixa';
 import { agruparPorMedico } from '@/modules/finance/repasse';
 import { CODIGO_VALIDO, montarResposta } from '@/modules/documents/verificacao';
-import { proximaEtapaDaRecepcao, GERA_GUIA } from '@/modules/queue/origin-kind';
+import { proximaEtapaDaRecepcao, GERA_GUIA, VAI_AO_MEDICO } from '@/modules/queue/origin-kind';
 
 // =====================================================================
 // Os dez pacientes
@@ -862,13 +862,25 @@ describe('4. etapas do atendimento', () => {
     },
   );
 
-  it.each(PERFIS.filter((p) => !p.exames.includes('CLINICO')))(
-    '$chave nao foi ao medico — nao tinha consulta marcada',
+  it.each(
+    PERFIS.filter((p) => !p.exames.includes('CLINICO') && !VAI_AO_MEDICO.includes(p.origem)),
+  )('$chave nao foi ao medico — nao tinha consulta marcada', async (perfil) => {
+    const r = await um<{ total: number }>(
+      `select count(*)::int as total from public.medical_consultations where attendance_id = '${reg(perfil.chave).atendimento}'`,
+    );
+    expect(r.total).toBe(0);
+  });
+
+  it.each(PERFIS.filter((p) => VAI_AO_MEDICO.includes(p.origem)))(
+    '$chave foi ao medico pela procedencia, sem consulta marcada',
     async (perfil) => {
+      // Pericia, SISPER e ingresso: a avaliacao medica e o motivo da visita
+      // e nao e cobrada como exame — nao ha o que marcar na recepcao.
+      expect(perfil.exames).not.toContain('CLINICO');
       const r = await um<{ total: number }>(
         `select count(*)::int as total from public.medical_consultations where attendance_id = '${reg(perfil.chave).atendimento}'`,
       );
-      expect(r.total).toBe(0);
+      expect(r.total).toBe(1);
     },
   );
 
@@ -1776,12 +1788,17 @@ describe('17. o dia fechado em numeros', () => {
       concluidos: '25',
       // Uma ficha por exame de sala concluido; consulta e raio X nao tem.
       fichas: '18',
-      consultas: '7',
+      // Oito desde 24/09: a Gisele é ingresso escolar, e essa procedência
+      // vai ao médico com ou sem "Consulta clínica ocupacional" marcada —
+      // a avaliação é o motivo da visita e não é cobrada como exame.
+      consultas: '8',
       triagens: '2',
       documentos: '9',
       cobrancas: '9',
+      // A receita não muda: a cobrança é pelos exames escolhidos, e a
+      // consulta da Gisele não é cobrada. O repasse do médico, sim.
       receita: '2630.00',
-      repasse: '420.00',
+      repasse: '480.00',
     });
 
     expect(chamadas).toHaveLength(14);

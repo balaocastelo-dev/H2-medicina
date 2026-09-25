@@ -244,6 +244,24 @@ describe('A.S.O. em Word', () => {
     expect(texto).toContain('—');
   });
 
+  it('traz as aptidões de altura e eletricidade quando marcadas', async () => {
+    const zip = entradasDoZip(
+      await buildAsoDocx({ ...DADOS, aptoAltura: true, aptoEletricidade: true }),
+    );
+    const texto = textoDoDocumento(zip.get('word/document.xml')!.toString('utf8'));
+    expect(texto).toContain('APTO (NR-35)');
+    expect(texto).toContain('APTO (NR-10)');
+    // Somam-se à conclusão, não a substituem.
+    expect(texto).toContain('APTO');
+  });
+
+  it('não menciona altura nem eletricidade quando não foram marcadas', async () => {
+    const zip = entradasDoZip(await buildAsoDocx(DADOS));
+    const texto = textoDoDocumento(zip.get('word/document.xml')!.toString('utf8'));
+    expect(texto).not.toContain('NR-35');
+    expect(texto).not.toContain('NR-10');
+  });
+
   it('o tipo do arquivo é o que o Word espera', () => {
     expect(MIME_DOCX).toBe(
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

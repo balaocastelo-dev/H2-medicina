@@ -190,6 +190,46 @@ export function ConsultationForm({
                 defaultValue={consultation?.valid_until ?? ''}
               />
             </Field>
+            {/*
+              "no parecer do aso precisa incluir as opcs 'Apto para trabalho
+               em altura', 'Apto para trabalho com Eletricidade'"
+                                                  — Isabella, 23/09.
+
+              Ficam ao lado da conclusão, e não dentro dela: são aptidões
+              ADICIONAIS. Quem trabalha em altura é apto para a função E,
+              além disso, liberado para altura. Como opções da mesma caixa,
+              o A.S.O. deixaria de dizer se a pessoa está apta ao cargo.
+            */}
+            <Field label="Aptidões específicas" hint="Saem marcadas no parecer do A.S.O.">
+              <div className="space-y-2 pt-1">
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="apto_altura"
+                    value="on"
+                    defaultChecked={consultation?.apto_altura ?? false}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Apto para trabalho em altura
+                    <span className="ml-1 text-xs text-slate-500">(NR-35)</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="apto_eletricidade"
+                    value="on"
+                    defaultChecked={consultation?.apto_eletricidade ?? false}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Apto para trabalho com eletricidade
+                    <span className="ml-1 text-xs text-slate-500">(NR-10)</span>
+                  </span>
+                </label>
+              </div>
+            </Field>
             <Field label="Restricoes">
               <Input name="restrictions" defaultValue={consultation?.restrictions ?? ''} />
             </Field>

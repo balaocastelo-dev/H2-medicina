@@ -173,6 +173,21 @@ export function proximaEtapaDaRecepcao(input: {
   const regra = REGRAS[input.originKind];
   const temConsulta = input.temConsulta ?? true;
 
+  // Procedencia que existe para ir ao medico vai ao medico.
+  //
+  // "os pacientes que eu categorizo como sisper ao clicar em encaminhar
+  //  para o medico vao direto para a aba pagamentos sem passar pela
+  //  chamada do medico" -- Isabella, 24/09.
+  //
+  // A regra da consulta clinica marcada, de 17/09, foi feita para o
+  // particular: quem vem so fazer um eletroencefalograma nao deve cair
+  // numa fila de consulta que ninguem pediu. Para pericia, SISPER e
+  // ingresso ela nao se aplica -- a avaliacao medica E o motivo da visita,
+  // e como nao e cobrada como exame nao ha "Consulta clinica ocupacional"
+  // para marcar na recepcao. O botao ja dizia "Liberar para o medico"; era
+  // o destino que discordava do rotulo.
+  if (regra.afterTriage === 'medico') return 'aguardando_medico';
+
   // Nada a fazer aqui dentro: nem exame, nem consulta. Segue para o
   // pagamento, que e o passo seguinte da esteira -- mandar ao consultorio
   // colocaria o paciente numa fila para uma consulta que ninguem pediu.
@@ -182,11 +197,19 @@ export function proximaEtapaDaRecepcao(input: {
   // nao ha exame para concluir e nada dispara a etapa seguinte.
   if (!input.temExames) return 'aguardando_medico';
 
-  // Com exames: a procedencia que pula a fila so faz sentido se houver
-  // consulta esperando do outro lado.
-  if (regra.afterTriage === 'medico' && temConsulta) return 'aguardando_medico';
   return 'aguardando_exames';
 }
+
+/**
+ * Procedencias cuja avaliacao medica e o proprio motivo da visita.
+ *
+ * O banco precisa da mesma lista: o gatilho que move o paciente quando os
+ * exames acabam, e o que roda no fim da triagem, decidem entre medico e
+ * pagamento com este mesmo criterio.
+ */
+export const VAI_AO_MEDICO: OriginKind[] = ORIGIN_KINDS.filter(
+  (k) => REGRAS[k].afterTriage === 'medico',
+);
 
 /** Documentos entregues ao fim do atendimento — iguais para as quatro procedencias. */
 export const DOCUMENTOS_DE_SAIDA = [

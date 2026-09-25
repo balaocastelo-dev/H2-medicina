@@ -74,6 +74,87 @@ export function perfilParaCargo(
 }
 
 /**
+ * Apelidos aceitos ao escrever a categoria a mao, no cadastro do paciente.
+ *
+ * Quem digita nao acentua, ora usa singular, ora plural, e "acidentes" tem
+ * o nome tecnico "mecanicos" na NR-1. Recusar por causa de um acento seria
+ * transformar um campo de ajuda em armadilha.
+ */
+const APELIDOS: Record<string, CategoriaDeRisco> = {
+  fisico: 'fisicos',
+  fisicos: 'fisicos',
+  quimico: 'quimicos',
+  quimicos: 'quimicos',
+  biologico: 'biologicos',
+  biologicos: 'biologicos',
+  ergonomico: 'ergonomicos',
+  ergonomicos: 'ergonomicos',
+  acidente: 'acidentes',
+  acidentes: 'acidentes',
+  mecanico: 'acidentes',
+  mecanicos: 'acidentes',
+  'de acidentes': 'acidentes',
+};
+
+/**
+ * Le a anotacao do cadastro do paciente dividida por categoria.
+ *
+ * "precisa arrumar uma forma de essa divisao que eu coloquei de riscos
+ *  fisicos e quimicos ficarem subdivididos certo no ASO final"
+ *                                              -- Isabella, 23/09.
+ *
+ * Ela escreveu no cadastro:
+ *
+ *     Fisicos = Ruido
+ *     Quimicos = Poeira / Amianto
+ *
+ * e o A.S.O. imprimiu as duas linhas juntas na casa de "Fisicos", com as
+ * outras quatro categorias saindo com a frase padrao.
+ *
+ * Aqui cada linha no formato `Categoria = texto` (ou `Categoria: texto`)
+ * vira uma casa do quadro. Linha sem categoria continua o texto da
+ * anterior -- descricao longa quebra em varias linhas naturalmente.
+ *
+ * Devolve `null` quando nao ha nenhuma categoria escrita: nesse caso o
+ * texto e corrido e o comportamento antigo vale, sem surpresa para quem ja
+ * escreve do jeito de antes.
+ */
+export function dividirPorCategoria(texto: string): Partial<Riscos> | null {
+  const achados = new Map<CategoriaDeRisco, string[]>();
+  let atual: CategoriaDeRisco | null = null;
+  let encontrouAlguma = false;
+
+  for (const linha of texto.split(/\r?\n/)) {
+    const bruta = linha.trim();
+    if (!bruta) continue;
+
+    const cabecalho = /^([\p{L} ]{3,20}?)\s*[=:]\s*(.*)$/u.exec(bruta);
+    const chave = cabecalho ? APELIDOS[normalizar(cabecalho[1])] : undefined;
+
+    if (chave) {
+      encontrouAlguma = true;
+      atual = chave;
+      const resto = (cabecalho?.[2] ?? '').trim();
+      achados.set(chave, resto ? [resto] : []);
+      continue;
+    }
+
+    // Sem categoria antes: nao ha onde pendurar este texto.
+    if (!atual) continue;
+    achados.set(atual, [...(achados.get(atual) ?? []), bruta]);
+  }
+
+  if (!encontrouAlguma) return null;
+
+  const saida: Partial<Riscos> = {};
+  for (const [chave, partes] of achados) {
+    const valor = partes.join(' ').trim();
+    if (valor) saida[chave] = valor;
+  }
+  return Object.keys(saida).length > 0 ? saida : null;
+}
+
+/**
  * Preenche as cinco categorias, completando o que faltar.
  *
  * `doPaciente` e o risco anotado no cadastro daquele empregado, pedido pela
@@ -91,9 +172,21 @@ export function montarRiscos(
 ): Riscos {
   const especifico = (doPaciente ?? '').trim();
   if (especifico) {
-    // A anotacao e um texto corrido, nao cinco campos. Vai inteira na
-    // primeira categoria e as outras saem com a frase padrao -- e o que o
-    // modelo em papel da clinica faz.
+    // Escrito por categoria: cada uma vai para a sua casa do quadro, e as
+    // que nao foram citadas saem com a frase padrao.
+    const porCategoria = dividirPorCategoria(especifico);
+    if (porCategoria) {
+      return {
+        fisicos: porCategoria.fisicos ?? SEM_RISCO_RELEVANTE,
+        quimicos: porCategoria.quimicos ?? SEM_RISCO_RELEVANTE,
+        biologicos: porCategoria.biologicos ?? SEM_RISCO_RELEVANTE,
+        ergonomicos: porCategoria.ergonomicos ?? SEM_RISCO_RELEVANTE,
+        acidentes: porCategoria.acidentes ?? SEM_RISCO_RELEVANTE,
+      };
+    }
+
+    // Texto corrido, sem categoria escrita: vai inteiro na primeira casa e
+    // as outras saem com a frase padrao, como sempre saiu.
     return {
       fisicos: especifico,
       quimicos: SEM_RISCO_RELEVANTE,

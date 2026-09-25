@@ -150,6 +150,58 @@ describe('cabe em uma folha', () => {
   });
 });
 
+/**
+ * "no parecer do aso precisa incluir as opcs 'Apto para trabalho em
+ *  altura', 'Apto para trabalho com Eletricidade'" -- Isabella, 23/09.
+ *
+ * Entraram como linhas PRÓPRIAS do parecer, e não como opções da conclusão
+ * de aptidão. NR-35 e NR-10 se somam a "apto para a função": se
+ * substituíssem, o A.S.O. de quem trabalha em altura deixaria de dizer se
+ * a pessoa está apta ao próprio cargo.
+ */
+describe('aptidões de altura e eletricidade', () => {
+  it('não aparecem quando o médico não marcou', async () => {
+    const texto = textoDoPdf(await buildAsoPdf(base));
+    expect(texto).not.toContain('altura');
+    expect(texto).not.toContain('eletricidade');
+  });
+
+  it('saem marcadas quando o médico marcou', async () => {
+    const texto = textoDoPdf(
+      await buildAsoPdf({ ...base, aptoAltura: true, aptoEletricidade: true }),
+    );
+    expect(texto).toContain('Apto para trabalho em altura (NR-35)');
+    expect(texto).toContain('Apto para trabalho com eletricidade (NR-10)');
+  });
+
+  it('a conclusão de aptidão continua lá — elas somam, não substituem', async () => {
+    const texto = textoDoPdf(await buildAsoPdf({ ...base, aptoAltura: true }));
+    expect(texto).toContain('Apto para função');
+    expect(texto).toContain('Apto para trabalho em altura');
+  });
+
+  it('uma só também funciona', async () => {
+    const texto = textoDoPdf(await buildAsoPdf({ ...base, aptoEletricidade: true }));
+    expect(texto).toContain('eletricidade');
+    expect(texto).not.toContain('altura');
+  });
+
+  it('continua cabendo em uma folha com as duas marcadas', async () => {
+    const doc = await PDFDocument.load(
+      await buildAsoPdf({
+        ...base,
+        aptoAltura: true,
+        aptoEletricidade: true,
+        exames: Array.from({ length: 12 }, (_, i) => ({
+          nome: `Exame número ${i + 1}`,
+          data: '19/08/2026',
+        })),
+      }),
+    );
+    expect(doc.getPageCount()).toBe(1);
+  });
+});
+
 describe('buildAsoPdf', () => {
   it('gera um PDF em A4', async () => {
     const bytes = await buildAsoPdf(base);

@@ -180,6 +180,9 @@ export async function buildAsoDocx(d: DadosAso): Promise<Uint8Array> {
           ...bloco('Parecer', [
             linha('Tipo de exame', d.tipoExame),
             linha('Conclusão', PARECER[d.parecer] ?? d.parecer),
+            // Aptidoes adicionais: so aparecem quando o medico as marcou.
+            ...(d.aptoAltura ? [linha('Trabalho em altura', 'APTO (NR-35)')] : []),
+            ...(d.aptoEletricidade ? [linha('Trabalho com eletricidade', 'APTO (NR-10)')] : []),
             linha('Restrições', d.restricoes),
             linha('Validade', d.validade),
             linha('Observações', d.observacoes),

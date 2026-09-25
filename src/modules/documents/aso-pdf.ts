@@ -67,6 +67,14 @@ export interface DadosAso {
   exames: { nome: string; data: string | null }[];
   /** apto | apto_com_restricoes | inapto | inconclusivo */
   parecer: string;
+  /**
+   * Aptidoes adicionais, que se somam ao parecer em vez de substitui-lo.
+   *
+   * NR-35 e NR-10: um trabalhador e apto para a funcao E, alem disso,
+   * liberado para altura ou para eletricidade.
+   */
+  aptoAltura?: boolean;
+  aptoEletricidade?: boolean;
   restricoes: string | null;
   validade: string | null;
   observacoes: string | null;
@@ -89,6 +97,20 @@ const MARGEM = 38;
  * A.S.O. para a folha dois mesmo quando o conteudo cabia.
  */
 const RESERVA_ASSINATURA = 185;
+
+/**
+ * As tres conclusoes de aptidao do modelo em papel, na ordem dele.
+ *
+ * Aptidao para altura (NR-35) e para eletricidade (NR-10) NAO entram
+ * aqui: elas se somam a conclusao em vez de substitui-la, e viram linhas
+ * proprias logo abaixo. Como opcoes desta lista, o A.S.O. de quem
+ * trabalha em altura deixaria de dizer se a pessoa esta apta ao cargo.
+ */
+const OPCOES_DE_PARECER: [string, string][] = [
+  ['inapto', 'Inapto para função'],
+  ['apto_com_restricoes', 'Apto para função com restrições'],
+  ['apto', 'Apto para função'],
+];
 const LARGURA = A4[0] - MARGEM * 2;
 
 const PORTARIAS =
@@ -275,6 +297,11 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     LARGURA - 10,
   ).slice(0, 8);
 
+  const aptidoesExtras = [
+    d.aptoAltura ? 'Apto para trabalho em altura (NR-35)' : null,
+    d.aptoEletricidade ? 'Apto para trabalho com eletricidade (NR-10)' : null,
+  ].filter((x): x is string => x !== null);
+
   // Lista de exames em duas colunas quando e longa. Quinze nomes numa
   // coluna so desperdicam metade da largura da folha e empurram a
   // assinatura para a pagina seguinte; em duas colunas cabem sem apertar a
@@ -293,7 +320,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     linhasDeExame * 11.5 +
     6 +
     26 + // faixa do parecer
-    3 * 14 +
+    (OPCOES_DE_PARECER.length + aptidoesExtras.length) * 14 +
     (d.validade ? 13 : 0) +
     linhasRestricoes.length * 10 +
     6 +
@@ -376,12 +403,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   // Parecer, em caixas de marcar como no modelo da clinica
   // -------------------------------------------------------------------
   faixa('Parecer');
-  const opcoes: [string, string][] = [
-    ['inapto', 'Inapto para função'],
-    ['apto_com_restricoes', 'Apto para função com restrições'],
-    ['apto', 'Apto para função'],
-  ];
-  for (const [chave, rotulo] of opcoes) {
+  for (const [chave, rotulo] of OPCOES_DE_PARECER) {
     espaco(dy(15));
     const marcada = d.parecer === chave;
     pagina.drawRectangle({
@@ -397,6 +419,19 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
       x: MARGEM + 20, y, size: marcada ? 9.5 : 8.5,
       font: marcada ? negrito : fonte, color: marcada ? preto : cinza,
     });
+    y -= dy(14);
+  }
+
+  // Aptidoes adicionais, quando o medico as marcou. Nao marcadas nao
+  // aparecem: linha em branco num A.S.O. sugere avaliacao que nao houve.
+  for (const rotulo of aptidoesExtras) {
+    espaco(dy(15));
+    pagina.drawRectangle({
+      x: MARGEM + 5, y: y - 1.5, width: 9, height: 9,
+      borderColor: cor, borderWidth: 1.4, color: cor,
+    });
+    pagina.drawText('X', { x: MARGEM + 7.2, y: y + 0.6, size: 8, font: negrito, color: rgb(1, 1, 1) });
+    pagina.drawText(rotulo, { x: MARGEM + 20, y, size: 9.5, font: negrito, color: preto });
     y -= dy(14);
   }
 
