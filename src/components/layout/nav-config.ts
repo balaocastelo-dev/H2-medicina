@@ -243,6 +243,15 @@ export const NAV_GROUPS: NavGroup[] = [
         permission: 'usuarios.administrar',
       },
       {
+        // "sera que tem como a gente ter mais autonomia sobre isso?"
+        // — Isabella, 25/09. Ate entao, trocar um equipamento de sala
+        // dependia de comando escrito a mao no banco.
+        href: '/salas-e-exames',
+        label: 'Salas e exames',
+        icon: 'DoorOpen',
+        permission: 'salas.administrar',
+      },
+      {
         href: '/configuracoes',
         label: 'Configurações da empresa',
         icon: 'Settings',
