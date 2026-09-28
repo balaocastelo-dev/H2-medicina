@@ -175,19 +175,41 @@ export async function salvarValoresDaEmpresa(
       });
     }
 
-    if (paraApagar.length > 0) {
-      await supabase
+    // -----------------------------------------------------------------
+    // Apaga e grava, em vez de "upsert".
+    //
+    // "na hora de colocar os valores para cada exame da empresa, esta
+    //  dando erro e nao ta salvando" -- Isabella, 25/09.
+    //
+    // O indice unico da tabela e sobre uma EXPRESSAO --
+    // `(company_id, exam_type_id, coalesce(contract_id, '000...'))` --
+    // porque em Postgres dois NULOS nao sao iguais entre si: sem o
+    // coalesce, a mesma empresa poderia ter o mesmo exame gravado duas
+    // vezes sem contrato.
+    //
+    // `on conflict (company_id, exam_type_id, contract_id)` nao casa com
+    // um indice de expressao, e o Postgres recusa a instrucao inteira
+    // (42P10). Nao era "uma linha nao gravou": nao gravava nada.
+    //
+    // Apagar e inserir nao depende de inferencia de indice nenhuma. So
+    // toca nos exames que vieram no formulario: apagar tudo levaria junto
+    // o preco de um exame desativado, que a tela nem mostra.
+    // -----------------------------------------------------------------
+    const noFormulario = [...paraApagar, ...paraGravar.map((l) => String(l.exam_type_id))];
+
+    if (noFormulario.length > 0) {
+      const { error } = await supabase
         .from('company_exam_prices')
         .delete()
+        .eq('tenant_id', ctx.tenant.id)
         .eq('company_id', companyId)
         .is('contract_id', null)
-        .in('exam_type_id', paraApagar);
+        .in('exam_type_id', noFormulario);
+      if (error) return fail(toFriendlyError(error));
     }
 
     if (paraGravar.length > 0) {
-      const { error } = await supabase
-        .from('company_exam_prices')
-        .upsert(paraGravar, { onConflict: 'company_id,exam_type_id,contract_id' });
+      const { error } = await supabase.from('company_exam_prices').insert(paraGravar);
       if (error) return fail(toFriendlyError(error));
     }
 
