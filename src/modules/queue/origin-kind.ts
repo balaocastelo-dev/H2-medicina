@@ -145,8 +145,30 @@ export function isOriginKind(value: unknown): value is OriginKind {
  * O psicossocial entrou aqui em 22/09. Ate entao ele era perguntado na
  * bancada da triagem E de novo na consulta -- o paciente respondia duas
  * vezes as mesmas perguntas, inclusive as de ideacao suicida.
+ *
+ * O Romberg entrou em 29/09: "o teste de romberg tem que mudar para ser
+ * realizado na aba medica" -- Isabella. Ele era feito na bancada da triagem.
+ *
+ * Esta lista e o espelho de `exam_types.respondido_pelo_medico` no banco, que
+ * e quem manda de fato: e a coluna, e nao esta constante, que os gatilhos
+ * consultam para decidir se o paciente vai ao consultorio. Ha um teste que
+ * cobra as duas iguais, porque em 22/09 elas quase saíram de sincronia.
  */
-export const RESPONDIDOS_PELO_MEDICO = new Set(['CLINICO', 'PSICO']);
+export const RESPONDIDOS_PELO_MEDICO = new Set(['CLINICO', 'PSICO', 'ROMBERG']);
+
+/**
+ * Dos respondidos pelo medico, os que ja vivem dentro do formulario da
+ * consulta: a consulta clinica E o formulario, e o psicossocial e um bloco
+ * dele. Os demais aparecem como ficha propria ao lado, para o medico
+ * preencher e concluir sem sair da tela.
+ */
+export const DENTRO_DO_FORMULARIO_DA_CONSULTA = new Set(['CLINICO', 'PSICO']);
+
+/** O medico preenche a ficha deste exame na tela da consulta. */
+export function temFichaNaConsulta(codigo: string | null | undefined): boolean {
+  if (!codigo) return false;
+  return RESPONDIDOS_PELO_MEDICO.has(codigo) && !DENTRO_DO_FORMULARIO_DA_CONSULTA.has(codigo);
+}
 
 export function proximaEtapaDaRecepcao(input: {
   originKind: OriginKind;

@@ -1520,7 +1520,9 @@ const CATALOGO = [
   { codigo: 'ISHIHARA', sala: true, guia: false },
   // Perguntado pelo medico na consulta desde 22/09, nao na bancada.
   { codigo: 'PSICO', sala: false, guia: false },
-  { codigo: 'ROMBERG', sala: true, guia: false },
+  // Feito pelo medico na consulta desde 29/09, nao na bancada.
+  // "o teste de romberg tem que mudar para ser realizado na aba medica"
+  { codigo: 'ROMBERG', sala: false, guia: false },
   { codigo: 'FADIGA', sala: true, guia: false },
   { codigo: 'DINAMO_PAL', sala: true, guia: false },
   { codigo: 'DINAMO_ESC', sala: true, guia: false },

@@ -8,6 +8,8 @@ import { calcAge, formatCPF, formatDate, formatDateTime } from '@/lib/format';
 import { umDo, type Embutido } from '@/lib/embed';
 import { ConsultationForm } from '@/modules/clinical/consultation-form';
 import { fichaDoExame, preenchidos } from '@/modules/clinical/fichas-de-exame';
+import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
+import { temFichaNaConsulta } from '@/modules/queue/origin-kind';
 import type { MedicalConsultation, Triage } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
@@ -101,6 +103,18 @@ export default async function MedicoAtendimentoPage({
   //  flegada na aba recepcao"
   const psicossocialSolicitado = data.patient_exams.some((e) => e.exam_types?.code === 'PSICO');
 
+  // "o teste de romberg tem que mudar para ser realizado na aba medica"
+  //                                              -- Isabella, 28/09.
+  //
+  // Ele era preenchido na bancada da triagem. Aqui ele aparece como ficha
+  // propria, e nao como bloco da consulta, de proposito: continua sendo um
+  // EXAME, com resultado e laudo em papel separado. Virar bloco da consulta
+  // faria o resultado deixar de existir como exame -- sem status, sem laudo,
+  // e sem aparecer na area do paciente.
+  const fichasDaConsulta = data.patient_exams.filter(
+    (e) => temFichaNaConsulta(e.exam_types?.code) && fichaDoExame(e.exam_types?.code),
+  );
+
   // O que a recepcao escolheu, em bom portugues, ao lado do nome.
   //
   // "deve mostrar pro medico apenas o que foi selecionado, sem opcao de
@@ -189,6 +203,32 @@ export default async function MedicoAtendimentoPage({
             </CardBody>
           </Card>
 
+          {fichasDaConsulta.length > 0 && (
+            <Card>
+              <CardHeader
+                title="Para preencher na consulta"
+                description="Exames respondidos aqui. Salvar conclui o exame e libera o laudo."
+              />
+              <CardBody className="space-y-5">
+                {fichasDaConsulta.map((e) => (
+                  <div key={e.id}>
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-sm font-medium">{e.exam_types?.name ?? '—'}</span>
+                      {e.status === 'concluido' && <Badge color="#22C55E">concluído</Badge>}
+                    </div>
+                    <FichaDeExameForm
+                      patientExamId={e.id}
+                      codigoExame={e.exam_types?.code}
+                      valoresIniciais={comoTexto(e.exam_results?.[0]?.values)}
+                      conclusaoInicial={e.exam_results?.[0]?.conclusion ?? ''}
+                      concluirAoSalvar
+                    />
+                  </div>
+                ))}
+              </CardBody>
+            </Card>
+          )}
+
           <Card>
             <CardHeader
               title="Exames"
@@ -261,6 +301,22 @@ export default async function MedicoAtendimentoPage({
       </div>
     </div>
   );
+}
+
+/**
+ * O que ja foi gravado, no formato que o formulario le.
+ *
+ * O banco guarda `values` como JSON livre; a ficha trabalha com texto. Numero
+ * e booleano viram texto para que reabrir uma ficha salva mostre o que foi
+ * respondido, em vez de um campo em branco por cima de um valor existente.
+ */
+function comoTexto(valores: Record<string, unknown> | undefined): Record<string, string> {
+  const saida: Record<string, string> = {};
+  for (const [chave, valor] of Object.entries(valores ?? {})) {
+    if (valor === null || valor === undefined) continue;
+    saida[chave] = String(valor);
+  }
+  return saida;
 }
 
 function Row({ label, value }: { label: string; value: string }) {

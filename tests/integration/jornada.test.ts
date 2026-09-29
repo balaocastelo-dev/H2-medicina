@@ -281,13 +281,14 @@ describe('regras que a clinica pediu', () => {
   it('todo exame ativo tem sala, menos os que nao acontecem em sala', async () => {
     // Raio X e feito fora. O psicossocial e perguntado pelo medico na
     // propria consulta desde 22/09 — antes disso era perguntado duas
-    // vezes, na triagem e no consultorio.
+    // vezes, na triagem e no consultorio. O Romberg foi para a consulta em
+    // 29/09, a pedido da clinica.
     const r = await amb.db.query<{ code: string }>(`
       select code from public.exam_types
        where tenant_id = '${amb.tenant}' and is_active and default_room_id is null
        order by code
     `);
-    expect(r.rows.map((x) => x.code)).toEqual(['PSICO', 'RAIOX']);
+    expect(r.rows.map((x) => x.code)).toEqual(['PSICO', 'RAIOX', 'ROMBERG']);
   });
 
   it('nenhum exame ativo aponta para sala inativa', async () => {

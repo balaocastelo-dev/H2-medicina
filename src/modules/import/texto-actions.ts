@@ -7,6 +7,8 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { isValidCPF } from '@/lib/validators';
+import { umDo } from '@/lib/embed';
+import { mesmoNome, pacienteJaNaAgenda, type JaAgendado } from './mesma-pessoa';
 
 /** Um registro ja conferido e corrigido na tela. */
 const registroSchema = z.object({
@@ -87,6 +89,27 @@ export async function aplicarTextoColado(
     // Uma empresa citada vinte vezes na lista e resolvida uma vez so.
     const empresasResolvidas = new Map<string, string | null>();
 
+    // Quem ja esta na agenda daquele dia.
+    //
+    // "ele esta duplicando os atendimentos que ja foram inclusos" --
+    // Isabella, 28/09. Colar a mesma lista de novo criava um paciente novo
+    // para quem veio sem CPF e sem nascimento, e o agendamento entrava
+    // outra vez porque o id era outro. Ver a agenda do dia antes de comecar
+    // resolve as duas metades: reconhece a pessoa e nao cria o agendamento.
+    const { data: agendaDoDia } = await supabase
+      .from('appointments')
+      .select('patient_id, patients(full_name)')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('scheduled_date', data)
+      .is('deleted_at', null)
+      .not('status', 'in', '("cancelado","remarcado")')
+      .returns<{ patient_id: string; patients: { full_name: string } | null }[]>();
+
+    const naAgenda: JaAgendado[] = (agendaDoDia ?? [])
+      .filter((a) => a.patients)
+      .map((a) => ({ patientId: a.patient_id, nome: umDo(a.patients)!.full_name }));
+    const jaAgendados = new Set(naAgenda.map((a) => a.patientId));
+
     for (const reg of registros) {
       try {
         const cpf = reg.cpf ? reg.cpf.replace(/\D/g, '') : null;
@@ -140,15 +163,29 @@ export async function aplicarTextoColado(
             .maybeSingle<{ id: string }>();
           patientId = achado?.id ?? null;
         } else if (reg.nascimento) {
-          const { data: achado } = await supabase
+          // Compara sem acento e sem caixa: o portal manda "JOSE DA SILVA"
+          // e o cadastro tem "José da Silva". Comparar exato fazia dessas
+          // duas grafias duas pessoas.
+          const { data: candidatos } = await supabase
             .from('patients')
-            .select('id')
+            .select('id, full_name')
             .eq('tenant_id', ctx.tenant.id)
-            .eq('full_name', reg.nome)
             .eq('birth_date', reg.nascimento)
             .is('deleted_at', null)
-            .maybeSingle<{ id: string }>();
-          patientId = achado?.id ?? null;
+            .returns<{ id: string; full_name: string }[]>();
+          const iguais = (candidatos ?? []).filter((p) => mesmoNome(p.full_name, reg.nome));
+          patientId = iguais.length === 1 ? iguais[0]!.id : null;
+        }
+
+        // Sem CPF, o unico jeito de reconhecer a pessoa e o nome -- e isso
+        // so vale dentro da agenda daquele dia, que e o caso da lista
+        // colada duas vezes. Ver `mesma-pessoa.ts`.
+        //
+        // Com CPF nao se entra aqui de proposito: CPF que nao achou ninguem
+        // e gente nova, e um homonimo ja agendado nao pode fazer o cadastro
+        // novo ser engolido pelo antigo.
+        if (!patientId && !cpf) {
+          patientId = pacienteJaNaAgenda(reg.nome, naAgenda);
         }
 
         if (patientId) {
@@ -190,16 +227,13 @@ export async function aplicarTextoColado(
 
         // Ja agendado nesse dia? Nao cria de novo — colar a lista duas vezes
         // e o erro mais facil de cometer.
-        const { data: jaTem } = await supabase
-          .from('appointments')
-          .select('id')
-          .eq('tenant_id', ctx.tenant.id)
-          .eq('patient_id', patientId)
-          .eq('scheduled_date', data)
-          .is('deleted_at', null)
-          .maybeSingle<{ id: string }>();
-
-        if (jaTem) {
+        //
+        // A conferencia sai da agenda ja carregada, e nao de uma consulta
+        // por linha. Antes era `.maybeSingle()`, que devolve erro quando
+        // encontra mais de uma linha; o erro nao era lido, a variavel ficava
+        // nula, e o sistema concluia "nao ha agendamento" justamente no caso
+        // em que havia dois. Cada colagem piorava a anterior.
+        if (jaAgendados.has(patientId)) {
           resultado.ignorados.push({ nome: reg.nome, motivo: 'Já estava agendado neste dia' });
           continue;
         }
@@ -224,6 +258,11 @@ export async function aplicarTextoColado(
           resultado.ignorados.push({ nome: reg.nome, motivo: toFriendlyError(erroAgenda) });
           continue;
         }
+
+        // A mesma lista pode trazer a pessoa duas vezes; a partir daqui ela
+        // esta na agenda do dia como qualquer outra.
+        jaAgendados.add(patientId);
+        naAgenda.push({ patientId, nome: reg.nome });
 
         resultado.agendamentosCriados += 1;
       } catch (erroLinha) {

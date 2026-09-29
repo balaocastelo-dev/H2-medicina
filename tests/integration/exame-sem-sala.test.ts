@@ -81,11 +81,14 @@ describe('coluna ocupa_sala', () => {
     // O psicossocial entrou nesta lista em 22/09: quem pergunta e o medico,
     // na propria consulta. Antes ele era perguntado duas vezes — na bancada
     // da triagem e de novo no consultorio.
+    //
+    // O Romberg entrou em 29/09, pelo mesmo motivo e a pedido da clinica:
+    // "o teste de romberg tem que mudar para ser realizado na aba medica".
     const r = await env.db.query<{ code: string }>(
       `select code from public.exam_types
         where tenant_id = '${env.tenant}' and ocupa_sala = false order by code`,
     );
-    expect(r.rows.map((x) => x.code).sort()).toEqual(['CLINICO', 'PSICO', 'RAIOX']);
+    expect(r.rows.map((x) => x.code).sort()).toEqual(['CLINICO', 'PSICO', 'RAIOX', 'ROMBERG']);
   });
 });
 

@@ -10,20 +10,9 @@ import { idadeNaData } from './riscos';
 import { buildLaudoAudiometria } from './laudo-audiometria';
 import { buildLaudoDeFicha } from './laudo-de-ficha';
 import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
+import { qualLaudo } from './qual-laudo';
 import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
-
-/**
- * Exames com laudo desenhado a mao.
- *
- * So a audiometria: e a unica com grafico de limiares. Todo o resto sai do
- * gerador generico, montado a partir da propria ficha de preenchimento.
- *
- * Ate 23/09 esta lista era a unica porta: dinamometria, Romberg, fadiga e
- * psicossocial eram preenchidos na sala e o resultado nunca virava papel.
- * "Nao ta gerando a ficha da Dinamometria palmar..." -- Isabella.
- */
-const COM_LAUDO_DESENHADO = new Set(['AUDIO']);
 
 interface ExameParaLaudo {
   id: string;
@@ -91,7 +80,8 @@ export async function gerarLaudoDeExame(
 
     const codigo = exame.exam_types?.code ?? '';
     const ficha = fichaDoExame(codigo);
-    if (!COM_LAUDO_DESENHADO.has(codigo) && !ficha) {
+    const escolha = qualLaudo(codigo);
+    if (escolha === 'nenhum') {
       return fail(
         `${exame.exam_types?.name ?? 'Este exame'} não tem ficha de preenchimento: ` +
           'o resultado vem do próprio aparelho ou do laboratório.',
@@ -171,7 +161,8 @@ export async function gerarLaudoDeExame(
       uf: perfil?.council_state ?? null,
     };
 
-    const pdf = ficha
+    // Quem decide e `qualLaudo`, e o porque esta escrito la.
+    const pdf = escolha === 'ficha' && ficha
       ? await buildLaudoDeFicha({
           clinica,
           ficha,

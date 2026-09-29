@@ -135,28 +135,32 @@ begin
     -- ----------------------------------------------------------------
     -- Exame que nao ocupa sala da clinica
     --
-    -- Consulta clinica e psicossocial sao perguntados pelo medico na
-    -- propria consulta; raio X e feito fora. Nenhum dos tres entra na fila
-    -- de salas -- se entrar, fica com sala nula e prende o paciente, sem
-    -- cartao que o mostre e sem botao que o alcance.
+    -- Consulta clinica, psicossocial e Romberg sao perguntados pelo medico
+    -- na propria consulta; raio X e feito fora. Nenhum dos quatro entra na
+    -- fila de salas -- se entrar, fica com sala nula e prende o paciente,
+    -- sem cartao que o mostre e sem botao que o alcance.
     --
     -- Precisa estar aqui e nao so nas migrations: numa instalacao nova o
     -- seed roda depois delas, quando os exames ainda nem existiam para
     -- serem marcados.
     -- ----------------------------------------------------------------
     update public.exam_types
-       set ocupa_sala = (code not in ('RAIOX', 'CLINICO', 'PSICO'))
+       set ocupa_sala = (code not in ('RAIOX', 'CLINICO', 'PSICO', 'ROMBERG')),
+           respondido_pelo_medico = (code in ('CLINICO', 'PSICO', 'ROMBERG'))
      where tenant_id = v_tenant;
 
-    -- O psicossocial saiu da bancada da triagem em 22/09: quem pergunta e
-    -- o medico. "pode deixar somente no modulo medico" -- Isabella.
+    -- O psicossocial saiu da bancada da triagem em 22/09 e o Romberg em
+    -- 29/09: quem pergunta e o medico.
+    -- "pode deixar somente no modulo medico" / "o teste de romberg tem que
+    --  mudar para ser realizado na aba medica" -- Isabella.
     delete from public.room_exam_types ret
      using public.exam_types et
-     where et.id = ret.exam_type_id and et.tenant_id = v_tenant and et.code = 'PSICO';
+     where et.id = ret.exam_type_id and et.tenant_id = v_tenant
+       and et.code in ('PSICO', 'ROMBERG');
 
     update public.exam_types
        set default_room_id = null
-     where tenant_id = v_tenant and code = 'PSICO';
+     where tenant_id = v_tenant and code in ('PSICO', 'ROMBERG');
 
   end loop;
 end$$;
