@@ -9,9 +9,11 @@ import { liberarSala } from '@/modules/queue/consultorio-actions';
 import { consultationSchema, triageSchema } from '@/lib/validators';
 import { lerBlocos } from './ficha-estrutura';
 import { gerarAso } from '@/modules/documents/aso';
+import { generateAttendanceDocument } from '@/modules/documents/actions';
 import { lancarRepasse } from '@/modules/finance/repasse-actions';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
+import { isOriginKind, REGRAS } from '@/modules/queue/origin-kind';
 
 function num(value: FormDataEntryValue | null): number | null {
   if (value === null || value === '') return null;
@@ -37,21 +39,60 @@ async function encaminharDepoisDaTriagem(
 ): Promise<string | null> {
   const supabase = await createClient();
 
-  const { data: exames } = await supabase
-    .from('patient_exams')
-    .select('status, exam_types(code, ocupa_sala)')
-    .eq('tenant_id', ctx.tenant.id)
-    .eq('attendance_id', attendanceId)
-    .returns<{ status: string; exam_types: { code: string; ocupa_sala: boolean } | null }[]>();
+  const [{ data: exames }, { data: atendimento }] = await Promise.all([
+    supabase
+      .from('patient_exams')
+      .select('status, exam_types(code, ocupa_sala, respondido_pelo_medico)')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', attendanceId)
+      .returns<
+        {
+          status: string;
+          exam_types: {
+            code: string;
+            ocupa_sala: boolean;
+            respondido_pelo_medico: boolean | null;
+          } | null;
+        }[]
+      >(),
+    supabase
+      .from('attendances')
+      .select('origin_kind')
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{ origin_kind: string | null }>(),
+  ]);
 
   const ativos = ['pendente', 'em_fila', 'chamado', 'em_andamento'];
   const pendentes = (exames ?? []).filter((e) => ativos.includes(e.status));
   const naFila = pendentes.some((e) => e.exam_types?.ocupa_sala !== false);
-  const temConsulta = pendentes.some((e) => e.exam_types?.code === 'CLINICO');
+
+  // Quem leva o paciente ao consultorio e o cadastro do exame, nao uma
+  // lista escrita aqui.
+  //
+  // Esta linha dizia `code === 'CLINICO'` -- uma QUARTA copia da lista de
+  // itens respondidos pelo medico, e a unica em TypeScript. Ela nunca
+  // recebeu o psicossocial de 22/09 nem o Romberg de 29/09, e como esta
+  // funcao grava a etapa DEPOIS do gatilho, ela sobrescrevia a decisao
+  // correta do banco. Quem saia da triagem devendo so o psicossocial caia
+  // no caixa sem passar pelo medico.
+  const temItemDoMedico = pendentes.some((e) => e.exam_types?.respondido_pelo_medico === true);
+
+  // Pericia, SISPER e ingresso vao ao medico com ou sem item marcado: a
+  // avaliacao medica E o motivo da visita.
+  //
+  // "os pacientes que eu categorizo como sisper ao clicar em encaminhar
+  //  para o medico vao direto para a aba pagamentos" -- Isabella, 24/09.
+  // Aquilo foi corrigido no caminho da recepcao e no gatilho do banco; este
+  // caminho -- o de quem passa PELA TRIAGEM -- continuava com a regra
+  // antiga, e o SISPER passa pela triagem.
+  const origem = atendimento?.origin_kind ?? 'particular';
+  const procedenciaVaiAoMedico =
+    isOriginKind(origem) && REGRAS[origem].afterTriage === 'medico';
 
   const etapa = naFila
     ? 'aguardando_exames'
-    : temConsulta
+    : temItemDoMedico || procedenciaVaiAoMedico
       ? 'aguardando_medico'
       : 'aguardando_pagamento';
 
@@ -276,6 +317,23 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       // assina documento medico no lugar de outro.
       const aso = await gerarAso(ctx, parsed.data.attendance_id, ctx.userId);
       avisoAso = aso.ok ? ' O A.S.O. foi gerado.' : ` (${aso.error})`;
+
+      // A ficha clinica tambem sai aqui, pelo mesmo motivo do A.S.O.
+      //
+      // Ela e montada a partir da triagem e da consulta, e essas duas so
+      // sao visiveis para quem tem `clinico.ver`. Quem encerra o
+      // atendimento costuma ser a recepcao, que nao tem -- se a ficha
+      // esperasse o kit de saida, sairia em branco (era o que acontecia) ou
+      // nao sairia. Emitindo agora, o kit apenas a encontra pronta.
+      const ficha = await generateAttendanceDocument(
+        parsed.data.attendance_id,
+        'ficha_clinica',
+      );
+      // Recusa por regra -- pericia, SISPER, empresa que so recebe A.S.O. --
+      // nao e falha e nao vira aviso na tela do medico.
+      if (!ficha.ok && !/não gera ficha|apenas o A\.S\.O\./i.test(ficha.error ?? '')) {
+        avisoAso += ` (ficha clínica: ${ficha.error})`;
+      }
 
       // O repasse do medico nasce do atendimento, nao de digitacao no
       // financeiro: o procedimento e o que a recepcao escolheu.

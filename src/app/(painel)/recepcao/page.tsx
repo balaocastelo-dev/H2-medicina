@@ -52,6 +52,45 @@ export default async function RecepcaoPage() {
   const waiting = rows.filter((r) => r.stage_code === 'aguardando_recepcao');
   const inProgress = rows.filter((r) => r.stage_code === 'na_recepcao');
 
+  // Os valores negociados das empresas que estao na fila agora.
+  //
+  // "os valores de cada atendimento de paciente nao estao de acordo com os
+  //  cadastrados na aba empresa" -- Isabella, 29/09.
+  //
+  // A cobranca ja usa o valor negociado. Esta tela somava `exam_types.price`
+  // direto: o balcao mostrava um total e o Pix do clique seguinte mostrava
+  // outro. Duas contas para a mesma pergunta e sempre uma delas errada.
+  const empresasNaFila = [...new Set(rows.map((r) => r.company_id).filter(Boolean))] as string[];
+
+  const [precosRes, contratosRes] = await Promise.all([
+    empresasNaFila.length > 0
+      ? supabase
+          .from('company_exam_prices')
+          .select('company_id, exam_type_id, contract_id, price')
+          .eq('tenant_id', ctx.tenant.id)
+          .in('company_id', empresasNaFila)
+          .returns<
+            { company_id: string; exam_type_id: string; contract_id: string | null; price: number }[]
+          >()
+      : Promise.resolve({ data: [] }),
+    empresasNaFila.length > 0
+      ? supabase
+          .from('company_contracts')
+          .select('id, company_id')
+          .eq('tenant_id', ctx.tenant.id)
+          .in('company_id', empresasNaFila)
+          .eq('status', 'ativo')
+          .is('deleted_at', null)
+          .order('starts_on', { ascending: false })
+          .returns<{ id: string; company_id: string }[]>()
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const contratoDaEmpresa: Record<string, string> = {};
+  for (const ct of contratosRes.data ?? []) {
+    contratoDaEmpresa[ct.company_id] ??= ct.id;
+  }
+
   return (
     <div>
       <ReceptionLiveRefresh tenantId={ctx.tenant.id} />
@@ -77,6 +116,8 @@ export default async function RecepcaoPage() {
         <ReceptionBoard
           rows={rows}
           examTypes={examsRes.data ?? []}
+          precosNegociados={precosRes.data ?? []}
+          contratoDaEmpresa={contratoDaEmpresa}
           procedimentos={procedimentosRes.data ?? []}
           canRegisterPayment={ctx.permissions.has('financeiro.registrar')}
         />

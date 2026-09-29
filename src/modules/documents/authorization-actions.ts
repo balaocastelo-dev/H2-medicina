@@ -267,7 +267,15 @@ export async function emitirTermoAutorizacao(input: {
     // O consentimento tambem entra no registro de LGPD do paciente: e la
     // que se procura quando o titular pergunta o que autorizou.
     if (input.method === 'tela') {
-      await supabase.from('patient_consents').insert({
+      // O resultado E conferido, de proposito.
+      //
+      // Esta gravacao era descartada. Quando quem emitia o termo era o
+      // medico, ela vinha barrada pelo RLS -- a tabela exigia
+      // `pacientes.editar`, que ele nao tem -- e o consentimento nao ficava
+      // registrado em lugar nenhum. O termo saia, a assinatura era gravada,
+      // e o registro que responde "o que o titular autorizou" nao existia.
+      // Pela recepcao funcionava, o que escondia o defeito.
+      const { error: erroConsentimento } = await supabase.from('patient_consents').insert({
         tenant_id: ctx.tenant.id,
         patient_id: atendimento.patient_id,
         purpose: 'compartilhamento_empresa',
@@ -276,6 +284,12 @@ export async function emitirTermoAutorizacao(input: {
         source: 'recepcao',
         created_by: ctx.userId,
       });
+      if (erroConsentimento) {
+        return fail(
+          'O termo foi assinado, mas o consentimento não pôde ser registrado: ' +
+            `${toFriendlyError(erroConsentimento)}. Sem esse registro o termo não vale como prova de autorização.`,
+        );
+      }
     }
 
     await audit(ctx, {
@@ -359,7 +373,9 @@ export async function anexarTermoAssinado(input: {
       .eq('tenant_id', ctx.tenant.id);
     if (error) return fail(toFriendlyError(error));
 
-    await supabase.from('patient_consents').insert({
+    // Conferido pelo mesmo motivo do outro caminho: sem o registro de
+    // consentimento, o termo anexado nao prova autorizacao nenhuma.
+    const { error: erroConsentimento } = await supabase.from('patient_consents').insert({
       tenant_id: ctx.tenant.id,
       patient_id: registro.patient_id,
       purpose: 'compartilhamento_empresa',
@@ -368,6 +384,12 @@ export async function anexarTermoAssinado(input: {
       source: 'recepcao',
       created_by: ctx.userId,
     });
+    if (erroConsentimento) {
+      return fail(
+        'O termo assinado foi anexado, mas o consentimento não pôde ser registrado: ' +
+          `${toFriendlyError(erroConsentimento)}.`,
+      );
+    }
 
     await audit(ctx, {
       action: 'update',

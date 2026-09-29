@@ -74,15 +74,26 @@ export async function auditClinicalAccess(
     const supabase = await createClient();
     const h = await headers();
     const forwarded = h.get('x-forwarded-for');
-    await supabase.from('clinical_access_logs').insert({
-      tenant_id: ctx.tenant.id,
-      user_id: ctx.userId,
-      patient_id: patientId,
-      context,
-      reference_id: referenceId ?? null,
-      ip_address: forwarded ? forwarded.split(',')[0]?.trim() : null,
-      user_agent: h.get('user-agent'),
+
+    // Gravado por uma funcao do banco, e nao direto na tabela.
+    //
+    // `clinical_access_logs` exige `logs.ver` para ler E para escrever. Ler
+    // e certo: a trilha e material de auditoria. Escrever, nao -- quem
+    // escreve e quem abriu o prontuario, e nenhum papel clinico tem
+    // `logs.ver`. O INSERT era barrado, o erro nao era lido, e a trilha
+    // LGPD ficou vazia desde que existe.
+    //
+    // `registrar_acesso_clinico` escreve sem poder ler, e sempre em nome de
+    // quem esta logado.
+    const { error } = await supabase.rpc('registrar_acesso_clinico', {
+      p_tenant: ctx.tenant.id,
+      p_patient: patientId,
+      p_context: context,
+      p_reference: referenceId ?? null,
+      p_ip: forwarded ? (forwarded.split(',')[0]?.trim() ?? null) : null,
+      p_user_agent: h.get('user-agent'),
     });
+    if (error) console.error('[audit] falha no log clínico:', error.message);
   } catch (error) {
     console.error('[audit] falha no log clínico:', error);
   }

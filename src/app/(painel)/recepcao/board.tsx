@@ -27,15 +27,26 @@ import { moveAttendanceStage } from '@/modules/queue/actions';
 import { BlocoGuiaDeExame } from './guia-de-exame';
 import { BlocoAutorizacao } from './autorizacao';
 import type { ProcedimentoOpcao, ReceptionRow } from './types';
+import { montarCobranca, type PrecoNegociado } from '@/modules/companies/precos';
+
+/** Valor negociado por empresa, como vem do banco para esta tela. */
+export interface PrecoDaEmpresa extends PrecoNegociado {
+  company_id: string;
+}
 
 export function ReceptionBoard({
   rows,
   examTypes,
+  precosNegociados,
+  contratoDaEmpresa,
   procedimentos,
   canRegisterPayment,
 }: {
   rows: ReceptionRow[];
   examTypes: { id: string; name: string; code: string; price: number | null }[];
+  precosNegociados: PrecoDaEmpresa[];
+  /** Contrato ativo de cada empresa, quando houver. */
+  contratoDaEmpresa: Record<string, string>;
   procedimentos: ProcedimentoOpcao[];
   canRegisterPayment: boolean;
 }) {
@@ -88,6 +99,8 @@ export function ReceptionBoard({
             key={selected.id}
             row={selected}
             examTypes={examTypes}
+            precosNegociados={precosNegociados}
+            contratoDaEmpresa={contratoDaEmpresa}
             procedimentos={procedimentos}
             canRegisterPayment={canRegisterPayment}
           />
@@ -178,11 +191,15 @@ function SeletorProcedencia({
 function ReceptionDetail({
   row,
   examTypes,
+  precosNegociados,
+  contratoDaEmpresa,
   procedimentos,
   canRegisterPayment,
 }: {
   row: ReceptionRow;
   examTypes: { id: string; name: string; code: string; price: number | null }[];
+  precosNegociados: PrecoDaEmpresa[];
+  contratoDaEmpresa: Record<string, string>;
   procedimentos: ProcedimentoOpcao[];
   canRegisterPayment: boolean;
 }) {
@@ -217,9 +234,32 @@ function ReceptionDetail({
   const [cobranca, setCobranca] = useState<CobrancaRecepcao | null>(null);
   const [pago, setPago] = useState(row.payment_status === 'pago');
 
-  const total = examTypes
-    .filter((e) => selectedExams.includes(e.id))
-    .reduce((soma, e) => soma + Number(e.price ?? 0), 0);
+  // O total da tela e o MESMO que a cobranca vai gerar.
+  //
+  // Esta soma usava `exam_types.price` direto, ignorando o valor negociado
+  // da empresa: o balcao anunciava um total e o Pix do clique seguinte
+  // trazia outro. Agora as duas contas saem da mesma funcao, `montarCobranca`
+  // -- a mesma que `gerarCobrancaRecepcao` usa no servidor.
+  const negociadosDoPaciente = row.company_id
+    ? precosNegociados
+        .filter((p) => p.company_id === row.company_id)
+        .map((p) => ({
+          exam_type_id: p.exam_type_id,
+          contract_id: p.contract_id,
+          price: p.price,
+        }))
+    : [];
+
+  const resumo = montarCobranca(
+    examTypes
+      .filter((e) => selectedExams.includes(e.id))
+      .map((e) => ({ id: e.id, nome: e.name, precoPadrao: e.price ?? 0 })),
+    negociadosDoPaciente,
+    row.company_id ? (contratoDaEmpresa[row.company_id] ?? null) : null,
+  );
+  const total = resumo.total;
+  const valorDoExame = (id: string) =>
+    resumo.itens.find((i) => i.examTypeId === id)?.valor ?? 0;
 
   // Raio-X e coleta laboratorial nao sao feitos aqui: em vez de entrar na
   // fila de uma sala que nao existe, saem como guia impressa no balcao.
@@ -369,10 +409,14 @@ function ReceptionDetail({
                   />
                   <span className="truncate">{e.name}</span>
                 </span>
-                {/* Preço só interessa a quem vai pagar no balcão. */}
+                {/* Preço só interessa a quem vai pagar no balcão. Quando o
+                    exame está marcado, mostra o valor que será de fato
+                    cobrado — o negociado da empresa, se houver. */}
                 {regra.requiresPayment && (
                   <span className="shrink-0 text-xs text-slate-500 tabular-nums">
-                    {formatMoney(e.price ?? 0)}
+                    {formatMoney(
+                      selectedExams.includes(e.id) ? valorDoExame(e.id) : (e.price ?? 0),
+                    )}
                   </span>
                 )}
               </label>

@@ -18,3 +18,8 @@ test-results/
 next-env.d.ts
 /supabase/.temp
 /scraper-artifacts
+
+# Rastro do último dia simulado e logs de execução
+tests/sistema/ultimo-dia.json
+*.log
+

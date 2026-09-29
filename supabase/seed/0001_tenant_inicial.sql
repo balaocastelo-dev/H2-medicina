@@ -143,7 +143,10 @@ begin
   select v_role_atendimento, c from unnest(array[
     'dashboard.ver','pacientes.ver','pacientes.criar','pacientes.editar',
     'agenda.ver','agenda.administrar','empresas.ver','empresas.administrar',
-    'totem.operar','recepcao.operar','filas.operar','painel.operar',
+    -- `exames.concluir` acompanha `filas.operar`: quem chama o paciente
+    -- para a sala precisa poder encerrar o exame e devolver a sala. Sem
+    -- isso a sala fica ocupada por quem ja saiu e a fila para.
+    'totem.operar','recepcao.operar','filas.operar','painel.operar','exames.concluir',
     'financeiro.ver','financeiro.registrar','documentos.emitir','crm.mover_manual',
     'pedidos.administrar','importacoes.executar'
   ]) as c

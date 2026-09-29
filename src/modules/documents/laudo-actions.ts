@@ -11,6 +11,7 @@ import { buildLaudoAudiometria } from './laudo-audiometria';
 import { buildLaudoDeFicha } from './laudo-de-ficha';
 import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
 import { qualLaudo } from './qual-laudo';
+import { conferirIshihara, descreverIshihara } from '@/modules/clinical/ishihara';
 import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
@@ -81,6 +82,7 @@ export async function gerarLaudoDeExame(
     const codigo = exame.exam_types?.code ?? '';
     const ficha = fichaDoExame(codigo);
     const escolha = qualLaudo(codigo);
+
     if (escolha === 'nenhum') {
       return fail(
         `${exame.exam_types?.name ?? 'Este exame'} não tem ficha de preenchimento: ` +
@@ -93,6 +95,44 @@ export async function gerarLaudoDeExame(
 
     const resultado = exame.exam_results?.[0];
     const valores = resultado?.values ?? {};
+
+    // Laudo sem nenhuma medicao nao pode ser emitido.
+    //
+    // Duas situacoes caem aqui, e as duas produziriam o mesmo papel: um PDF
+    // com todos os campos em branco, assinado com o nome de quem clicou,
+    // gravado com codigo de verificacao e entregue a empresa.
+    //
+    //   - a ficha do exame nunca foi preenchida;
+    //   - quem esta emitindo nao enxerga `exam_results`. A leitura exige
+    //     `clinico.ver`, que o papel de atendimento nao tem: o embed volta
+    //     vazio, sem erro nenhum, e o laudo sairia em branco. Isso ficou
+    //     mais provavel depois que a recepcao passou a poder concluir
+    //     exames -- a tela de Filas emite o laudo logo apos a conclusao.
+    //
+    // Recusar e dizer o porque vale mais que um documento vazio no mundo.
+    // O Ishihara e contado pelo sistema, nao pelo examinador.
+    //
+    // O campo "placas acertadas" digitado a mao foi removido justamente
+    // para isso: o numero ia para o prontuario sem nada que permitisse
+    // reconferir, a nao ser repetir o teste no paciente. `conferirIshihara`
+    // compara as 15 leituras com o gabarito e valida a lamina de controle.
+    //
+    // A funcao existia, com teste proprio, e nunca tinha sido chamada por
+    // ninguem: o laudo saia com as respostas listadas e a conclusao vazia.
+    const conclusaoDoExame =
+      codigo === 'ISHIHARA' && !(resultado?.conclusion ?? '').trim()
+        ? descreverIshihara(conferirIshihara(valores as Record<string, string | undefined>))
+        : (resultado?.conclusion ?? null);
+
+    const temMedicao = Object.values(valores).some((v) => String(v ?? '').trim() !== '');
+    if (!temMedicao) {
+      return fail(
+        ctx.permissions.has('clinico.ver')
+          ? 'A ficha deste exame ainda não foi preenchida: sem os valores medidos não há laudo a emitir.'
+          : 'O laudo é montado a partir da ficha do exame, que só quem faz o exame enxerga — ' +
+              'peça a emissão a quem preencheu.',
+      );
+    }
     const paciente = exame.attendances.patients;
     const empresa = exame.attendances.companies;
     const emitidoEm = exame.finished_at ? new Date(exame.finished_at) : new Date();
@@ -167,7 +207,7 @@ export async function gerarLaudoDeExame(
           clinica,
           ficha,
           valores,
-          conclusao: resultado?.conclusion ?? null,
+          conclusao: conclusaoDoExame,
           emitidoEm,
           paciente: dadosDoPaciente,
           empresa: dadosDaEmpresa,

@@ -9,6 +9,11 @@ import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import {
+  montarCobranca,
+  ROTULO_ORIGEM,
+  type PrecoNegociado,
+} from '@/modules/companies/precos';
+import {
   FORA_DA_CLINICA,
   isOriginKind,
   proximaEtapaDaRecepcao,
@@ -378,8 +383,57 @@ export async function gerarCobrancaRecepcao(
       .in('id', examTypeIds)
       .returns<{ id: string; name: string; price: number | null }[]>();
 
-    const itens = (tipos ?? []).map((t) => ({ nome: t.name, valor: Number(t.price ?? 0) }));
-    const valor = itens.reduce((s, i) => s + i.valor, 0);
+    // O valor negociado da empresa, e nao so o preco de tabela.
+    //
+    // "os valores de cada atendimento de paciente nao estao de acordo com os
+    //  cadastrados na aba empresa" -- Isabella, 29/09.
+    //
+    // A regra de precedencia ja existia em `montarCobranca`, escrita e
+    // testada desde o inicio -- e nunca tinha sido ligada aqui. A cobranca
+    // lia `exam_types.price` direto, entao a tabela que a clinica preenchia
+    // na aba Empresa era gravada, era exibida, e nao valia na hora de cobrar.
+    let negociados: PrecoNegociado[] = [];
+    let contratoId: string | null = null;
+
+    if (atendimento.company_id) {
+      // O contrato vigente ganha do preco geral da empresa. Sem contrato
+      // ativo, vale o preco geral; sem nenhum dos dois, o de tabela.
+      const [{ data: precos }, { data: contrato }] = await Promise.all([
+        supabase
+          .from('company_exam_prices')
+          .select('exam_type_id, contract_id, price')
+          .eq('tenant_id', ctx.tenant.id)
+          .eq('company_id', atendimento.company_id)
+          .in('exam_type_id', examTypeIds)
+          .returns<PrecoNegociado[]>(),
+        supabase
+          .from('company_contracts')
+          .select('id')
+          .eq('tenant_id', ctx.tenant.id)
+          .eq('company_id', atendimento.company_id)
+          .eq('status', 'ativo')
+          .is('deleted_at', null)
+          .order('starts_on', { ascending: false })
+          .limit(1)
+          .returns<{ id: string }[]>(),
+      ]);
+      negociados = precos ?? [];
+      contratoId = contrato?.[0]?.id ?? null;
+    }
+
+    const resumo = montarCobranca(
+      (tipos ?? []).map((t) => ({ id: t.id, nome: t.name, precoPadrao: t.price ?? 0 })),
+      negociados,
+      contratoId,
+    );
+
+    // A recepcao precisa saber de onde veio cada valor: "por que este
+    // paciente pagou menos?" e uma pergunta que o balcao recebe.
+    const itens = resumo.itens.map((i) => ({
+      nome: `${i.nome} (${ROTULO_ORIGEM[i.origem]})`,
+      valor: i.valor,
+    }));
+    const valor = resumo.total;
     if (valor <= 0) {
       return fail('Os exames selecionados nao possuem preco cadastrado.');
     }

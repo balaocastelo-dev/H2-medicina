@@ -4,9 +4,31 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
     testTimeout: 60000,
     hookTimeout: 120000,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'unidade-e-integracao',
+          include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
+        },
+      },
+      {
+        // Testes que exercitam as SERVER ACTIONS de verdade contra um
+        // Postgres real. Ficam num projeto separado porque precisam de um
+        // setup que substitui `@/lib/supabase/server` — e esse setup nao
+        // pode valer para os testes que falam SQL direto.
+        extends: true,
+        test: {
+          name: 'sistema',
+          include: ['tests/sistema/**/*.test.ts'],
+          setupFiles: ['tests/setup-acoes.ts'],
+          testTimeout: 180000,
+          hookTimeout: 300000,
+        },
+      },
+    ],
   },
   resolve: {
     alias: {

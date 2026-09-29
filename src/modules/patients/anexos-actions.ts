@@ -22,7 +22,17 @@ export async function anexarExame(
   formData: FormData,
 ): Promise<ActionResult> {
   try {
-    const ctx = await assertPermission('pacientes.editar');
+    // Anexar resultado de exame e ato clinico, e a permissao precisa ser a
+    // mesma que o RLS da tabela exige.
+    //
+    // Esta linha pedia `pacientes.editar`, que e de outro eixo, e o
+    // resultado era que NINGUEM conseguia anexar e ver:
+    //   - a recepcao tem `pacientes.editar`, passava aqui, e o INSERT em
+    //     `patient_attachments` era barrado (exige `exames.preencher`). O
+    //     arquivo ja tinha subido para o balde: sobrava orfao;
+    //   - o medico tem `exames.preencher` e `clinico.ver`, tudo que o RLS
+    //     pede -- e era barrado na porta, por esta linha.
+    const ctx = await assertPermission('exames.preencher');
     const supabase = await createClient();
 
     const arquivo = formData.get('arquivo');
@@ -110,7 +120,9 @@ export async function urlDoAnexo(anexoId: string): Promise<ActionResult<{ url: s
 
 export async function removerAnexo(anexoId: string): Promise<ActionResult> {
   try {
-    const ctx = await assertPermission('pacientes.editar');
+    // Mesma permissao de anexar: quem pode pendurar um laudo no prontuario
+    // e quem pode tira-lo.
+    const ctx = await assertPermission('exames.preencher');
     const supabase = await createClient();
 
     const { data: anexo } = await supabase

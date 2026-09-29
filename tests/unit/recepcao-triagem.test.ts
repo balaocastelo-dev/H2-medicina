@@ -37,13 +37,29 @@ describe('proximaEtapaDaRecepcao', () => {
     }
   });
 
-  it('sem triagem e com exame, segue a regra da procedencia', () => {
+  it('sem triagem e com exame, TODA procedencia vai para a fila de exames', () => {
+    // Esta afirmacao dizia "segue a regra da procedencia", e era o defeito:
+    // pericia e SISPER com exame marcado iam direto ao consultorio e o
+    // exame ficava pendente para sempre, porque a chamada de sala so
+    // enxerga quem esta em 'aguardando_exames' ou 'em_exames'.
+    //
+    // Exame marcado vem primeiro, qualquer que seja a procedencia. A ida ao
+    // medico nao se perde: quando o ultimo exame termina, o gatilho olha a
+    // procedencia e encaminha.
+    for (const originKind of TODAS) {
+      expect(proximaEtapaDaRecepcao({ originKind, needsTriage: false, temExames: true })).toBe(
+        'aguardando_exames',
+      );
+    }
+  });
+
+  it('sem triagem e SEM exame, segue a regra da procedencia', () => {
     for (const originKind of TODAS) {
       const esperado =
-        regraDe(originKind).afterTriage === 'medico' ? 'aguardando_medico' : 'aguardando_exames';
-      expect(
-        proximaEtapaDaRecepcao({ originKind, needsTriage: false, temExames: true }),
-      ).toBe(esperado);
+        regraDe(originKind).afterTriage === 'medico' ? 'aguardando_medico' : 'aguardando_medico';
+      expect(proximaEtapaDaRecepcao({ originKind, needsTriage: false, temExames: false })).toBe(
+        esperado,
+      );
     }
   });
 });

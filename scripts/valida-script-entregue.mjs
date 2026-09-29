@@ -84,11 +84,21 @@ const { rows } = await db.query(`
        and not coalesce(ocupa_sala, true) and default_room_id is null) as romberg_ok,
     (select count(*)::int from public.room_exam_types ret
        join public.exam_types et on et.id = ret.exam_type_id where et.code = 'ROMBERG') as romberg_em_sala,
-    (select count(*)::int from pg_proc where proname = 'can_access_any') as tem_can_access_any`);
+    (select count(*)::int from pg_proc where proname = 'can_access_any') as tem_can_access_any,
+    (select count(*)::int from pg_proc where proname = 'atendimento_tem_parecer') as tem_parecer_fn,
+    (select count(*)::int from pg_proc where proname = 'registrar_acesso_clinico') as tem_log_fn,
+    (select count(*)::int from public.role_permissions rp
+       join public.roles r on r.id = rp.role_id
+      where r.code = 'atendimento' and rp.permission_code = 'exames.concluir') as recepcao_conclui`);
 const r = rows[0];
 console.log('\nconferencia:', JSON.stringify(r));
 
-if (r.romberg_ok !== 1 || r.romberg_em_sala !== 0 || r.tem_can_access_any !== 1) {
+const faltando = Object.entries(r)
+  .filter(([k, v]) => (k === 'romberg_em_sala' ? v !== 0 : v < 1))
+  .map(([k]) => k);
+
+if (faltando.length > 0) {
+  console.error(`✗ faltou no banco: ${faltando.join(', ')}`);
   console.error('✗ o script rodou mas nao deixou o banco no estado esperado');
   process.exit(1);
 }

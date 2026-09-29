@@ -54,11 +54,25 @@ describe('procedência do paciente', () => {
       ).toBe('aguardando_medico');
     });
 
-    it('não desvia o paciente do Estado para a fila de exames', () => {
-      // Mesmo com exame marcado, o destino continua sendo o consultório:
-      // a fila de exames não é o caminho dele.
+    it('com exame marcado, o paciente do Estado faz o exame ANTES do médico', () => {
+      // Esta afirmação dizia o contrário até 29/09, e estava errada — eu a
+      // escrevi em 25/09 ao corrigir o SISPER e generalizei demais.
+      //
+      // Mandar direto ao consultório com exame pendente prendia o exame
+      // para sempre: `call_next_for_room` só enxerga quem está em
+      // 'aguardando_exames' ou 'em_exames'. Nenhuma sala podia chamá-lo, e
+      // o paciente ia ao médico com o exame por fazer.
+      //
+      // Ir aos exames primeiro não perde a ida ao médico: ao concluir o
+      // último exame, o gatilho olha a procedência e encaminha.
       expect(
         proximaEtapaDaRecepcao({ originKind: 'estado', needsTriage: false, temExames: true }),
+      ).toBe('aguardando_exames');
+    });
+
+    it('sem exame marcado, o paciente do Estado vai direto ao consultório', () => {
+      expect(
+        proximaEtapaDaRecepcao({ originKind: 'estado', needsTriage: false, temExames: false }),
       ).toBe('aguardando_medico');
     });
 
@@ -69,8 +83,14 @@ describe('procedência do paciente', () => {
         expect(proximaEtapaDaRecepcao({ originKind: kind, needsTriage: true, temExames: true })).toBe(
           'aguardando_triagem',
         );
+        // Com exame marcado, a fila de exames vem primeiro — senão o exame
+        // fica pendente e nenhuma sala consegue chamá-lo.
         expect(
           proximaEtapaDaRecepcao({ originKind: kind, needsTriage: false, temExames: true }),
+        ).toBe('aguardando_exames');
+
+        expect(
+          proximaEtapaDaRecepcao({ originKind: kind, needsTriage: false, temExames: false }),
         ).toBe('aguardando_medico');
       }
     });
@@ -92,6 +112,8 @@ describe('procedência do paciente', () => {
           }),
         ).toBe('aguardando_medico');
 
+        // Com exame marcado o destino imediato é a fila de exames, e o
+        // médico vem depois dela — não em vez dela.
         expect(
           proximaEtapaDaRecepcao({
             originKind: kind,
@@ -99,7 +121,7 @@ describe('procedência do paciente', () => {
             temExames: true,
             temConsulta: false,
           }),
-        ).toBe('aguardando_medico');
+        ).toBe('aguardando_exames');
       }
     });
 

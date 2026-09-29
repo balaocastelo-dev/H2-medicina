@@ -195,6 +195,19 @@ export function proximaEtapaDaRecepcao(input: {
   const regra = REGRAS[input.originKind];
   const temConsulta = input.temConsulta ?? true;
 
+  // Exame marcado vem antes de tudo, qualquer que seja a procedencia.
+  //
+  // Esta linha estava DEPOIS da regra de procedencia, e era um buraco: uma
+  // pericia com audiometria marcada ia direto ao consultorio, e a
+  // audiometria ficava pendente para sempre. A sala nao podia chama-la,
+  // porque `call_next_for_room` so enxerga quem esta em 'aguardando_exames'
+  // ou 'em_exames' -- o paciente era chamado ao medico com o exame por
+  // fazer, e o exame nunca acontecia.
+  //
+  // Mandar aos exames primeiro nao perde a ida ao medico: quando o ultimo
+  // exame termina, o gatilho ve a procedencia e encaminha ao consultorio.
+  if (input.temExames) return 'aguardando_exames';
+
   // Procedencia que existe para ir ao medico vai ao medico.
   //
   // "os pacientes que eu categorizo como sisper ao clicar em encaminhar
@@ -213,13 +226,11 @@ export function proximaEtapaDaRecepcao(input: {
   // Nada a fazer aqui dentro: nem exame, nem consulta. Segue para o
   // pagamento, que e o passo seguinte da esteira -- mandar ao consultorio
   // colocaria o paciente numa fila para uma consulta que ninguem pediu.
-  if (!input.temExames && !temConsulta) return 'aguardando_pagamento';
+  if (!temConsulta) return 'aguardando_pagamento';
 
   // Sem exame para fazer, mandar para a fila deixaria o paciente parado:
   // nao ha exame para concluir e nada dispara a etapa seguinte.
-  if (!input.temExames) return 'aguardando_medico';
-
-  return 'aguardando_exames';
+  return 'aguardando_medico';
 }
 
 /**

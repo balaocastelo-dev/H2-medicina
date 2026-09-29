@@ -15,7 +15,7 @@ import {
   formatMoney,
   formatTime,
 } from '@/lib/format';
-import { regraDe } from '@/modules/queue/origin-kind';
+import { regraDe, DENTRO_DO_FORMULARIO_DA_CONSULTA } from '@/modules/queue/origin-kind';
 import { avaliarFichaClinica } from './ficha-clinica';
 import { montarComprovanteImpresso } from './comprovante-texto';
 import { gerarLaudoDeExame } from './laudo-actions';
@@ -465,12 +465,16 @@ export async function emitirDocumentosDeSaida(
 
     const { data: at } = await supabase
       .from('attendances')
-      .select('id, origin_kind, medical_consultations(verdict, psicossocial)')
+      .select(
+        'id, origin_kind, procedure_code, companies(emite_ficha_clinica), medical_consultations(verdict, psicossocial)',
+      )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
         origin_kind: string | null;
+        procedure_code: string | null;
+        companies: Embutido<{ emite_ficha_clinica: boolean }>;
         medical_consultations: Embutido<{
           verdict: string | null;
           psicossocial: Record<string, unknown> | null;
@@ -479,29 +483,118 @@ export async function emitirDocumentosDeSaida(
 
     if (!at) return fail('Atendimento não encontrado.');
 
+    const emitidos: string[] = [];
+    const falhas: string[] = [];
     const ehParticular = (at.origin_kind ?? 'particular') === 'particular';
-    const temParecer = Boolean(umDo(at.medical_consultations)?.verdict);
+
+    // Ha parecer? Perguntado ao banco, e nao lido do embed acima.
+    //
+    // Quem encerra o atendimento costuma ser a recepcao, e a recepcao NAO
+    // enxerga `medical_consultations`: a leitura exige `clinico.ver`, que o
+    // papel de atendimento nao tem -- e nao deve ter. O embed voltava vazio,
+    // o sistema concluia "nao ha parecer" e o kit acusava o medico de nao
+    // ter preenchido uma consulta que ele tinha assinado.
+    //
+    // `atendimento_tem_parecer` responde sim ou nao sem devolver nada do
+    // conteudo clinico.
+    const { data: temParecerRpc } = await supabase.rpc('atendimento_tem_parecer', {
+      p_attendance: attendanceId,
+    });
+    const temParecer =
+      Boolean(temParecerRpc) || Boolean(umDo(at.medical_consultations)?.verdict);
 
     const kinds: { kind: DocumentKind; nome: string }[] = [
       { kind: 'comprovante_comparecimento', nome: 'comprovante de comparecimento' },
       { kind: 'recibo', nome: 'recibo de pagamento' },
       { kind: 'comprovante_agendamento', nome: 'comprovante de agendamento' },
-      // "essa ficha clinica deve sair pra cada paciente com as informacoes
-      //  preenchidas" -- Isabella, 15/09.
-      { kind: 'ficha_clinica', nome: 'ficha clínica' },
     ];
+
+    // -----------------------------------------------------------------
+    // Ficha clinica: so quando a regra manda, e so por quem enxerga o
+    // conteudo clinico.
+    //
+    // "essa ficha clinica deve sair pra cada paciente com as informacoes
+    //  preenchidas" -- Isabella, 15/09. E "emitir ficha clinica exceto para
+    //  pericia, acl, sisper e empresa agape".
+    //
+    // Duas coisas estavam erradas aqui:
+    //
+    //   1. A ficha era tentada SEMPRE. Para SISPER e pericia a emissao e
+    //      recusada por regra, e o kit anunciava isso como FALHA: a clinica
+    //      lia "Nao saiu: ficha clinica" todo dia e achava que algo tinha
+    //      quebrado. Nao tinha: e a regra funcionando.
+    //
+    //   2. Quando quem encerra e a recepcao, `triages` e
+    //      `medical_consultations` voltam vazios -- a leitura exige
+    //      `clinico.ver`. A ficha saia com "sem triagem registrada", sem
+    //      nenhum bloco do medico e sem a conclusao, e mesmo assim era
+    //      gravada como documento valido, com codigo de verificacao.
+    // -----------------------------------------------------------------
+    const naoSeAplica: string[] = [];
+    const podeLerOClinico = ctx.permissions.has('clinico.ver');
+
+    let procedimentoEmiteFicha: boolean | null = null;
+    if (at.procedure_code) {
+      const { data: procedimento } = await supabase
+        .from('procedure_types')
+        .select('emite_ficha_clinica')
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('code', at.procedure_code)
+        .maybeSingle<{ emite_ficha_clinica: boolean }>();
+      procedimentoEmiteFicha = procedimento?.emite_ficha_clinica ?? null;
+    }
+
+    const regraDaFicha = avaliarFichaClinica({
+      origin_kind: at.origin_kind,
+      procedimentoEmiteFicha,
+      empresaEmiteFicha: umDo(at.companies)?.emite_ficha_clinica ?? null,
+    });
+
+    // Ja emitida pelo medico ao assinar a consulta? Entao nada a fazer: o
+    // bloco de "ja estavam prontos" a lista. Emitir de novo criaria uma
+    // segunda ficha clinica para o mesmo atendimento.
+    const { data: fichaExistente } = await supabase
+      .from('documents')
+      .select('id')
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('attendance_id', attendanceId)
+      .eq('kind', 'ficha_clinica')
+      .is('deleted_at', null)
+      .limit(1)
+      .returns<{ id: string }[]>();
+
+    if ((fichaExistente ?? []).length > 0) {
+      // Nada a fazer.
+    } else if (!temParecer) {
+      // Sem consulta nao ha ficha clinica: ela e montada a partir da
+      // triagem e do que o medico registrou. Quem so fez um exame de sala
+      // e foi embora nao passou por medico nenhum.
+      naoSeAplica.push('ficha clínica (o paciente não passou por consulta médica)');
+    } else if (!regraDaFicha.emite) {
+      naoSeAplica.push(`ficha clínica (${regraDaFicha.motivo ?? 'não se aplica a este atendimento'})`);
+    } else if (!podeLerOClinico) {
+      falhas.push(
+        'ficha clínica (é montada a partir da triagem e da consulta, que só o médico enxerga — ' +
+          'peça a ele para emitir pela aba Documentos)',
+      );
+    } else {
+      kinds.push({ kind: 'ficha_clinica', nome: 'ficha clínica' });
+    }
 
     // O psicossocial so entra no kit se o medico respondeu: emitir folha em
     // branco nao ajuda ninguem, e o documento nao vale para quem nao fez.
-    const psicossocialRespondido = Object.values(
-      (umDo(at.medical_consultations)?.psicossocial ?? {}) as Record<string, unknown>,
-    ).some((v) => String(v ?? '').trim() !== '');
-    if (psicossocialRespondido) {
-      kinds.push({ kind: 'avaliacao_psicossocial', nome: 'avaliação psicossocial' });
+    //
+    // A pergunta so pode ser feita por quem enxerga a consulta. Para a
+    // recepcao o embed volta vazio, e o psicossocial nunca entrava no kit
+    // mesmo preenchido -- em silencio, sem aparecer nem como falha.
+    if (podeLerOClinico) {
+      const psicossocialRespondido = Object.values(
+        (umDo(at.medical_consultations)?.psicossocial ?? {}) as Record<string, unknown>,
+      ).some((v) => String(v ?? '').trim() !== '');
+      if (psicossocialRespondido) {
+        kinds.push({ kind: 'avaliacao_psicossocial', nome: 'avaliação psicossocial' });
+      }
     }
-
-    const emitidos: string[] = [];
-    const falhas: string[] = [];
 
     for (const { kind, nome } of kinds) {
       const resultado = await generateAttendanceDocument(attendanceId, kind);
@@ -521,8 +614,32 @@ export async function emitirDocumentosDeSaida(
     // que o documento nao saiu. Agora o kit diz o porque.
     // -----------------------------------------------------------------
     if (ehParticular) {
-      if (!temParecer) {
+      // O A.S.O. ja sai quando o medico assina a consulta. Reemitir aqui
+      // criaria um segundo documento com outro codigo de verificacao para o
+      // mesmo atendimento -- dois A.S.O. validos para o mesmo exame.
+      const { data: asoExistente } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('attendance_id', attendanceId)
+        .eq('kind', 'aso')
+        .is('deleted_at', null)
+        .limit(1)
+        .returns<{ id: string }[]>();
+
+      if ((asoExistente ?? []).length > 0) {
+        // Nada a fazer: o bloco de "ja estavam prontos", mais abaixo, lista
+        // este A.S.O. junto com a guia e os laudos que sairam na sala.
+      } else if (!temParecer) {
         falhas.push('A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido)');
+      } else if (!ctx.permissions.has('clinico.ver')) {
+        // Ha parecer, mas quem esta encerrando nao pode ler a consulta para
+        // montar o documento. Dizer a verdade e apontar quem resolve vale
+        // mais do que uma mensagem que parece culpa de outro.
+        falhas.push(
+          'A.S.O. (o documento é montado a partir da consulta, que só o médico enxerga — ' +
+            'peça a ele para reemitir pela aba Documentos)',
+        );
       } else {
         const aso = await gerarAso(ctx, attendanceId);
         if (aso.ok) emitidos.push('A.S.O.');
@@ -564,8 +681,17 @@ export async function emitirDocumentosDeSaida(
       .returns<{ id: string; exam_types: { code: string; name: string } | null }[]>();
 
     for (const exame of exames ?? []) {
+      const codigo = exame.exam_types?.code;
       if (comLaudo.has(exame.id)) continue;
-      if (!fichaDoExame(exame.exam_types?.code)) continue;
+      if (!fichaDoExame(codigo)) continue;
+
+      // O que o medico responde DENTRO do formulario da consulta nao tem
+      // laudo proprio: as respostas ficam em `medical_consultations`, nao
+      // em `exam_results`. O psicossocial tem documento proprio
+      // (`avaliacao_psicossocial`), emitido mais acima; a consulta clinica
+      // vira a ficha clinica. Tentar um laudo generico aqui buscaria uma
+      // ficha que nunca existiu e acusaria falha em todo atendimento.
+      if (codigo && DENTRO_DO_FORMULARIO_DA_CONSULTA.has(codigo)) continue;
 
       const laudo = await gerarLaudoDeExame(exame.id);
       const nome = `laudo de ${(exame.exam_types?.name ?? 'exame').toLowerCase()}`;
@@ -604,10 +730,16 @@ export async function emitirDocumentosDeSaida(
         ? `${total} documentos no kit (${jaExistiam.length} já estavam prontos).`
         : `${emitidos.length} documentos emitidos.`;
 
-    return ok(
-      { emitidos, falhas, jaExistiam },
-      falhas.length === 0 ? base : `${base} Não saiu: ${falhas.join('; ')}.`,
-    );
+    // "Nao se aplica" nao e "nao saiu".
+    //
+    // A ficha clinica de uma pericia nao falhou: ela nao existe para esse
+    // tipo de atendimento. Anunciar isso como falha fazia a clinica procurar
+    // defeito onde ha regra -- todo dia, em todo SISPER.
+    const naoSaiu = falhas.length > 0 ? ` Não saiu: ${falhas.join('; ')}.` : '';
+    const foraDaRegra =
+      naoSeAplica.length > 0 ? ` Não se aplica a este atendimento: ${naoSeAplica.join('; ')}.` : '';
+
+    return ok({ emitidos, falhas, jaExistiam }, `${base}${naoSaiu}${foraDaRegra}`);
   } catch (error) {
     return fail(toFriendlyError(error));
   }
