@@ -22,8 +22,12 @@ export default async function RelatoriosPage({
       .from('attendances')
       .select('id, checkin_at, finished_at, stage_code, companies(trade_name, legal_name)')
       .eq('tenant_id', ctx.tenant.id)
-      .gte('checkin_at', `${from}T00:00:00`)
-      .lte('checkin_at', `${to}T23:59:59`)
+      // `-03:00` explicito: sem o fuso, o Postgres le a string como UTC e a
+      // janela real vira 21h a 20h59 de Sao Paulo — o relatorio perdia as
+      // tres ultimas horas do ultimo dia e ganhava as tres ultimas do dia
+      // anterior ao primeiro.
+      .gte('checkin_at', `${from}T00:00:00-03:00`)
+      .lte('checkin_at', `${to}T23:59:59-03:00`)
       .is('deleted_at', null)
       .returns<
         {
@@ -38,11 +42,12 @@ export default async function RelatoriosPage({
       .from('patient_exams')
       .select('id, status, duration_seconds, exam_types(name)')
       .eq('tenant_id', ctx.tenant.id)
-      .gte('created_at', `${from}T00:00:00`)
+      .gte('created_at', `${from}T00:00:00-03:00`)
       // Faltava o `.lte`: escolher 01/08 a 15/08 trazia tudo de 01/08 ATE
       // HOJE, com o cabecalho dizendo "Periodo de 01/08 a 15/08". Fechava-se
-      // um mes com numero de dois.
-      .lte('created_at', `${to}T23:59:59`)
+      // um mes com numero de dois. O `-03:00` e obrigatorio: sem ele a
+      // janela escorrega tres horas.
+      .lte('created_at', `${to}T23:59:59-03:00`)
       .returns<
         {
           id: string;
@@ -56,9 +61,9 @@ export default async function RelatoriosPage({
           .from('payments')
           .select('status, net_amount, method')
           .eq('tenant_id', ctx.tenant.id)
-          .gte('created_at', `${from}T00:00:00`)
+          .gte('created_at', `${from}T00:00:00-03:00`)
           // Mesmo `.lte` que faltava nos exames — aqui o numero e dinheiro.
-          .lte('created_at', `${to}T23:59:59`)
+          .lte('created_at', `${to}T23:59:59-03:00`)
           .is('deleted_at', null)
           .returns<{ status: string; net_amount: number; method: string }[]>()
       : Promise.resolve({ data: [] as { status: string; net_amount: number; method: string }[] }),

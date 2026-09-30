@@ -36,11 +36,25 @@ begin
   end if;
 
   -- ---------------- MARCA ----------------
-  insert into public.tenant_branding (tenant_id, system_name, color_primary, color_secondary, color_accent, color_sidebar, footer_text)
+  -- Os caminhos do logo apontam para `public/marca/`, que vai no deploy
+  -- (`outputFileTracingIncludes` no next.config.ts) e e lido direto do disco
+  -- pelo gerador de PDF. Sem estas tres linhas, TODO documento -- A.S.O.,
+  -- guia, laudo -- saia sem logo, e a home mostrava as iniciais "H2" no lugar
+  -- da marca: nenhum seed definia o logo, e a clinica nao tinha como saber
+  -- que era so preencher o campo.
+  insert into public.tenant_branding (tenant_id, system_name, color_primary, color_secondary, color_accent, color_sidebar, footer_text,
+                                      logo_url, logo_compact_url, favicon_url)
   values (v_tenant, 'H2 Medicina Ocupacional', '#0F766E', '#0EA5E9', '#F59E0B', '#0B1220',
-          'Desenvolvido pelo Balao da Informatica')
+          'Desenvolvido pelo Balao da Informatica',
+          '/marca/h2-logo.png', '/marca/h2-logo-compacto.png', '/marca/h2-favicon.png')
   on conflict (tenant_id) do update
-    set system_name = excluded.system_name, footer_text = excluded.footer_text;
+    set system_name = excluded.system_name,
+        footer_text = excluded.footer_text,
+        -- `coalesce` para nao sobrescrever logo que a clinica tenha subido
+        -- pela tela de Configuracoes: o seed preenche o que esta vazio.
+        logo_url = coalesce(public.tenant_branding.logo_url, excluded.logo_url),
+        logo_compact_url = coalesce(public.tenant_branding.logo_compact_url, excluded.logo_compact_url),
+        favicon_url = coalesce(public.tenant_branding.favicon_url, excluded.favicon_url);
 
   -- ---------------- CONFIGURACOES (todas editaveis no painel) ----------------
   insert into public.tenant_settings (tenant_id, group_key, settings) values

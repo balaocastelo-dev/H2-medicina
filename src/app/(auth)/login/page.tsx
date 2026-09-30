@@ -6,9 +6,9 @@ import { LoginForm } from './login-form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ proximo?: string }>;
+  searchParams: Promise<{ proximo?: string; sessao?: string }>;
 }) {
-  const { proximo } = await searchParams;
+  const { proximo, sessao } = await searchParams;
 
   // Lido com a chave de servico: `tenants` e `tenant_branding` estao sob
   // RLS e o visitante da tela de login ainda nao tem sessao. Sem isso o
@@ -34,6 +34,24 @@ export default async function LoginPage({
         <h1 className="mt-3 text-xl font-semibold text-slate-900">{systemName}</h1>
         <p className="text-sm text-slate-500">Acesse com suas credenciais</p>
       </div>
+
+      {/*
+        Sessao valida sem perfil: o usuario existe no Supabase Auth e nao tem
+        `profiles`, papel, clinica, ou esta inativo/bloqueado. Antes isso dava
+        tela branca com ERR_TOO_MANY_REDIRECTS; agora diz o que fazer.
+      */}
+      {sessao === 'sem-perfil' && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+        >
+          <p className="font-semibold">Seu acesso ainda não está liberado</p>
+          <p className="mt-1">
+            Seu usuário existe, mas falta o cadastro no sistema (ou ele foi bloqueado). Peça a quem
+            administra para conferir seu perfil e seu papel, e entre novamente.
+          </p>
+        </div>
+      )}
 
       <LoginForm next={proximo} primaryColor={cor} />
 

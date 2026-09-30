@@ -357,24 +357,31 @@ export async function cancelarRepasseDoAtendimento(
   const jaPagos = (lancamentos ?? []).filter((l) => l.status === 'pago').length;
   if (emAberto.length === 0) return { cancelados: 0, jaPagos };
 
-  const { data: cancelados } = await supabase
-    .from('fee_entries')
-    .update({
-      status: 'cancelado',
-      // Anexa, nao substitui: a observacao pode ja trazer um ajuste de valor.
-      notes: motivo.slice(0, 240),
-      updated_by: ctx.userId,
-    })
-    .in(
-      'id',
-      emAberto.map((l) => l.id),
-    )
-    .eq('tenant_id', ctx.tenant.id)
-    .eq('status', 'a_pagar')
-    .select('id')
-    .returns<{ id: string }[]>();
+  // Um UPDATE por lancamento, para ANEXAR a observacao em vez de substituir.
+  //
+  // O comentario prometia anexar e o codigo sobrescrevia: `ajustarValorDoRepasse`
+  // grava em `notes` a trilha do valor ("Valor corrigido de 100,00 para
+  // 130,00 — plantao"), e o cancelamento apagava justamente a prova do acerto
+  // que a clinica ja tinha combinado com o medico.
+  const linha = `Cancelado: ${motivo}`;
+  let quantos = 0;
 
-  const quantos = cancelados?.length ?? 0;
+  for (const l of emAberto) {
+    const { data: cancelado } = await supabase
+      .from('fee_entries')
+      .update({
+        status: 'cancelado',
+        notes: [l.notes, linha].filter(Boolean).join('\n').slice(0, 1000),
+        updated_by: ctx.userId,
+      })
+      .eq('id', l.id)
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('status', 'a_pagar')
+      .select('id')
+      .maybeSingle<{ id: string }>();
+    if (cancelado) quantos += 1;
+  }
+
   if (quantos > 0) {
     await audit(ctx, {
       action: 'update',

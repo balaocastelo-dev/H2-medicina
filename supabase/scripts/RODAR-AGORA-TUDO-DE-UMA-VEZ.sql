@@ -1,7 +1,7 @@
 -- =====================================================================
 -- RODAR AGORA -- H2 Medicina Ocupacional
 --
--- Migrations 0041 a 0052, na ordem, num arquivo so.
+-- Migrations 0041 a 0054, na ordem, num arquivo so.
 --
 -- COMO USAR
 --   1. Supabase > SQL Editor > New query
@@ -24,6 +24,11 @@
 --   0050  uma cobranca da recepcao em aberto por atendimento
 --   0051  reabrir atendimento devolve os exames dele
 --   0052  medico volta a guardar e usar a propria assinatura
+--   0053  a trava do portal funciona em Supabase hospedado
+--   0054  o indice da recepcao nao barra a cobranca do Financeiro
+--
+-- DEPOIS DE RODAR
+--   Abra /api/health no sistema. Tem de responder status "ok".
 -- =====================================================================
 
 
@@ -1649,10 +1654,17 @@ comment on function public.next_ticket_sequence(uuid, date, text) is
 -- ---------------------------------------------------------------------
 -- Antes do indice, limpar o que a corrida ja deixou: cobrancas abertas
 -- repetidas do mesmo atendimento. Fica a mais antiga (e a que tem o Pix
--- que o paciente pode ter recebido); as outras sao canceladas com motivo.
+-- que o paciente pode ter recebido); as outras sao canceladas.
 --
 -- Sem esta limpeza a criacao do indice falharia em qualquer banco que ja
 -- tenha sofrido o defeito.
+--
+-- `payment_transactions` NAO recebe linha aqui, e e de proposito: estas
+-- cobrancas nunca existiram como cobranca de verdade — sao o mesmo valor
+-- lancado duas vezes pela corrida entre duas telas. Registrar um
+-- "cancelamento" de cada uma no livro sugeriria movimento que nao houve. A
+-- procedencia delas esta neste arquivo, e a `raise notice` do fim diz
+-- quantas foram.
 -- ---------------------------------------------------------------------
 with repetidas as (
   select id,
@@ -1868,7 +1880,10 @@ update public.patient_exams pe
    set status = 'pendente',
        queued_at = null,
        called_at = null,
-       started_at = null
+       started_at = null,
+       -- Mesma regra do `elsif` da funcao: sala escolhida a mao fica; sala
+       -- herdada da chamada anterior sai, para a fila repartir de novo.
+       room_id = case when pe.sala_escolhida_a_mao then pe.room_id else null end
   from public.attendances a
  where pe.attendance_id = a.id
    and a.stage_code in ('aguardando_exames','em_exames')
@@ -1877,10 +1892,24 @@ update public.patient_exams pe
    and a.absent_at is null
    and a.deleted_at is null
    and pe.status = 'cancelado'
+   -- `nao_realizado` entra na lista.
+   --
+   -- E o status de "o paciente nao fez": recusou, foi embora, foi tirado da
+   -- fila. Sem ele aqui, um atendimento com UM exame nao realizado e os
+   -- outros cancelados a mao satisfazia o `not exists`, e todos os
+   -- cancelados voltavam para a fila — exames que a clinica decidiu nao
+   -- fazer reaparecendo nas salas.
+   --
+   -- Qualquer sinal de que alguem mexeu nos exames deste atendimento manda
+   -- deixar como esta. Os sete valores do enum sao: pendente, em_fila,
+   -- chamado, em_andamento, concluido, nao_realizado, cancelado — e so o
+   -- ultimo fica de fora desta lista, que e justamente o que se conserta.
    and not exists (
      select 1 from public.patient_exams outro
       where outro.attendance_id = a.id
-        and outro.status in ('pendente','em_fila','chamado','em_andamento','concluido'));
+        and outro.status in (
+          'pendente','em_fila','chamado','em_andamento','concluido',
+          'nao_realizado'));
 
 
 do $$
@@ -2042,4 +2071,242 @@ begin
    where schemaname = 'storage' and tablename = 'objects'
      and policyname like 'wl_signatures%';
   raise notice 'Politicas do bucket de assinaturas: % (esperado 4)', v_politicas;
+end$$;
+
+
+-- #####################################################################
+-- 0053_trava_do_portal_funciona_em_producao.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0053 - A trava do portal do paciente funciona onde importa
+--
+-- ---------------------------------------------------------------------
+-- O defeito, que era meu e desta noite
+-- ---------------------------------------------------------------------
+-- As duas funcoes da 0048 chamam `digest(p_cpf, 'sha256')`, que vem do
+-- pgcrypto, com `set search_path = public, pg_temp`.
+--
+-- No banco de teste isso funciona: a 0001 roda `create extension pgcrypto`
+-- e a extensao cai em `public`. No Supabase hospedado o pgcrypto JA VEM
+-- instalado, no schema `extensions` — logo o `create extension if not
+-- exists` da 0001 e no-op e `digest` NAO esta em `public`.
+--
+-- Com o `search_path` sem `extensions`, as duas funcoes levantavam
+-- "function digest(text, unknown) does not exist". E o codigo falha ABERTO:
+-- `.rpc()` devolve `{ data: null, error }` sem lancar, o erro e descartado,
+-- `null` nao e `false`, e a trava simplesmente nao contava nada.
+--
+-- Ou seja: a protecao contra forca bruta existia no teste e nao existia na
+-- clinica, sem uma linha de log dizendo isso. O pior tipo de defeito.
+--
+-- ---------------------------------------------------------------------
+-- A correcao: `sha256`, que e do proprio Postgres
+-- ---------------------------------------------------------------------
+-- `sha256(bytea)` e funcao NUCLEO do Postgres desde a versao 14 — nao
+-- depende de extensao nenhuma, nao depende de qual schema alguem escolheu,
+-- e da o mesmo resultado nos dois ambientes. Trocar por ela tira a
+-- dependencia inteira em vez de remendar o `search_path`.
+--
+-- O digest muda de valor (mesma funcao, chamada diferente), entao as
+-- tentativas ja registradas deixam de casar. Sao tentativas de login das
+-- ultimas horas: a tabela e limpa junto, e ninguem fica preso por causa da
+-- troca.
+--
+-- Pode ser executada mais de uma vez sem efeito colateral.
+-- =====================================================================
+
+-- Contador zerado: os digests antigos nao casam mais com os novos, e
+-- manter linhas que nunca serao consultadas so confunde quem for auditar.
+delete from public.portal_login_attempts;
+
+
+create or replace function public.portal_registrar_tentativa(
+  p_tenant uuid,
+  p_cpf    text,
+  p_ok     boolean
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_digest text;
+  v_falhas int;
+begin
+  if p_tenant is null or coalesce(p_cpf, '') = '' then
+    return false;
+  end if;
+
+  -- `sha256` e do nucleo do Postgres: nao depende de pgcrypto nem de em
+  -- qual schema ele foi instalado.
+  v_digest := encode(sha256(convert_to(p_cpf, 'UTF8')), 'hex');
+
+  if p_ok then
+    -- Entrou: o contador dele zera.
+    delete from public.portal_login_attempts
+     where tenant_id = p_tenant and cpf_digest = v_digest;
+    insert into public.portal_login_attempts (tenant_id, cpf_digest, succeeded)
+    values (p_tenant, v_digest, true);
+    return true;
+  end if;
+
+  insert into public.portal_login_attempts (tenant_id, cpf_digest, succeeded)
+  values (p_tenant, v_digest, false);
+
+  select count(*) into v_falhas
+    from public.portal_login_attempts
+   where tenant_id = p_tenant
+     and cpf_digest = v_digest
+     and succeeded = false
+     and attempted_at > now() - interval '15 minutes';
+
+  return v_falhas < 5;
+end$$;
+
+comment on function public.portal_registrar_tentativa(uuid, text, boolean) is
+  'Conta tentativa de acesso ao portal do paciente e devolve false quando o CPF passou de cinco falhas em quinze minutos. Usa sha256 do nucleo do Postgres, nao pgcrypto.';
+
+
+create or replace function public.portal_pode_tentar(
+  p_tenant uuid,
+  p_cpf    text
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_falhas int;
+begin
+  if p_tenant is null or coalesce(p_cpf, '') = '' then
+    return false;
+  end if;
+
+  select count(*) into v_falhas
+    from public.portal_login_attempts
+   where tenant_id = p_tenant
+     and cpf_digest = encode(sha256(convert_to(p_cpf, 'UTF8')), 'hex')
+     and succeeded = false
+     and attempted_at > now() - interval '15 minutes';
+
+  return v_falhas < 5;
+end$$;
+
+comment on function public.portal_pode_tentar(uuid, text) is
+  'Consulta a trava do portal do paciente sem registrar tentativa.';
+
+
+-- ---------------------------------------------------------------------
+-- Prova que a funcao responde de verdade neste banco.
+--
+-- A 0048 nao tinha esta checagem, e foi por isso que o defeito passou: a
+-- funcao existia, era chamavel, e falhava so na hora de executar. Aqui ela
+-- e EXECUTADA na migration — se `sha256` nao existir neste Postgres, a
+-- migration para com erro em vez de deixar a clinica sem trava.
+-- ---------------------------------------------------------------------
+do $$
+declare
+  v_tenant uuid;
+  v_resposta boolean;
+begin
+  select id into v_tenant from public.tenants limit 1;
+  if v_tenant is null then
+    raise notice 'Sem clinica cadastrada: trava do portal nao pode ser exercitada agora.';
+    return;
+  end if;
+
+  -- CPF que nao existe em cadastro nenhum, so para exercitar a funcao.
+  v_resposta := public.portal_pode_tentar(v_tenant, '00000000000');
+  if v_resposta is null then
+    raise exception 'portal_pode_tentar devolveu nulo: a trava do portal nao esta funcionando';
+  end if;
+
+  raise notice 'Trava do portal do paciente respondendo (pode tentar: %).', v_resposta;
+end$$;
+
+
+-- #####################################################################
+-- 0054_indice_da_recepcao_nao_barra_o_financeiro.sql
+-- #####################################################################
+
+-- =====================================================================
+-- 0054 - O indice da recepcao para de barrar a cobranca do Financeiro
+--
+-- ---------------------------------------------------------------------
+-- O defeito, que era meu e desta noite
+-- ---------------------------------------------------------------------
+-- A 0050 criou um indice unico para impedir a cobranca dupla que duas
+-- recepcionistas produziam. Ela escolheu `provider = 'pix_manual'` como
+-- marca da cobranca da recepcao, e escreveu, no proprio comentario, que o
+-- indice tinha de ser parcial para NAO barrar a cobranca a mais que a tela
+-- de Financeiro lanca de proposito (exame incluido depois, acerto de
+-- diferenca).
+--
+-- Só que a cobranca do Financeiro grava o MESMO provider:
+--
+--     createCharge:  provider: method === 'pix' ? 'pix_manual' : 'manual'
+--
+-- Entao o indice barrava exatamente o caso que ele dizia preservar, com o
+-- erro 23505 chegando na tela como "Registro duplicado." — sem nenhuma
+-- pista de que era o Pix da recepcao que estava no caminho.
+--
+-- ---------------------------------------------------------------------
+-- A correcao: dizer o que a coisa e, em vez de adivinhar pelo provedor
+-- ---------------------------------------------------------------------
+-- `provider` responde "por onde o dinheiro entra"; nao serve para responder
+-- "quem gerou esta cobranca". A coluna nova responde a segunda pergunta, e
+-- e ela que o indice passa a usar.
+--
+-- Cobranca antiga fica com `false` e sai do indice. Sao cobrancas ja
+-- resolvidas, e a 0050 ja recolheu as duplicadas que existiam.
+--
+-- Pode ser executada mais de uma vez sem efeito colateral.
+-- =====================================================================
+
+alter table public.payments
+  add column if not exists gerada_na_recepcao boolean not null default false;
+
+comment on column public.payments.gerada_na_recepcao is
+  'Verdadeiro para a cobranca que a tela da recepcao gera ao liberar o paciente. O indice unico de cobranca em aberto olha esta coluna, e nao o provedor: a cobranca extra lancada no Financeiro usa o mesmo provedor e nao pode ser barrada.';
+
+
+-- ---------------------------------------------------------------------
+-- Retroage no que a recepcao gerou antes desta coluna existir.
+--
+-- Criterio conservador: cobranca em aberto, do provedor que a recepcao
+-- usava, com descricao no formato que so ela escreve ("Exames: ..."). Errar
+-- para menos aqui e seguro — cobranca que ficar de fora do indice apenas
+-- deixa de ter a protecao, sem barrar nada.
+-- ---------------------------------------------------------------------
+update public.payments
+   set gerada_na_recepcao = true
+ where gerada_na_recepcao = false
+   and attendance_id is not null
+   and provider = 'pix_manual'
+   and description like 'Exames:%'
+   and status in ('pendente', 'em_analise')
+   and deleted_at is null;
+
+
+drop index if exists public.uq_cobranca_aberta_da_recepcao;
+
+create unique index if not exists uq_cobranca_aberta_da_recepcao
+  on public.payments (tenant_id, attendance_id)
+  where attendance_id is not null
+    and gerada_na_recepcao
+    and status in ('pendente', 'em_analise')
+    and deleted_at is null;
+
+comment on index public.uq_cobranca_aberta_da_recepcao is
+  'Uma cobranca DA RECEPCAO em aberto por atendimento. Impede a cobranca dupla quando duas telas geram ao mesmo tempo, e nao alcanca a cobranca lancada no Financeiro.';
+
+
+do $$
+declare v_marcadas int;
+begin
+  select count(*) into v_marcadas from public.payments where gerada_na_recepcao;
+  raise notice 'Cobrancas marcadas como geradas na recepcao: %', v_marcadas;
 end$$;

@@ -135,10 +135,18 @@ export const getSessionContext = cache(async (): Promise<SessionContext | null> 
   };
 });
 
-/** Exige sessao valida; redireciona para o login caso contrario. */
+/**
+ * Exige sessao valida; redireciona para o login caso contrario.
+ *
+ * `sessao=sem-perfil` na URL e o que impede o pingue-pongue: o proxy conhece
+ * o cookie de autenticacao e nao conhece o perfil, entao um usuario
+ * autenticado no Supabase sem `profiles`, sem papel, com `tenant_id` nulo,
+ * inativo ou bloqueado era mandado daqui para `/login` e de la de volta para
+ * `/dashboard`, em loop, com tela branca e nenhuma explicacao.
+ */
 export async function requireSession(): Promise<SessionContext> {
   const ctx = await getSessionContext();
-  if (!ctx) redirect('/login');
+  if (!ctx) redirect('/login?sessao=sem-perfil');
   return ctx;
 }
 

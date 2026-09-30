@@ -272,6 +272,7 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
     codigoVerificacao: d.codigoVerificacao,
     margem: M,
     fonte: F,
+    largura: LARGURA,
     base: 38,
   });
 

@@ -534,6 +534,11 @@ export async function gerarCobrancaRecepcao(
         method: 'pix',
         status: 'pendente',
         provider: 'pix_manual',
+        // Marca de onde a cobranca veio. O indice unico de "uma cobranca em
+        // aberto por atendimento" olha esta coluna: `provider` e o mesmo que
+        // a tela de Financeiro usa, e o indice barrava a cobranca extra que
+        // ela lanca de proposito.
+        gerada_na_recepcao: true,
         created_by: ctx.userId,
         updated_by: ctx.userId,
       })
@@ -553,7 +558,7 @@ export async function gerarCobrancaRecepcao(
         .select('id, status, net_amount, pix_charges(payload, qrcode_data_url)')
         .eq('attendance_id', attendanceId)
         .eq('tenant_id', ctx.tenant.id)
-        .eq('provider', 'pix_manual')
+        .eq('gerada_na_recepcao', true)
         .in('status', ['pendente', 'em_analise'])
         .order('created_at', { ascending: false })
         .limit(1)

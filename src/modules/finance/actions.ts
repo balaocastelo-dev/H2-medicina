@@ -352,13 +352,29 @@ async function desfazerAtendimento(
     .limit(1)
     .returns<{ id: string }[]>();
 
-  if ((aindaPagas?.length ?? 0) === 0) {
-    await supabase
-      .from('attendances')
-      .update({ payment_status: 'pendente' })
-      .eq('id', attendanceId)
-      .eq('tenant_id', ctx.tenant.id);
+  // A guarda vale para AS DUAS coisas.
+  //
+  // Escrita a primeira vez, ela cobria so o `payment_status` e o
+  // cancelamento do repasse rodava sempre. Isso criava o prejuizo inverso ao
+  // que esta funcao existe para evitar:
+  //
+  //   recepcao gera Pix de R$ 300 (fica pendente)
+  //   paciente paga em dinheiro; o caixa lanca e confirma      -> pago
+  //   alguem cancela o Pix orfao, que continuou pendente
+  //   -> o repasse do medico era cancelado, num atendimento que a clinica
+  //      RECEBEU. O medico deixava de receber por uma consulta paga.
+  //
+  // Se sobrou cobranca paga, o atendimento continua pago e o medico continua
+  // recebendo. Cancelar uma cobranca a mais nao desfaz o atendimento.
+  if ((aindaPagas?.length ?? 0) > 0) {
+    return '';
   }
+
+  await supabase
+    .from('attendances')
+    .update({ payment_status: 'pendente' })
+    .eq('id', attendanceId)
+    .eq('tenant_id', ctx.tenant.id);
 
   const { cancelados, jaPagos } = await cancelarRepasseDoAtendimento(ctx, attendanceId, motivo);
 

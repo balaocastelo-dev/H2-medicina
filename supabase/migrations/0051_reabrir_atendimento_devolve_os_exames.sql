@@ -168,7 +168,10 @@ update public.patient_exams pe
    set status = 'pendente',
        queued_at = null,
        called_at = null,
-       started_at = null
+       started_at = null,
+       -- Mesma regra do `elsif` da funcao: sala escolhida a mao fica; sala
+       -- herdada da chamada anterior sai, para a fila repartir de novo.
+       room_id = case when pe.sala_escolhida_a_mao then pe.room_id else null end
   from public.attendances a
  where pe.attendance_id = a.id
    and a.stage_code in ('aguardando_exames','em_exames')
@@ -177,10 +180,24 @@ update public.patient_exams pe
    and a.absent_at is null
    and a.deleted_at is null
    and pe.status = 'cancelado'
+   -- `nao_realizado` entra na lista.
+   --
+   -- E o status de "o paciente nao fez": recusou, foi embora, foi tirado da
+   -- fila. Sem ele aqui, um atendimento com UM exame nao realizado e os
+   -- outros cancelados a mao satisfazia o `not exists`, e todos os
+   -- cancelados voltavam para a fila — exames que a clinica decidiu nao
+   -- fazer reaparecendo nas salas.
+   --
+   -- Qualquer sinal de que alguem mexeu nos exames deste atendimento manda
+   -- deixar como esta. Os sete valores do enum sao: pendente, em_fila,
+   -- chamado, em_andamento, concluido, nao_realizado, cancelado — e so o
+   -- ultimo fica de fora desta lista, que e justamente o que se conserta.
    and not exists (
      select 1 from public.patient_exams outro
       where outro.attendance_id = a.id
-        and outro.status in ('pendente','em_fila','chamado','em_andamento','concluido'));
+        and outro.status in (
+          'pendente','em_fila','chamado','em_andamento','concluido',
+          'nao_realizado'));
 
 
 do $$

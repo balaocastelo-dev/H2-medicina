@@ -36,10 +36,17 @@
 -- ---------------------------------------------------------------------
 -- Antes do indice, limpar o que a corrida ja deixou: cobrancas abertas
 -- repetidas do mesmo atendimento. Fica a mais antiga (e a que tem o Pix
--- que o paciente pode ter recebido); as outras sao canceladas com motivo.
+-- que o paciente pode ter recebido); as outras sao canceladas.
 --
 -- Sem esta limpeza a criacao do indice falharia em qualquer banco que ja
 -- tenha sofrido o defeito.
+--
+-- `payment_transactions` NAO recebe linha aqui, e e de proposito: estas
+-- cobrancas nunca existiram como cobranca de verdade — sao o mesmo valor
+-- lancado duas vezes pela corrida entre duas telas. Registrar um
+-- "cancelamento" de cada uma no livro sugeriria movimento que nao houve. A
+-- procedencia delas esta neste arquivo, e a `raise notice` do fim diz
+-- quantas foram.
 -- ---------------------------------------------------------------------
 with repetidas as (
   select id,

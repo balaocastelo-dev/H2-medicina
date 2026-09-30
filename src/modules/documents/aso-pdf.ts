@@ -639,6 +639,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     url: d.urlVerificacao,
     margem: MARGEM,
     fonte,
+    largura: LARGURA,
     base: 40,
     tamanho: 6.5,
   });

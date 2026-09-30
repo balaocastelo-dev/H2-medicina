@@ -57,6 +57,24 @@ export async function proxy(request: NextRequest) {
   }
 
   if (user && (pathname === '/login' || pathname === '/')) {
+    // `sessao=sem-perfil` quebra o pingue-pongue.
+    //
+    // O proxy conhece o cookie de autenticacao; nao conhece o PERFIL. Um
+    // usuario autenticado no Supabase mas sem `profiles`, sem papel, com
+    // `tenant_id` nulo, inativo ou bloqueado tem sessao valida e
+    // `getSessionContext()` nulo — entao `/dashboard` mandava para `/login`,
+    // o proxy via a sessao e mandava de volta para `/dashboard`:
+    // ERR_TOO_MANY_REDIRECTS, tela branca do navegador, nenhuma mensagem.
+    //
+    // Acontece em dois momentos reais: no primeiro acesso, se o INSERT do
+    // perfil sair errado; e quando um usuario e bloqueado com a aba aberta,
+    // porque bloquear nao encerra a sessao no Supabase Auth.
+    //
+    // Com a marca na URL, `/login` sabe que veio de volta por falta de
+    // perfil e mostra o motivo em vez de redirecionar de novo.
+    if (request.nextUrl.searchParams.get('sessao') === 'sem-perfil') {
+      return response;
+    }
     const url = request.nextUrl.clone();
     url.pathname = '/dashboard';
     url.search = '';

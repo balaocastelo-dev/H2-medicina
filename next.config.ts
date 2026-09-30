@@ -13,6 +13,21 @@ const supabaseHost = (() => {
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  experimental: {
+    serverActions: {
+      // O padrao do Next e 1 MB, e o anexo de exame da recepcao e o unico
+      // arquivo que sobe por Server Action. A validacao de tamanho no codigo
+      // nunca era alcancada: um laudo escaneado de 3 MB morria antes, com
+      // erro cru de framework ("Body exceeded 1 MB limit") em vez da
+      // mensagem em portugues.
+      //
+      // 4 MB porque o teto da Vercel e 4,5 MB no corpo da requisicao — pedir
+      // mais aqui so trocaria um erro por outro, mais tarde e mais confuso.
+      // Arquivo maior que isso precisa subir direto ao Storage; a mensagem do
+      // servidor diz o limite.
+      bodySizeLimit: '4mb',
+    },
+  },
   turbopack: {
     root: process.cwd(),
   },

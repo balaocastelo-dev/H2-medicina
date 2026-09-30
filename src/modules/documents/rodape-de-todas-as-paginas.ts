@@ -32,9 +32,28 @@ export interface Rodape {
   url?: string | null;
   margem: number;
   fonte: PDFFont;
+  /** Largura util da folha, para quebrar o texto do rodape. */
+  largura: number;
   /** Onde a primeira linha do rodape comeca. Padrao 38. */
   base?: number;
   tamanho?: number;
+}
+
+/** Quebra o texto na largura disponivel, palavra por palavra. */
+function quebrarEm(texto: string, fonte: PDFFont, tamanho: number, largura: number): string[] {
+  const linhas: string[] = [];
+  let atual = '';
+  for (const palavra of texto.split(/\s+/)) {
+    const teste = atual ? `${atual} ${palavra}` : palavra;
+    if (fonte.widthOfTextAtSize(teste, tamanho) > largura && atual) {
+      linhas.push(atual);
+      atual = palavra;
+    } else {
+      atual = teste;
+    }
+  }
+  if (atual) linhas.push(atual);
+  return linhas.length > 0 ? linhas : [''];
 }
 
 export function escreverRodapeEmTodasAsPaginas(pdf: PDFDocument, r: Rodape): void {
@@ -56,9 +75,17 @@ export function escreverRodapeEmTodasAsPaginas(pdf: PDFDocument, r: Rodape): voi
 
     let y = base;
     // De baixo para cima: a ultima parte da lista fica na linha de baixo.
+    //
+    // Cada parte e quebrada pela largura da folha. O A.S.O. fazia isso antes
+    // deste modulo existir, e ao centralizar o rodape eu perdi a quebra: o
+    // texto configurado pela clinica (endereco + CNPJ + telefones + e-mail
+    // passa facil de 160 caracteres) saia pela margem direita em vez de
+    // descer uma linha.
     for (const parte of [...partes].reverse()) {
-      pagina.drawText(parte, { x: r.margem, y, size: tamanho, font: r.fonte, color: cinza });
-      y += 9;
+      for (const linha of quebrarEm(parte, r.fonte, tamanho, r.largura).reverse()) {
+        pagina.drawText(linha, { x: r.margem, y, size: tamanho, font: r.fonte, color: cinza });
+        y += 9;
+      }
     }
   });
 }

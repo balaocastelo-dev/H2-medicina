@@ -7,7 +7,19 @@ import { audit } from '@/lib/audit';
 import { slugify } from '@/lib/format';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 
-const LIMITE_BYTES = 50 * 1024 * 1024;
+/**
+ * Teto real do anexo.
+ *
+ * Eram 50 MB, numero que nunca era alcancado: o corpo de uma Server Action
+ * passa pelo limite do Next (1 MB no padrao, 4 MB configurado em
+ * `next.config.ts`) e pelo teto da Vercel (4,5 MB). Um laudo escaneado de 3 MB
+ * morria com erro cru de framework, ANTES desta funcao rodar, e a mensagem em
+ * portugues nunca aparecia.
+ *
+ * 4 MB aqui casa com o `bodySizeLimit`, e assim quem passa do tamanho recebe a
+ * frase que explica o que fazer em vez de uma tela de erro.
+ */
+const LIMITE_BYTES = 4 * 1024 * 1024;
 const BUCKET = 'attachments';
 
 /**
@@ -37,7 +49,11 @@ export async function anexarExame(
 
     const arquivo = formData.get('arquivo');
     if (!(arquivo instanceof File) || arquivo.size === 0) return fail('Selecione um arquivo.');
-    if (arquivo.size > LIMITE_BYTES) return fail('Arquivo maior que 50 MB.');
+    if (arquivo.size > LIMITE_BYTES) {
+      return fail(
+        'Arquivo maior que 4 MB. Reduza a qualidade da digitalização (preto e branco, 200 dpi) ou divida em partes.',
+      );
+    }
 
     const { data: paciente } = await supabase
       .from('patients')
