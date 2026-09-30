@@ -34,7 +34,17 @@ export const CATALOGO_PADRAO: ProcedimentoPadrao[] = [
   { code: 'junta_pericia', name: 'Junta Médica Perícia', default_fee: 130, sort_order: 70, emite_ficha_clinica: false },
   { code: 'junta_medica', name: 'Junta Médica', default_fee: 64, sort_order: 80, emite_ficha_clinica: false },
   { code: 'junta_auxiliar', name: 'Junta Médica auxiliar', default_fee: 0, sort_order: 90, emite_ficha_clinica: false },
-  { code: 'consulta_ocupacional', name: 'Consulta ocupacional', default_fee: 0, sort_order: 100, emite_ficha_clinica: true },
+  // R$ 100,00 e um valor de PARTIDA, nao a tabela final da clinica.
+  //
+  // Ele estava em zero -- "aguardando o valor que ainda nao foi informado"
+  // --, e como e o procedimento de quase todo atendimento, o repasse de
+  // todos os medicos saia zerado. Zero tambem impedia a recuperacao dos
+  // lancamentos perdidos, que so recria o que tem valor maior que zero.
+  //
+  // A clinica ajusta em Financeiro > Repasse, e o valor por medico em
+  // Usuarios > Repasse ganha deste. Melhor um numero para corrigir do que
+  // nenhum para contar.
+  { code: 'consulta_ocupacional', name: 'Consulta ocupacional', default_fee: 100, sort_order: 100, emite_ficha_clinica: true },
 ];
 
 /** Primeiro dia do mes de uma data AAAA-MM-DD — a competencia do lancamento. */

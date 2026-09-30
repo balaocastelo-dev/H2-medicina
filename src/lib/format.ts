@@ -10,6 +10,20 @@ export function formatCPF(value: string | null | undefined): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+/**
+ * CPF com o comeco e o fim escondidos: `***.456.789-**`.
+ *
+ * Para papel que sai da clinica sem login por tras — o comprovante de
+ * agendamento e baixado por quem tem o codigo, e codigo de agendamento
+ * circula em conversa de WhatsApp. Os digitos do meio bastam para a pessoa
+ * reconhecer o proprio comprovante e nao reconstroem o CPF.
+ */
+export function cpfParcial(value: string | null | undefined): string {
+  const d = onlyDigits(value);
+  if (d.length !== 11) return '';
+  return `***.${d.slice(3, 6)}.${d.slice(6, 9)}-**`;
+}
+
 export function formatCNPJ(value: string | null | undefined): string {
   const d = onlyDigits(value);
   if (d.length !== 14) return value ?? '';
@@ -205,6 +219,36 @@ const FUSO = 'America/Sao_Paulo';
  * Brasilia o dia UTC ja virou, e o sistema passaria a procurar a agenda do dia
  * seguinte — o paciente sumiria do totem.
  */
+/**
+ * O dia do calendario brasileiro de um instante gravado no banco.
+ *
+ * ---------------------------------------------------------------------
+ * Por que `.slice(0, 10)` nao serve
+ * ---------------------------------------------------------------------
+ * `timestamptz` chega em UTC. Das 21h a meia-noite em Brasilia, UTC ja esta
+ * no dia seguinte: um pagamento confirmado as 21h30 de 30/09 chega como
+ * `2026-10-01T00:30:00Z`, e cortar os dez primeiros caracteres joga o valor
+ * em OUTUBRO.
+ *
+ * Isso acontecia no fluxo de caixa, no relatorio em PDF do contador e no
+ * calendario financeiro — nas tres noites de movimento, o dinheiro do dia
+ * aparecia no dia seguinte, e o fechamento do mes nao fechava.
+ *
+ * Aceita tambem coluna `date` ('2026-09-30'), que ja e dia e passa intacta:
+ * converter dia puro para fuso e o erro inverso.
+ */
+export function diaEmSaoPaulo(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  if (typeof value === 'string') {
+    // Coluna `date`: dez caracteres, sem hora. Ja e o dia.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  }
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  // 'en-CA' formata como AAAA-MM-DD, que e o formato usado em todo o sistema.
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(d);
+}
+
 export function todayISO(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: FUSO }).format(new Date());
 }

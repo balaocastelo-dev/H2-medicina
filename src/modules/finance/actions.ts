@@ -9,6 +9,7 @@ import { audit } from '@/lib/audit';
 import { buildPixPayload, buildTxid } from '@/lib/pix';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Payment } from '@/types/entities';
+import { cancelarRepasseDoAtendimento } from './repasse-actions';
 
 const chargeSchema = z.object({
   description: z.string().trim().min(2, 'Informe a descrição'),
@@ -212,6 +213,16 @@ export async function refundPayment(paymentId: string, reason: string): Promise<
       is_manual: true,
     });
 
+    // O estorno tem de descer ate o atendimento, senao ele fica "pago" para
+    // sempre e a proxima liberacao de documento passa sem cobranca nenhuma.
+    // E o repasse do medico tem de cair junto: devolver o dinheiro ao
+    // paciente e continuar devendo o repasse e prejuizo por estorno.
+    const consequencias = await desfazerAtendimento(
+      ctx,
+      data.attendance_id,
+      `Cobranca estornada: ${reason}`,
+    );
+
     await audit(ctx, {
       action: 'refund',
       entity: 'payments',
@@ -220,7 +231,7 @@ export async function refundPayment(paymentId: string, reason: string): Promise<
     });
 
     revalidatePath('/financeiro');
-    return ok(undefined, 'Pagamento estornado.');
+    return ok(undefined, `Pagamento estornado.${consequencias}`);
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -230,7 +241,17 @@ export async function cancelPayment(paymentId: string): Promise<ActionResult> {
   try {
     const ctx = await assertPermission('financeiro.registrar');
     const supabase = await createClient();
-    const { error } = await supabase
+
+    // Cancelar e para cobranca que nunca foi paga. Cobranca paga se ESTORNA,
+    // que devolve dinheiro e deixa lancamento no livro.
+    //
+    // A tela so mostrava o botao para pendente, mas a acao e chamavel direta:
+    // sem esta condicao, cancelar uma cobranca paga tirava a receita do
+    // caixa sem nenhum registro de que o dinheiro tinha entrado.
+    //
+    // E `.select()` porque, com RLS forcado, UPDATE barrado afeta zero
+    // linhas em silencio — a tela dizia "Cobranca cancelada" sobre nada.
+    const { data: cancelada, error } = await supabase
       .from('payments')
       .update({
         status: 'cancelado',
@@ -238,8 +259,35 @@ export async function cancelPayment(paymentId: string): Promise<ActionResult> {
         updated_by: ctx.userId,
       })
       .eq('id', paymentId)
-      .eq('tenant_id', ctx.tenant.id);
+      .eq('tenant_id', ctx.tenant.id)
+      .in('status', ['pendente', 'em_analise', 'falhou'])
+      .select('id, net_amount, attendance_id')
+      .maybeSingle<{ id: string; net_amount: number; attendance_id: string | null }>();
     if (error) return fail(toFriendlyError(error));
+    if (!cancelada) {
+      return fail(
+        'Só é possível cancelar cobrança em aberto. Cobrança já paga precisa ser estornada.',
+      );
+    }
+
+    // Cancelamento tambem entra no livro. Criar, confirmar e estornar
+    // gravavam `payment_transactions`; so o cancelamento nao, e por isso uma
+    // cobranca podia desaparecer da receita sem deixar linha nenhuma.
+    await supabase.from('payment_transactions').insert({
+      tenant_id: ctx.tenant.id,
+      payment_id: paymentId,
+      event: 'cancelamento',
+      status: 'cancelado',
+      amount: cancelada.net_amount,
+      performed_by: ctx.userId,
+      is_manual: true,
+    });
+
+    const consequencias = await desfazerAtendimento(
+      ctx,
+      cancelada.attendance_id,
+      'Cobranca cancelada',
+    );
 
     await audit(ctx, {
       action: 'update',
@@ -248,8 +296,62 @@ export async function cancelPayment(paymentId: string): Promise<ActionResult> {
       description: 'Cobrança cancelada',
     });
     revalidatePath('/financeiro');
-    return ok(undefined, 'Cobrança cancelada.');
+    return ok(undefined, `Cobrança cancelada.${consequencias}`);
   } catch (error) {
     return fail(toFriendlyError(error));
   }
+}
+
+/**
+ * Desfaz o que a cobranca havia liberado no atendimento.
+ *
+ * Chamada por estorno e por cancelamento. Faz duas coisas que faltavam:
+ *
+ * 1. Devolve `attendances.payment_status` a "pendente" quando nao sobrou
+ *    cobranca paga. Sem isso o atendimento ficava "pago" para sempre e a
+ *    trava de liberacao de documentos deixava passar.
+ * 2. Cancela o repasse do medico daquele atendimento.
+ *
+ * Devolve um pedaco de frase para juntar a mensagem de sucesso: quem
+ * estorna precisa saber que o repasse caiu — e precisa saber quando NAO
+ * caiu, porque ja estava pago.
+ */
+async function desfazerAtendimento(
+  ctx: Awaited<ReturnType<typeof assertPermission>>,
+  attendanceId: string | null,
+  motivo: string,
+): Promise<string> {
+  if (!attendanceId) return '';
+  const supabase = await createClient();
+
+  // Um atendimento pode ter mais de uma cobranca. Se ainda houver uma paga,
+  // ele continua pago.
+  const { data: aindaPagas } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('attendance_id', attendanceId)
+    .eq('status', 'pago')
+    .is('deleted_at', null)
+    .limit(1)
+    .returns<{ id: string }[]>();
+
+  if ((aindaPagas?.length ?? 0) === 0) {
+    await supabase
+      .from('attendances')
+      .update({ payment_status: 'pendente' })
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id);
+  }
+
+  const { cancelados, jaPagos } = await cancelarRepasseDoAtendimento(ctx, attendanceId, motivo);
+
+  const partes: string[] = [];
+  if (cancelados > 0) partes.push(`Repasse do médico cancelado (${cancelados}).`);
+  if (jaPagos > 0) {
+    partes.push(
+      `Atenção: ${jaPagos} repasse(s) deste atendimento já foram pagos ao médico e não foram desfeitos.`,
+    );
+  }
+  return partes.length > 0 ? ` ${partes.join(' ')}` : '';
 }

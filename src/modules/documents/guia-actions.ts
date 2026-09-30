@@ -156,6 +156,9 @@ export async function emitirGuiaDeExame(input: {
         file_path: caminho,
         size_bytes: pdf.byteLength,
         verification_code: codigo,
+        // A guia e o papel que o paciente leva ao laboratorio: sem ela no
+        // portal, ele volta ao balcao so para pedir segunda via. Nao traz
+        // resultado — so o que foi solicitado.
         is_patient_visible: true,
         generated_by: ctx.userId,
       })

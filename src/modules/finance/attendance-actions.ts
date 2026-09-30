@@ -116,11 +116,23 @@ export async function quitarAtendimento(attendanceId: string): Promise<ActionRes
       .eq('status', 'pendente')
       .returns<{ id: string; net_amount: number }[]>();
 
+    let quitadas = 0;
     for (const p of pendentes ?? []) {
-      await supabase
+      // `status = 'pendente'` repetido no UPDATE e `.select()` para ler o que
+      // mudou: entre a leitura acima e este update, outro operador pode ter
+      // confirmado a mesma cobranca. Sem isso, os dois gravavam
+      // `payment_transactions` e o livro passava a ter a mesma confirmacao
+      // duas vezes.
+      const { data: quitada } = await supabase
         .from('payments')
         .update({ status: 'pago', paid_at: agora, updated_by: ctx.userId })
-        .eq('id', p.id);
+        .eq('id', p.id)
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('status', 'pendente')
+        .select('id')
+        .maybeSingle<{ id: string }>();
+      if (!quitada) continue;
+      quitadas += 1;
       await supabase.from('payment_transactions').insert({
         tenant_id: ctx.tenant.id,
         payment_id: p.id,
@@ -146,12 +158,17 @@ export async function quitarAtendimento(attendanceId: string): Promise<ActionRes
       action: 'update',
       entity: 'attendances',
       entityId: attendanceId,
-      description: `Pagamento quitado (${(pendentes ?? []).length} cobrança(s))`,
+      description: `Pagamento quitado (${quitadas} cobrança(s))`,
     });
 
     revalidatePath('/pagamentos');
     revalidatePath('/financeiro');
-    return ok(undefined, 'Pagamento confirmado.');
+    return ok(
+      undefined,
+      quitadas === 0
+        ? 'Nenhuma cobrança em aberto neste atendimento.'
+        : `Pagamento confirmado (${quitadas} cobrança(s)).`,
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -169,19 +186,39 @@ export async function liberarDocumentos(attendanceId: string): Promise<ActionRes
     const ctx = await assertPermission('financeiro.registrar');
     const supabase = await createClient();
 
-    const { data: abertos } = await supabase
+    // Todas as cobrancas do atendimento, nao so as em aberto.
+    //
+    // A trava olhava apenas `pendente` e `em_analise`. Uma cobranca
+    // ESTORNADA nao esta em nenhum desses estados — entao estornar e clicar
+    // em "Liberar documentos" passava, e o A.S.O. saia sem pagamento. Era o
+    // contrario do que a trava existe para impedir.
+    const { data: cobrancas } = await supabase
       .from('payments')
-      .select('id, net_amount, method')
+      .select('id, net_amount, method, status')
       .eq('tenant_id', ctx.tenant.id)
       .eq('attendance_id', attendanceId)
-      .in('status', ['pendente', 'em_analise'])
-      .returns<{ id: string; net_amount: number; method: string }[]>();
+      .is('deleted_at', null)
+      .returns<{ id: string; net_amount: number; method: string; status: string }[]>();
 
-    const emAberto = (abertos ?? []).filter((p) => p.method !== 'faturamento');
+    const todas = cobrancas ?? [];
+
+    const emAberto = todas.filter(
+      (p) => ['pendente', 'em_analise'].includes(p.status) && p.method !== 'faturamento',
+    );
     if (emAberto.length > 0) {
       const total = emAberto.reduce((s, p) => s + Number(p.net_amount), 0);
       return fail(
         `Ainda há R$ ${total.toFixed(2).replace('.', ',')} em aberto. Confirme o pagamento antes de liberar os documentos.`,
+      );
+    }
+
+    // Cobranca desfeita sem nenhuma outra no lugar: a conta voltou a ficar
+    // aberta, mesmo que nao haja linha "pendente" nenhuma.
+    const desfeitas = todas.filter((p) => ['estornado', 'cancelado'].includes(p.status));
+    const valendo = todas.filter((p) => p.status === 'pago' || p.method === 'faturamento');
+    if (desfeitas.length > 0 && valendo.length === 0) {
+      return fail(
+        'A cobrança deste atendimento foi estornada ou cancelada. Gere uma nova cobrança antes de liberar os documentos.',
       );
     }
 

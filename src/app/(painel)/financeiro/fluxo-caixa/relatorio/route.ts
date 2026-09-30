@@ -1,6 +1,6 @@
 import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { todayISO } from '@/lib/format';
+import { diaEmSaoPaulo, todayISO } from '@/lib/format';
 import {
   janelaDoPeriodo,
   porCategoria,
@@ -70,19 +70,31 @@ export async function GET(request: Request) {
       >(),
     supabase
       .from('fee_entries')
-      .select('fee, status, created_at, paid_at')
+      .select('fee, status, competencia, created_at, paid_at')
       .eq('tenant_id', ctx.tenant.id)
       .neq('status', 'cancelado')
-      .returns<{ fee: number; status: string; created_at: string; paid_at: string | null }[]>(),
+      .returns<
+        {
+          fee: number;
+          status: string;
+          competencia: string;
+          created_at: string;
+          paid_at: string | null;
+        }[]
+      >(),
   ]);
 
   const movimentos: Movimento[] = [];
 
+  // Este relatorio vai para o contador. Mesma regra da tela de fluxo de
+  // caixa, e pelo mesmo motivo: o banco guarda em UTC, e cortar a string
+  // jogava o movimento das noites no dia seguinte. Um PDF de fechamento com
+  // o dinheiro no mes errado e pior do que nenhum.
   for (const p of pagamentos.data ?? []) {
     if (['cancelado', 'estornado', 'falhou'].includes(p.status)) continue;
     movimentos.push({
-      competencia: (p.due_date ?? p.created_at).slice(0, 10),
-      pagoEm: p.status === 'pago' ? (p.paid_at ?? p.created_at).slice(0, 10) : null,
+      competencia: diaEmSaoPaulo(p.due_date ?? p.created_at),
+      pagoEm: p.status === 'pago' ? diaEmSaoPaulo(p.paid_at ?? p.created_at) : null,
       tipo: 'receita',
       valor: p.net_amount,
       categoria: p.description?.trim() || 'Atendimento',
@@ -92,7 +104,7 @@ export async function GET(request: Request) {
     if (c.status === 'cancelada') continue;
     movimentos.push({
       competencia: c.due_date,
-      pagoEm: c.status === 'paga' ? (c.paid_at ?? c.due_date).slice(0, 10) : null,
+      pagoEm: c.status === 'paga' ? diaEmSaoPaulo(c.paid_at ?? c.due_date) : null,
       tipo: 'despesa',
       valor: c.amount,
       categoria: c.category,
@@ -100,8 +112,9 @@ export async function GET(request: Request) {
   }
   for (const r of repasses.data ?? []) {
     movimentos.push({
-      competencia: r.created_at.slice(0, 10),
-      pagoEm: r.status === 'pago' ? (r.paid_at ?? r.created_at).slice(0, 10) : null,
+      // A coluna `competencia`, a mesma que "Meus ganhos" le.
+      competencia: r.competencia,
+      pagoEm: r.status === 'pago' ? diaEmSaoPaulo(r.paid_at ?? r.created_at) : null,
       tipo: 'repasse',
       valor: r.fee,
       categoria: 'Repasse médico',

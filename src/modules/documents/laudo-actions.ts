@@ -264,7 +264,10 @@ export async function gerarLaudoDeExame(
         // o que ja saiu e nao emitir o mesmo laudo duas vezes.
         payload: { patient_exam_id: patientExamId },
         verification_code: verificacao,
-        is_patient_visible: true,
+        // Laudo e resultado de exame: dado clinico. Sai da clinica em maos
+        // ou anexo ao A.S.O., nao pelo portal que autentica so com CPF e
+        // data de nascimento.
+        is_patient_visible: false,
         signed_by: ctx.userId,
         signer_name: perfil?.full_name ?? ctx.profile.full_name,
         signer_council: perfil?.council_number

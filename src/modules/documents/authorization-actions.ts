@@ -179,6 +179,7 @@ export async function emitirTermoAutorizacao(input: {
         file_path: pdfPath,
         size_bytes: pdfBytes.byteLength,
         verification_code: verificationCode,
+        // Termo assinado pelo proprio paciente: e dele, e administrativo.
         is_patient_visible: true,
         generated_by: ctx.userId,
         payload: { method: input.method, signer_name: nomeAssinante },

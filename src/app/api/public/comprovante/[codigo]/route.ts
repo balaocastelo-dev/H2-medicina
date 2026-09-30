@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { marcaPublica } from '@/modules/settings/marca-publica';
 import { publicEnv } from '@/lib/env';
-import { formatCPF, formatDate, formatTime } from '@/lib/format';
+import { cpfParcial, formatDate, formatTime } from '@/lib/format';
 import { buildDocumentPdf, carregarLogo, type PdfBrand } from '@/modules/documents/pdf';
 
 export const dynamic = 'force-dynamic';
@@ -124,7 +124,12 @@ export async function GET(
             { label: 'Nome', value: reserva.requester_name ?? reserva.patients?.full_name ?? '—' },
             {
               label: 'CPF',
-              value: reserva.patients?.cpf ? formatCPF(reserva.patients.cpf) : 'não informado',
+              // Mascarado de proposito. O comprovante e baixado por quem
+              // tem o codigo — e um codigo de agendamento circula: vai por
+              // WhatsApp, e reencaminhado, fica no print. Os digitos do
+              // meio bastam para a pessoa reconhecer que o comprovante e
+              // dela, e nao entregam o CPF a quem recebeu o print.
+              value: reserva.patients?.cpf ? cpfParcial(reserva.patients.cpf) : 'não informado',
             },
             { label: 'Contato', value: reserva.requester_phone ?? 'não informado' },
           ],

@@ -48,6 +48,10 @@ export default async function VerificarPage({
     if (!CODIGO_VALIDO.test(codigo)) {
       // Barra a varredura antes de chegar ao banco.
       formatoInvalido = true;
+    } else if (!unidade) {
+      // Sem unidade configurada nao ha o que verificar, e verificar "em
+      // geral" e o defeito que esta corrigido logo abaixo.
+      indisponivel = true;
     } else {
       try {
         const admin = createAdminClient();
@@ -56,6 +60,12 @@ export default async function VerificarPage({
           .select(
             'kind, title, generated_at, deleted_at, signer_name, signer_council, patients(full_name)',
           )
+          // A consulta corria com a chave de servico e SEM filtro de
+          // clinica: um codigo emitido por outra clinica do sistema
+          // aparecia aqui como documento autentico, sob o nome desta. Quem
+          // confere um A.S.O. nesta pagina precisa da resposta desta
+          // clinica, nao de qualquer uma.
+          .eq('tenant_id', unidade.tenantId)
           .eq('verification_code', codigo)
           .maybeSingle<LinhaDeDocumento>();
 

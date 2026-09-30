@@ -211,7 +211,7 @@ export async function lancarRepasse(
     // nunca apareceu em lugar nenhum.
     const { data: atendimento, error: erroAtendimento } = await supabase
       .from('attendances')
-      .select('id, patient_id, company_id, created_at')
+      .select('id, patient_id, company_id, created_at, checkin_at')
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
@@ -219,6 +219,7 @@ export async function lancarRepasse(
         patient_id: string | null;
         company_id: string | null;
         created_at: string;
+        checkin_at: string | null;
       }>();
     if (erroAtendimento) return fail(toFriendlyError(erroAtendimento));
     if (!atendimento) return fail('Atendimento nao encontrado.');
@@ -243,8 +244,16 @@ export async function lancarRepasse(
       .maybeSingle<{ fee: number }>();
 
     const fee = Number(valorProprio?.fee ?? procedimento.default_fee) || 0;
+    // A competencia e o mes em que o paciente FOI ATENDIDO, nao o mes em que
+    // a ficha foi criada no sistema. Atendimento agendado ou incluido pelo
+    // robozinho nasce dias antes da pessoa aparecer: usar `created_at`
+    // jogava o repasse no mes anterior. `checkin_at` e a chegada; `created_at`
+    // fica so como rede para ficha sem check-in registrado.
+    //
+    // Mesma regra da recuperacao de lancamentos da 0047, de proposito: duas
+    // regras diferentes colocariam o mesmo atendimento em dois meses.
     const dia = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(
-      new Date(atendimento.created_at),
+      new Date(atendimento.checkin_at ?? atendimento.created_at),
     );
 
     const { error } = await supabase.from('fee_entries').insert({
@@ -274,6 +283,84 @@ export async function lancarRepasse(
   }
 }
 
+/**
+ * Cancela o repasse de um atendimento que nao vai mais ser cobrado.
+ *
+ * ---------------------------------------------------------------------
+ * O que nao existia
+ * ---------------------------------------------------------------------
+ * Em todo o sistema NAO havia um unico ponto que escrevesse
+ * `status = 'cancelado'` em `fee_entries`. Estornar uma cobranca devolvia o
+ * dinheiro ao paciente e o lancamento do medico continuava intacto, em
+ * aberto, somando em "Meus ganhos" e em Contas a pagar. Cancelar o
+ * atendimento no CRM, igual.
+ *
+ * Ou seja: a clinica devolvia os R$ 300 ao paciente e continuava devendo os
+ * R$ 100 do medico pelo atendimento que deixou de existir. Prejuizo
+ * silencioso, uma vez por estorno.
+ *
+ * ---------------------------------------------------------------------
+ * Por que cancelar e nao apagar
+ * ---------------------------------------------------------------------
+ * O medico atendeu. O lancamento tem de continuar visivel, com o motivo,
+ * para ele poder discordar — e para a clinica saber por que aquele
+ * atendimento nao entrou no mes. `agruparPorMedico` e `resumirGanhos` ja
+ * excluem `cancelado` de todas as somas.
+ *
+ * Repasse JA PAGO nao se toca: o dinheiro saiu, e mexer no valor pago
+ * desacerta o que o medico recebeu. Esse caso e conversa entre a clinica e
+ * o medico, nao update de banco — a funcao devolve quantos ficaram de fora
+ * para quem chamou poder avisar.
+ */
+export async function cancelarRepasseDoAtendimento(
+  ctx: SessionContext,
+  attendanceId: string,
+  motivo: string,
+): Promise<{ cancelados: number; jaPagos: number }> {
+  const supabase = await createClient();
+
+  const { data: lancamentos } = await supabase
+    .from('fee_entries')
+    .select('id, status, notes')
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('attendance_id', attendanceId)
+    .returns<{ id: string; status: string; notes: string | null }[]>();
+
+  const emAberto = (lancamentos ?? []).filter((l) => l.status === 'a_pagar');
+  const jaPagos = (lancamentos ?? []).filter((l) => l.status === 'pago').length;
+  if (emAberto.length === 0) return { cancelados: 0, jaPagos };
+
+  const { data: cancelados } = await supabase
+    .from('fee_entries')
+    .update({
+      status: 'cancelado',
+      // Anexa, nao substitui: a observacao pode ja trazer um ajuste de valor.
+      notes: motivo.slice(0, 240),
+      updated_by: ctx.userId,
+    })
+    .in(
+      'id',
+      emAberto.map((l) => l.id),
+    )
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('status', 'a_pagar')
+    .select('id')
+    .returns<{ id: string }[]>();
+
+  const quantos = cancelados?.length ?? 0;
+  if (quantos > 0) {
+    await audit(ctx, {
+      action: 'update',
+      entity: 'fee_entries',
+      entityId: attendanceId,
+      description: `Repasse cancelado (${quantos} lancamento(s)): ${motivo}`,
+    });
+    revalidarFinanceiro();
+  }
+
+  return { cancelados: quantos, jaPagos };
+}
+
 const baixaSchema = z.object({
   ids: z.array(z.string().uuid()).min(1, 'Selecione ao menos um lancamento'),
 });
@@ -285,21 +372,51 @@ export async function marcarRepassePago(_prev: unknown, formData: FormData): Pro
     if (!parsed.success) return fail('Selecione ao menos um lancamento.');
 
     const supabase = await createClient();
-    const { error } = await supabase
+    // `.select()` nao e enfeite: com RLS forcado, um UPDATE barrado afeta
+    // ZERO linhas sem levantar erro nenhum. Sem ler as linhas de volta, a
+    // tela dizia "Repasse marcado como pago" sobre nada — e a clinica
+    // acertava com o medico acreditando que a baixa entrou.
+    //
+    // O filtro `status = 'a_pagar'` tambem faz a baixa ser idempotente: dois
+    // operadores clicando junto, ou um duplo clique, nao paga duas vezes.
+    // Mas era exatamente esse filtro que fazia a segunda chamada afetar zero
+    // linhas e ainda assim responder sucesso.
+    const { data: baixados, error } = await supabase
       .from('fee_entries')
       .update({ status: 'pago', paid_at: new Date().toISOString(), paid_by: ctx.userId })
       .in('id', parsed.data.ids)
       .eq('tenant_id', ctx.tenant.id)
-      .eq('status', 'a_pagar');
+      .eq('status', 'a_pagar')
+      .select('id')
+      .returns<{ id: string }[]>();
     if (error) return fail(toFriendlyError(error));
+
+    const quantos = baixados?.length ?? 0;
+    const pedidos = parsed.data.ids.length;
+
+    if (quantos === 0) {
+      return fail(
+        pedidos === 1
+          ? 'Este lançamento não está em aberto: verifique se a baixa já foi dada.'
+          : 'Nenhum dos lançamentos selecionados estava em aberto. Recarregue a página.',
+      );
+    }
 
     await audit(ctx, {
       action: 'update',
       entity: 'fee_entries',
-      description: `Repasse pago (${parsed.data.ids.length} lancamento(s))`,
+      description: `Repasse pago (${quantos} lancamento(s))`,
     });
     revalidarFinanceiro();
-    return ok(undefined, 'Repasse marcado como pago.');
+
+    // Dizer o numero real, nao o pedido: selecionar dez e pagar seis tem de
+    // aparecer na tela, senao a diferenca some.
+    return ok(
+      undefined,
+      quantos === pedidos
+        ? `Repasse marcado como pago (${quantos}).`
+        : `${quantos} de ${pedidos} lançamentos marcados como pagos — os outros já não estavam em aberto.`,
+    );
   } catch (e) {
     return fail(toFriendlyError(e));
   }

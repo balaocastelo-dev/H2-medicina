@@ -2,7 +2,7 @@ import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, StatCard } from '@/components/ui';
-import { formatMoney, todayISO } from '@/lib/format';
+import { diaEmSaoPaulo, formatMoney, todayISO } from '@/lib/format';
 import {
   agruparPorMes,
   montarCalendario,
@@ -58,22 +58,37 @@ export default async function CalendarioFinanceiroPage({
       .returns<{ amount: number; due_date: string; status: string }[]>(),
     supabase
       .from('fee_entries')
-      .select('fee, competencia, status, created_at')
+      .select('fee, competencia, status, created_at, paid_at')
       .eq('tenant_id', ctx.tenant.id)
       .neq('status', 'cancelado')
-      .returns<{ fee: number; competencia: string; status: string; created_at: string }[]>(),
+      .returns<
+        {
+          fee: number;
+          competencia: string;
+          status: string;
+          created_at: string;
+          paid_at: string | null;
+        }[]
+      >(),
   ]);
 
   // Cada lancamento entra no dia em que o dinheiro se movimenta de fato:
   // recebido na data do pagamento, a receber no vencimento.
   const movimentos: MovimentoFinanceiro[] = [];
 
+  // `diaEmSaoPaulo` e nao `.slice(0, 10)`: o banco guarda em UTC, e das 21h
+  // a meia-noite UTC ja e o dia seguinte. Pagamento recebido as 21h30 caia
+  // na celula do dia seguinte do calendario.
   for (const p of pagamentos.data ?? []) {
     if (p.status === 'pago') {
-      movimentos.push({ data: (p.paid_at ?? p.created_at).slice(0, 10), tipo: 'recebido', valor: p.net_amount });
+      movimentos.push({
+        data: diaEmSaoPaulo(p.paid_at ?? p.created_at),
+        tipo: 'recebido',
+        valor: p.net_amount,
+      });
     } else if (['pendente', 'em_analise'].includes(p.status)) {
       movimentos.push({
-        data: (p.due_date ?? p.created_at).slice(0, 10),
+        data: diaEmSaoPaulo(p.due_date ?? p.created_at),
         tipo: 'a_receber',
         valor: p.net_amount,
       });
@@ -86,7 +101,15 @@ export default async function CalendarioFinanceiroPage({
   }
 
   for (const r of repasses.data ?? []) {
-    movimentos.push({ data: r.created_at.slice(0, 10), tipo: 'repasse', valor: r.fee });
+    // Repasse pago entra no dia em que saiu o dinheiro; repasse em aberto,
+    // no primeiro dia da competencia — a mesma coluna que "Meus ganhos" le.
+    // Antes as duas situacoes usavam `created_at`, que e quando o medico
+    // assinou a consulta, e o calendario discordava das outras telas.
+    movimentos.push({
+      data: r.status === 'pago' ? diaEmSaoPaulo(r.paid_at ?? r.created_at) : r.competencia,
+      tipo: 'repasse',
+      valor: r.fee,
+    });
   }
 
   const dias = montarCalendario(inicio, fim, movimentos);

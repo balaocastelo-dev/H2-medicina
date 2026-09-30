@@ -27,7 +27,11 @@ export async function startReception(attendanceId: string): Promise<ActionResult
   try {
     const ctx = await assertPermission('recepcao.operar');
     const supabase = await createClient();
-    const { error } = await supabase
+    // `.select()` obrigatorio: com RLS forcado, UPDATE barrado por politica
+    // afeta ZERO linhas e NAO levanta erro. Sem ler de volta, a tela dizia
+    // "Atendimento iniciado" e o paciente continuava na etapa anterior — foi
+    // essa classe de defeito que travou os medicos (migration 0041).
+    const { data: iniciado, error } = await supabase
       .from('attendances')
       .update({
         stage_code: 'na_recepcao',
@@ -35,8 +39,13 @@ export async function startReception(attendanceId: string): Promise<ActionResult
         updated_by: ctx.userId,
       })
       .eq('id', attendanceId)
-      .eq('tenant_id', ctx.tenant.id);
+      .eq('tenant_id', ctx.tenant.id)
+      .select('id')
+      .maybeSingle<{ id: string }>();
     if (error) return fail(toFriendlyError(error));
+    if (!iniciado) {
+      return fail('Não foi possível iniciar este atendimento. Recarregue a tela da recepção.');
+    }
 
     // Quem espera na entrada precisa ver a propria senha ser chamada. Ate
     // aqui a chamada da recepcao nao ia para TV nenhuma, so as das salas.
@@ -530,6 +539,43 @@ export async function gerarCobrancaRecepcao(
       })
       .select('id, net_amount')
       .single<{ id: string; net_amount: number }>();
+
+    // 23505 aqui e a outra recepcionista, nao um erro.
+    //
+    // O indice unico da 0050 (uma cobranca da recepcao em aberto por
+    // atendimento) e o que impede a cobranca dupla que a leitura-antes-de-
+    // escrever la em cima nao consegue impedir. Quando ele barra, a cobranca
+    // certa acabou de ser criada pela outra tela: a resposta e mostra-la, nao
+    // dizer "erro" para quem esta com o paciente na frente.
+    if (error?.code === '23505') {
+      const { data: daOutraTela } = await supabase
+        .from('payments')
+        .select('id, status, net_amount, pix_charges(payload, qrcode_data_url)')
+        .eq('attendance_id', attendanceId)
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('provider', 'pix_manual')
+        .in('status', ['pendente', 'em_analise'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle<{
+          id: string;
+          status: string;
+          net_amount: number;
+          pix_charges: { payload: string; qrcode_data_url: string | null }[];
+        }>();
+
+      if (daOutraTela) {
+        return ok({
+          paymentId: daOutraTela.id,
+          valor: Number(daOutraTela.net_amount),
+          itens,
+          payload: daOutraTela.pix_charges?.[0]?.payload ?? '',
+          qrcode: daOutraTela.pix_charges?.[0]?.qrcode_data_url ?? null,
+          recebedor,
+          jaPago: false,
+        });
+      }
+    }
     if (error) return fail(toFriendlyError(error));
 
     await supabase.from('payment_transactions').insert({

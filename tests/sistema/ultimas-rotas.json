@@ -1,0 +1,6274 @@
+{
+ "total": 52,
+ "resultados": [
+  {
+   "rota": {
+    "nome": "A1 · admissional completo",
+    "porque": "o percurso mais frequente: triagem, exames de sala e consulta",
+    "perfil": {
+     "porque": "A1 · admissional completo — o percurso mais frequente: triagem, exames de sala e consulta",
+     "nome": "Amanda Bezerra Quintal 1",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": true,
+     "temAso": true,
+     "laudosMinimos": 2,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A1 · admissional completo — o percurso mais frequente: triagem, exames de sala e consulta",
+     "nome": "Amanda Bezerra Quintal 1",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 0,
+    "pacienteId": "bfa48aed-7392-4164-a4a3-45b1c7253f8a",
+    "atendimentoId": "755f9978-d957-47e7-b278-bdd2aca1a165",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+ACUIDADE+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A001 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 6 documentos no kit (3 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A2 · sem triagem, direto aos exames",
+    "porque": "a recepção pode dispensar a triagem",
+    "perfil": {
+     "porque": "A2 · sem triagem, direto aos exames — a recepção pode dispensar a triagem",
+     "nome": "Bernardo Achilles Fontoura 2",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true,
+     "laudosMinimos": 1
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A2 · sem triagem, direto aos exames — a recepção pode dispensar a triagem",
+     "nome": "Bernardo Achilles Fontoura 2",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 1,
+    "pacienteId": "9964fdd6-2732-4af6-96e5-3f1b6b6d7dcd",
+    "atendimentoId": "97560f6e-54a5-4b90-b394-098d675a0160",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A002 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A3 · só consulta, nenhum exame",
+    "porque": "nada dispara a etapa seguinte: quem move o paciente é a própria consulta",
+    "perfil": {
+     "porque": "A3 · só consulta, nenhum exame — nada dispara a etapa seguinte: quem move o paciente é a própria consulta",
+     "nome": "Clarice Modesto Aragão 3",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A3 · só consulta, nenhum exame — nada dispara a etapa seguinte: quem move o paciente é a própria consulta",
+     "nome": "Clarice Modesto Aragão 3",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 2,
+    "pacienteId": "4df9b0e0-a0a4-44c0-92fa-a121df3716b6",
+    "atendimentoId": "78b688e8-c819-4309-a028-42f755479b50",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A003 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A4 · só exame, sem consulta",
+    "porque": "termina no caixa sem passar pelo médico — e sem A.S.O.",
+    "perfil": {
+     "porque": "A4 · só exame, sem consulta — termina no caixa sem passar pelo médico — e sem A.S.O.",
+     "nome": "Danilo Verissimo Pacheco 4",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": false,
+     "temAso": false,
+     "laudosMinimos": 1
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A4 · só exame, sem consulta — termina no caixa sem passar pelo médico — e sem A.S.O.",
+     "nome": "Danilo Verissimo Pacheco 4",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 3,
+    "pacienteId": "2541bd1b-828a-4942-9922-39d0ba122eba",
+    "atendimentoId": "4a1126ae-d848-4bec-8fb2-ba6618b89d8a",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A5 · nenhum exame marcado",
+    "porque": "não pode sumir do sistema por não ter o que fazer",
+    "perfil": {
+     "porque": "A5 · nenhum exame marcado — não pode sumir do sistema por não ter o que fazer",
+     "nome": "Elaine Rocha Monteiro 5",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado"
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A5 · nenhum exame marcado — não pode sumir do sistema por não ter o que fazer",
+     "nome": "Elaine Rocha Monteiro 5",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 4,
+    "pacienteId": "8c01873f-f7ce-4e89-b36a-8fc39e07685a",
+    "atendimentoId": "52d754d1-1849-4d56-888d-400267ae4eb5",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para pagamento.",
+      "detalhe": "sem exame"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Selecione ao menos um exame para cobrar.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 3 documentos emitidos. Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A6 · seis exames em cinco salas",
+    "porque": "o percurso mais longo, com a fila cheia",
+    "perfil": {
+     "porque": "A6 · seis exames em cinco salas — o percurso mais longo, com a fila cheia",
+     "nome": "Fabrício Delgado Arruda 6",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "ESPIRO",
+      "ECG",
+      "EEG",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true,
+     "laudosMinimos": 2
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A6 · seis exames em cinco salas — o percurso mais longo, com a fila cheia",
+     "nome": "Fabrício Delgado Arruda 6",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "ESPIRO",
+      "ECG",
+      "EEG",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 5,
+    "pacienteId": "d2571a43-6adc-4320-8815-91be1dad675c",
+    "atendimentoId": "fd5244c6-6b45-427f-a461-d53bc89bbc9a",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+ESPIRO+ECG+EEG+ACUIDADE+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A006 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 6 documentos no kit (3 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "A7 · três dinamometrias na mesma sala",
+    "porque": "uma chamada só precisa trazer os três exames daquela sala",
+    "perfil": {
+     "porque": "A7 · três dinamometrias na mesma sala — uma chamada só precisa trazer os três exames daquela sala",
+     "nome": "Giovana Paes de Barros 7",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "DINAMO_LOM",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "laudosMinimos": 3
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "A7 · três dinamometrias na mesma sala — uma chamada só precisa trazer os três exames daquela sala",
+     "nome": "Giovana Paes de Barros 7",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "DINAMO_LOM",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 6,
+    "pacienteId": "04cfd60b-1489-4d75-a565-d3e420d58738",
+    "atendimentoId": "700f9987-2fda-4611-80d4-f98475812227",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "DINAMO_PAL+DINAMO_ESC+DINAMO_LOM+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A007 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 7 documentos no kit (4 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B1 · só raio X",
+    "porque": "feito fora: não entra em fila nenhuma, sai como guia",
+    "perfil": {
+     "porque": "B1 · só raio X — feito fora: não entra em fila nenhuma, sai como guia",
+     "nome": "Hélio Camargo Bittencourt 8",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "RAIOX"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": false
+    },
+    "desvios": [
+     "guia_de_exame"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B1 · só raio X — feito fora: não entra em fila nenhuma, sai como guia",
+     "nome": "Hélio Camargo Bittencourt 8",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "RAIOX"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 7,
+    "pacienteId": "23f46053-f4f2-4e99-8445-1c56540c8d0a",
+    "atendimentoId": "f7775521-964c-4e81-9ff1-2cd03baa1bfc",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para pagamento.",
+      "detalhe": "RAIOX"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Os exames selecionados nao possuem preco cadastrado.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "emitirGuiaDeExame",
+      "ok": true,
+      "mensagem": "Guia emitida."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B2 · só coleta laboratorial",
+    "porque": "coleta é feita aqui, mas com guia impressa no balcão",
+    "perfil": {
+     "porque": "B2 · só coleta laboratorial — coleta é feita aqui, mas com guia impressa no balcão",
+     "nome": "Iara Nunes Sampaio 9",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "LAB"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado"
+    },
+    "desvios": [
+     "guia_de_exame"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B2 · só coleta laboratorial — coleta é feita aqui, mas com guia impressa no balcão",
+     "nome": "Iara Nunes Sampaio 9",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "LAB"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 8,
+    "pacienteId": "dfb73512-d0f1-4239-b2e4-019808eaa508",
+    "atendimentoId": "c93b71c2-19c3-456b-bda8-d0a54806d100",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "emitirGuiaDeExame",
+      "ok": true,
+      "mensagem": "Guia emitida."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B3 · raio X e coleta mais consulta",
+    "porque": "dois de fora e um dentro: o paciente não pode ficar preso esperando os de fora",
+    "perfil": {
+     "porque": "B3 · raio X e coleta mais consulta — dois de fora e um dentro: o paciente não pode ficar preso esperando os de fora",
+     "nome": "Jonas Teixeira Vilalva 10",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "RAIOX",
+      "LAB",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    },
+    "desvios": [
+     "guia_de_exame"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B3 · raio X e coleta mais consulta — dois de fora e um dentro: o paciente não pode ficar preso esperando os de fora",
+     "nome": "Jonas Teixeira Vilalva 10",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "RAIOX",
+      "LAB",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 9,
+    "pacienteId": "8dc06dba-f9fe-4db6-8267-adf5fbb6ab30",
+    "atendimentoId": "95cc30dc-1a81-47e4-bb56-24bf5bd0efda",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "RAIOX+LAB+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "emitirGuiaDeExame",
+      "ok": true,
+      "mensagem": "Guia emitida."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A010 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B4 · psicossocial, respondido pelo médico",
+    "porque": "não ocupa sala e leva o paciente ao consultório",
+    "perfil": {
+     "porque": "B4 · psicossocial, respondido pelo médico — não ocupa sala e leva o paciente ao consultório",
+     "nome": "Kátia Moreira Lustosa 11",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "PSICO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B4 · psicossocial, respondido pelo médico — não ocupa sala e leva o paciente ao consultório",
+     "nome": "Kátia Moreira Lustosa 11",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "PSICO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 10,
+    "pacienteId": "3a9005ae-2c83-434b-bb77-db962fd9e627",
+    "atendimentoId": "615fbbae-b426-4d47-be56-1f25de3c04ed",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "PSICO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A011 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B5 · só Romberg",
+    "porque": "desde 29/09 é do médico: vai ao consultório sem consulta marcada",
+    "perfil": {
+     "porque": "B5 · só Romberg — desde 29/09 é do médico: vai ao consultório sem consulta marcada",
+     "nome": "Leandro Bastos Chaves 12",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "ROMBERG"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "laudosMinimos": 1
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B5 · só Romberg — desde 29/09 é do médico: vai ao consultório sem consulta marcada",
+     "nome": "Leandro Bastos Chaves 12",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "ROMBERG"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 11,
+    "pacienteId": "710878ae-13b7-468c-b7d3-2a01d77aaf62",
+    "atendimentoId": "9161459e-cf12-4d65-8090-d8af982c1381",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A012 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveExamResult(na consulta)",
+      "ok": true,
+      "mensagem": "Exame concluído.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B6 · Romberg com triagem",
+    "porque": "sai da triagem devendo só um item do médico — o buraco de 22/09",
+    "perfil": {
+     "porque": "B6 · Romberg com triagem — sai da triagem devendo só um item do médico — o buraco de 22/09",
+     "nome": "Mirela Antunes Rezende 13",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "ROMBERG"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B6 · Romberg com triagem — sai da triagem devendo só um item do médico — o buraco de 22/09",
+     "nome": "Mirela Antunes Rezende 13",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "ROMBERG"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 12,
+    "pacienteId": "03f68aae-5b7a-4092-bfa6-7ebb45abbec4",
+    "atendimentoId": "a81440cc-2514-4ec9-b03e-8ac0bcd90e94",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A013 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveExamResult(na consulta)",
+      "ok": true,
+      "mensagem": "Exame concluído.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "B7 · exames de bancada, sem consulta",
+    "porque": "acuidade e Ishihara são feitos na triagem e terminam no caixa",
+    "perfil": {
+     "porque": "B7 · exames de bancada, sem consulta — acuidade e Ishihara são feitos na triagem e terminam no caixa",
+     "nome": "Norberto Pinheiro Galvão 14",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "ACUIDADE",
+      "ISHIHARA"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": false,
+     "laudosMinimos": 2
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "B7 · exames de bancada, sem consulta — acuidade e Ishihara são feitos na triagem e terminam no caixa",
+     "nome": "Norberto Pinheiro Galvão 14",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "ACUIDADE",
+      "ISHIHARA"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 13,
+    "pacienteId": "62a3cfc2-0228-4b3e-aa8f-817eb71548a1",
+    "atendimentoId": "98028aff-5bae-4c3e-b8a1-afb2ad095103",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "ACUIDADE+ISHIHARA"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C1 · perícia sem exame",
+    "porque": "a avaliação médica é o motivo da visita; não gera cobrança",
+    "perfil": {
+     "porque": "C1 · perícia sem exame — a avaliação médica é o motivo da visita; não gera cobrança",
+     "nome": "Olívia Cardoso Meneses 15",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "pericia"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": false,
+     "temConsulta": true,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C1 · perícia sem exame — a avaliação médica é o motivo da visita; não gera cobrança",
+     "nome": "Olívia Cardoso Meneses 15",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "pericia"
+    },
+    "indice": 14,
+    "pacienteId": "b563d90a-e343-4566-a631-7276822bb8fb",
+    "atendimentoId": "5dadaf83-df02-4cc8-966a-154c13b205f7",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência PR registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "sem exame"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente Perícia não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A015 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C2 · perícia COM exame de sala",
+    "porque": "o exame vem antes do médico — senão fica pendente para sempre",
+    "perfil": {
+     "porque": "C2 · perícia COM exame de sala — o exame vem antes do médico — senão fica pendente para sempre",
+     "nome": "Paulo Sérgio Drumond 16",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "pericia"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": false,
+     "temConsulta": true,
+     "laudosMinimos": 1
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C2 · perícia COM exame de sala — o exame vem antes do médico — senão fica pendente para sempre",
+     "nome": "Paulo Sérgio Drumond 16",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "pericia"
+    },
+    "indice": 15,
+    "pacienteId": "178f7f8a-d90f-42d8-b825-5634d0b48c14",
+    "atendimentoId": "cb1f4dc0-3370-4d6f-9a9e-12403ae87973",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência PR registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente Perícia não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A016 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C3 · SISPER sem triagem",
+    "porque": "vai direto ao médico",
+    "perfil": {
+     "porque": "C3 · SISPER sem triagem — vai direto ao médico",
+     "nome": "Queila Barreto Assunção 17",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "sisper",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": false,
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C3 · SISPER sem triagem — vai direto ao médico",
+     "nome": "Queila Barreto Assunção 17",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [],
+     "procedencia": "sisper",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 16,
+    "pacienteId": "e431dfe7-689e-4b38-90dd-6577e5af8284",
+    "atendimentoId": "babb8f90-ab27-4cfc-809a-3b3b6699c82c",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência S registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "sem exame"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente SISPER não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A017 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (Atendimento SISPER não gera ficha clínica.)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C4 · SISPER passando pela triagem",
+    "porque": "é como acontece de verdade, e o encaminhamento pós-triagem já errou aqui",
+    "perfil": {
+     "porque": "C4 · SISPER passando pela triagem — é como acontece de verdade, e o encaminhamento pós-triagem já errou aqui",
+     "nome": "Rogério Vasconcelos Pinto 18",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [],
+     "procedencia": "sisper",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": false,
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C4 · SISPER passando pela triagem — é como acontece de verdade, e o encaminhamento pós-triagem já errou aqui",
+     "nome": "Rogério Vasconcelos Pinto 18",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [],
+     "procedencia": "sisper",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 17,
+    "pacienteId": "03b0059a-3615-4657-9d45-20773cca150e",
+    "atendimentoId": "8aea38d4-378c-40e9-84c1-fa2cef268e85",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência S registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "sem exame"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente SISPER não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A018 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (Atendimento SISPER não gera ficha clínica.)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C5 · ingresso escolar",
+    "porque": "termina em avaliação médica mesmo sem consulta marcada",
+    "perfil": {
+     "porque": "C5 · ingresso escolar — termina em avaliação médica mesmo sem consulta marcada",
+     "nome": "Sandra Lemos Figueiredo 19",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "ACUIDADE"
+     ],
+     "procedencia": "ingresso",
+     "triagem": true,
+     "prioridade": "normal",
+     "procedimento": "ingresso"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": false,
+     "temConsulta": true,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C5 · ingresso escolar — termina em avaliação médica mesmo sem consulta marcada",
+     "nome": "Sandra Lemos Figueiredo 19",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "ACUIDADE"
+     ],
+     "procedencia": "ingresso",
+     "triagem": true,
+     "prioridade": "normal",
+     "procedimento": "ingresso"
+    },
+    "indice": 18,
+    "pacienteId": "69cd5caa-2ca2-4657-aa12-790ee94eb665",
+    "atendimentoId": "37001ae3-411e-4826-ade0-0ba341c99403",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência I registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente Ingresso — ESISLA (escola) não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A019 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C6 · junta médica",
+    "porque": "procedimento com repasse próprio e sem ficha clínica",
+    "perfil": {
+     "porque": "C6 · junta médica — procedimento com repasse próprio e sem ficha clínica",
+     "nome": "Thiago Borges Andrade 20",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "junta_medica"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C6 · junta médica — procedimento com repasse próprio e sem ficha clínica",
+     "nome": "Thiago Borges Andrade 20",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [],
+     "procedencia": "estado",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "junta_medica"
+    },
+    "indice": 19,
+    "pacienteId": "94274b16-65e7-4a49-bbc0-d48f961aa422",
+    "atendimentoId": "f124ad6c-9dd1-4b26-a687-f52f85685205",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência PR registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "sem exame"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": false,
+      "erro": "Paciente Perícia não gera cobrança: o atendimento é custeado pelo órgão de origem.",
+      "recusaEsperada": true
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A020 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C7 · C.P.S.",
+    "porque": "procedimento do catálogo que emite ficha clínica",
+    "perfil": {
+     "porque": "C7 · C.P.S. — procedimento do catálogo que emite ficha clínica",
+     "nome": "Ubirajara Correia Neto 21",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "procedimento": "cps"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C7 · C.P.S. — procedimento do catálogo que emite ficha clínica",
+     "nome": "Ubirajara Correia Neto 21",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "procedimento": "cps"
+    },
+    "indice": 20,
+    "pacienteId": "919b308d-6607-4348-9772-e2a15a4cb940",
+    "atendimentoId": "017f19f9-924f-4f8a-a7c9-282aec151e9b",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A021 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "C8 · SEDUC",
+    "porque": "outro procedimento do catálogo, com valor diferente",
+    "perfil": {
+     "porque": "C8 · SEDUC — outro procedimento do catálogo, com valor diferente",
+     "nome": "Valéria Guimarães Sodré 22",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "seduc"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temRepasse": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "C8 · SEDUC — outro procedimento do catálogo, com valor diferente",
+     "nome": "Valéria Guimarães Sodré 22",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "procedimento": "seduc"
+    },
+    "indice": 21,
+    "pacienteId": "40805266-0278-4056-a217-ebf8708901e3",
+    "atendimentoId": "b0124e3a-d71c-47f6-afba-eddb53105646",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A022 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D1 · empresa com valor negociado",
+    "porque": "o valor da aba Empresa tem de valer na cobrança",
+    "perfil": {
+     "porque": "D1 · empresa com valor negociado — o valor da aba Empresa tem de valer na cobrança",
+     "nome": "Wellington Rosa Peçanha 23",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D1 · empresa com valor negociado — o valor da aba Empresa tem de valer na cobrança",
+     "nome": "Wellington Rosa Peçanha 23",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "indice": 22,
+    "pacienteId": "63b6c9b6-2d29-457d-8517-bf4387ba9479",
+    "atendimentoId": "30d5fc34-f9bd-4983-b0ad-120b1f0b25b5",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A023 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D2 · empresa sem valor negociado",
+    "porque": "cai no preço de tabela, e a diferença entre as duas precisa aparecer",
+    "perfil": {
+     "porque": "D2 · empresa sem valor negociado — cai no preço de tabela, e a diferença entre as duas precisa aparecer",
+     "nome": "Ximena Duarte Falcão 24",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "9cf4ae6d-4524-46ea-9204-c0e00f02f9d5"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D2 · empresa sem valor negociado — cai no preço de tabela, e a diferença entre as duas precisa aparecer",
+     "nome": "Ximena Duarte Falcão 24",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "9cf4ae6d-4524-46ea-9204-c0e00f02f9d5"
+    },
+    "indice": 23,
+    "pacienteId": "dc985db5-5c5c-473b-b19e-5df5563b93f2",
+    "atendimentoId": "e608024b-44d4-487f-a5f1-992e9e94d86a",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A024 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D3 · empresa com desconto e seis exames",
+    "porque": "o desconto precisa valer em todos, não só no primeiro",
+    "perfil": {
+     "porque": "D3 · empresa com desconto e seis exames — o desconto precisa valer em todos, não só no primeiro",
+     "nome": "Yasmin Portela Coelho 25",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ESPIRO",
+      "ECG",
+      "ACUIDADE",
+      "ISHIHARA",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D3 · empresa com desconto e seis exames — o desconto precisa valer em todos, não só no primeiro",
+     "nome": "Yasmin Portela Coelho 25",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ESPIRO",
+      "ECG",
+      "ACUIDADE",
+      "ISHIHARA",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "indice": 24,
+    "pacienteId": "082b3adb-25c1-40bf-a524-7ced8adb476d",
+    "atendimentoId": "bc2e9926-1872-4903-b27d-ced0d9ab3090",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+ESPIRO+ECG+ACUIDADE+ISHIHARA+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A025 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 7 documentos no kit (4 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D4 · particular sem vínculo",
+    "porque": "sem empresa, preço de tabela",
+    "perfil": {
+     "porque": "D4 · particular sem vínculo — sem empresa, preço de tabela",
+     "nome": "Zenon Ribeiro Mascarenhas 26",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D4 · particular sem vínculo — sem empresa, preço de tabela",
+     "nome": "Zenon Ribeiro Mascarenhas 26",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 25,
+    "pacienteId": "886319b9-0a9a-4087-bceb-c7bae6d58f84",
+    "atendimentoId": "209be2db-b4c8-41cd-8136-856eca07fb30",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D5 · cobrança gerada duas vezes",
+    "porque": "clicar de novo não pode empilhar lançamento",
+    "perfil": {
+     "porque": "D5 · cobrança gerada duas vezes — clicar de novo não pode empilhar lançamento",
+     "nome": "Alice Moura Tavares 27",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true,
+     "temConsulta": true
+    },
+    "desvios": [
+     "cobrar_duas_vezes"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D5 · cobrança gerada duas vezes — clicar de novo não pode empilhar lançamento",
+     "nome": "Alice Moura Tavares 27",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 26,
+    "pacienteId": "ec027a24-0afb-4744-b22a-6500130f58a3",
+    "atendimentoId": "684ec202-9c60-471e-b68c-c9a277a775c0",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "gerarCobrancaRecepcao (2a vez)",
+      "ok": true
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A027 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "D6 · pago no balcão",
+    "porque": "confirmar o pagamento na recepção, e não só no caixa do fim",
+    "perfil": {
+     "porque": "D6 · pago no balcão — confirmar o pagamento na recepção, e não só no caixa do fim",
+     "nome": "Benedito Farias Coutinho 28",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temCobranca": true
+    },
+    "desvios": [
+     "pagar_no_balcao"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "D6 · pago no balcão — confirmar o pagamento na recepção, e não só no caixa do fim",
+     "nome": "Benedito Farias Coutinho 28",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 27,
+    "pacienteId": "afd75a2f-4381-432b-a4c7-6e2835b156dd",
+    "atendimentoId": "c9afbb59-d9c4-4a95-9776-ce7a72fdace2",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "confirmarPagamentoRecepcao",
+      "ok": true,
+      "mensagem": "Pagamento confirmado."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Nenhuma cobrança em aberto neste atendimento."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E1 · repetir a chamada da senha",
+    "porque": "o paciente não ouviu: chamar de novo não pode duplicar nada",
+    "perfil": {
+     "porque": "E1 · repetir a chamada da senha — o paciente não ouviu: chamar de novo não pode duplicar nada",
+     "nome": "Cristina Aguiar Belmonte 29",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "repetir_chamada_sala"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E1 · repetir a chamada da senha — o paciente não ouviu: chamar de novo não pode duplicar nada",
+     "nome": "Cristina Aguiar Belmonte 29",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 28,
+    "pacienteId": "97b53542-d67d-4d09-b98d-7ff032213539",
+    "atendimentoId": "72bef909-eb7e-457e-9737-eb6d75f76ab9",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "recallTicket",
+      "ok": true,
+      "mensagem": "Senha rechamada.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A029 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E2 · repetir a chamada da triagem",
+    "porque": "mesma coisa, na outra tela",
+    "perfil": {
+     "porque": "E2 · repetir a chamada da triagem — mesma coisa, na outra tela",
+     "nome": "Douglas Sarmento Vieira 30",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "repetir_chamada_triagem"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E2 · repetir a chamada da triagem — mesma coisa, na outra tela",
+     "nome": "Douglas Sarmento Vieira 30",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 29,
+    "pacienteId": "8389bf3e-74b0-425b-a36b-a2f53426a411",
+    "atendimentoId": "07c8b2b6-0ed3-4132-bdc5-cb5c76336803",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "repetirChamadaDaTriagem",
+      "ok": true,
+      "mensagem": "Chamada repetida."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A030 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E3 · devolver o exame para a fila",
+    "porque": "chamou errado: volta a pendente e solta a sala",
+    "perfil": {
+     "porque": "E3 · devolver o exame para a fila — chamou errado: volta a pendente e solta a sala",
+     "nome": "Eunice Barbosa Trindade 31",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "laudosMinimos": 1
+    },
+    "desvios": [
+     "devolver_exame_para_fila"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E3 · devolver o exame para a fila — chamou errado: volta a pendente e solta a sala",
+     "nome": "Eunice Barbosa Trindade 31",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 30,
+    "pacienteId": "72542861-7c79-4278-b1c5-3b31174891ee",
+    "atendimentoId": "6892a688-03f7-4617-b743-ce9fe9f7eeb9",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(pendente)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "callNextForRoom (de novo)",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A031 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E4 · remanejar o exame de sala",
+    "porque": "o equipamento mudou de lugar: a sala nova chama, a antiga para",
+    "perfil": {
+     "porque": "E4 · remanejar o exame de sala — o equipamento mudou de lugar: a sala nova chama, a antiga para",
+     "nome": "Flávio Meireles Cunha 32",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "ESPIRO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "remanejar_sala_do_exame"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E4 · remanejar o exame de sala — o equipamento mudou de lugar: a sala nova chama, a antiga para",
+     "nome": "Flávio Meireles Cunha 32",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "ESPIRO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 31,
+    "pacienteId": "3c66213e-05fd-4e72-b790-bd780382d932",
+    "atendimentoId": "111bf95c-9e89-44a5-9b05-ea066be0d70c",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "ESPIRO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "atribuirSalaAoExame",
+      "ok": true,
+      "mensagem": "Exame enviado para Sala de Audiometria.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A032 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E5 · exame não realizado",
+    "porque": "o percurso segue sem ele, com o motivo gravado",
+    "perfil": {
+     "porque": "E5 · exame não realizado — o percurso segue sem ele, com o motivo gravado",
+     "nome": "Gabriela Xavier Peixoto 33",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "naoRealiza": "AUDIO"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E5 · exame não realizado — o percurso segue sem ele, com o motivo gravado",
+     "nome": "Gabriela Xavier Peixoto 33",
+     "nascimento": "1958-07-09",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "naoRealiza": "AUDIO"
+    },
+    "indice": 32,
+    "pacienteId": "a237e0a7-a257-41f8-9103-9046208a8a42",
+    "atendimentoId": "7583bf78-3712-4265-8258-730821332e73",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+ACUIDADE+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(nao_realizado)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A033 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E6 · devolver da consulta para a fila do médico",
+    "porque": "chamou o paciente errado no consultório",
+    "perfil": {
+     "porque": "E6 · devolver da consulta para a fila do médico — chamou o paciente errado no consultório",
+     "nome": "Horácio Brandão Lisboa 34",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "devolver_da_consulta_para_fila"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E6 · devolver da consulta para a fila do médico — chamou o paciente errado no consultório",
+     "nome": "Horácio Brandão Lisboa 34",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 33,
+    "pacienteId": "1c829dd6-8965-4bc3-b49a-e7a72c1103f2",
+    "atendimentoId": "327a1fa5-1fe6-4990-8a1b-200071191ae3",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A034 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "devolverParaFilaDoMedico",
+      "ok": true,
+      "mensagem": "Paciente devolvido à fila."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio (de novo)",
+      "ok": true,
+      "mensagem": "Senha A034 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E7 · triagem salva como rascunho e finalizada depois",
+    "porque": "salvar de novo não pode desfazer o que já foi concluído",
+    "perfil": {
+     "porque": "E7 · triagem salva como rascunho e finalizada depois — salvar de novo não pode desfazer o que já foi concluído",
+     "nome": "Isadora Freitas Malheiros 35",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "rascunho_de_triagem"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E7 · triagem salva como rascunho e finalizada depois — salvar de novo não pode desfazer o que já foi concluído",
+     "nome": "Isadora Freitas Malheiros 35",
+     "nascimento": "1972-01-01",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 34,
+    "pacienteId": "ed8e11cb-e404-4975-bbfd-2f4fb742d695",
+    "atendimentoId": "8a3c6434-ab2b-454c-b933-80188c0c1ee8",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage (rascunho)",
+      "ok": true,
+      "mensagem": "Triagem salva."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "saveTriage (correção depois)",
+      "ok": true,
+      "mensagem": "Triagem salva."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A035 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E8 · consulta salva como rascunho e assinada depois",
+    "porque": "o defeito de 22/09: corrigir uma observação desassinava a consulta",
+    "perfil": {
+     "porque": "E8 · consulta salva como rascunho e assinada depois — o defeito de 22/09: corrigir uma observação desassinava a consulta",
+     "nome": "Juliano Castro Perdigão 36",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    },
+    "desvios": [
+     "rascunho_de_consulta"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E8 · consulta salva como rascunho e assinada depois — o defeito de 22/09: corrigir uma observação desassinava a consulta",
+     "nome": "Juliano Castro Perdigão 36",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 35,
+    "pacienteId": "ff1d3464-c7c4-4497-8862-4f1b5b411bd1",
+    "atendimentoId": "d76b9727-e04b-43e2-a75a-43c0866dc526",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A036 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation (rascunho)",
+      "ok": true,
+      "mensagem": "Consulta salva."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "saveConsultation (correção depois)",
+      "ok": true,
+      "mensagem": "Consulta salva."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E9 · desiste no meio",
+    "porque": "precisa sumir das filas e não gerar cobrança paga",
+    "perfil": {
+     "porque": "E9 · desiste no meio — precisa sumir das filas e não gerar cobrança paga",
+     "nome": "Késia Amaral Bragança 37",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "desiste": true
+    },
+    "espera": {
+     "etapa": "cancelado",
+     "temConsulta": false
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E9 · desiste no meio — precisa sumir das filas e não gerar cobrança paga",
+     "nome": "Késia Amaral Bragança 37",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "desiste": true
+    },
+    "indice": 36,
+    "pacienteId": "6b6d4073-4191-41ae-b296-7455a9a183a1",
+    "atendimentoId": "6be7e3d0-af9a-44b8-810d-d13b5d104faf",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "moveAttendanceStage(cancelado)",
+      "ok": true,
+      "mensagem": "Paciente movido."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E10 · não compareceu",
+    "porque": "ausente solta o paciente igual ao cancelado, com outro motivo",
+    "perfil": {
+     "porque": "E10 · não compareceu — ausente solta o paciente igual ao cancelado, com outro motivo",
+     "nome": "Lucas Ferraz Albuquerque 38",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "ausente"
+    },
+    "desvios": [
+     "marcar_ausente"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E10 · não compareceu — ausente solta o paciente igual ao cancelado, com outro motivo",
+     "nome": "Lucas Ferraz Albuquerque 38",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 37,
+    "pacienteId": "7e3361ac-85b7-43aa-8804-e895e756d0ff",
+    "atendimentoId": "09eb17b0-9a7d-4c9a-8a4d-ad135445a289",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "moveAttendanceStage(ausente)",
+      "ok": true,
+      "mensagem": "Paciente movido."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E11 · volta a etapa pelo CRM",
+    "porque": "voltar o cartão não pode deixar data de encerramento para trás",
+    "perfil": {
+     "porque": "E11 · volta a etapa pelo CRM — voltar o cartão não pode deixar data de encerramento para trás",
+     "nome": "Marina Caldeira Rangel 39",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "voltar_etapa_no_crm"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E11 · volta a etapa pelo CRM — voltar o cartão não pode deixar data de encerramento para trás",
+     "nome": "Marina Caldeira Rangel 39",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 38,
+    "pacienteId": "bb4a28d0-37c4-40a7-bb2a-b1abaca4d3cc",
+    "atendimentoId": "3b20a4fc-c4d2-4942-ad7a-b12b5447003e",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "moveAttendanceStage(finalizado)",
+      "ok": true,
+      "mensagem": "Paciente movido."
+     },
+     {
+      "acao": "moveAttendanceStage(volta)",
+      "ok": true,
+      "mensagem": "Paciente movido."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A039 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E12 · termo de autorização assinado na tela",
+    "porque": "sem o registro de consentimento o termo não prova autorização",
+    "perfil": {
+     "porque": "E12 · termo de autorização assinado na tela — sem o registro de consentimento o termo não prova autorização",
+     "nome": "Nelson Otávio Vidigal 40",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "termo_de_autorizacao"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E12 · termo de autorização assinado na tela — sem o registro de consentimento o termo não prova autorização",
+     "nome": "Nelson Otávio Vidigal 40",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "empresaId": "eac8acc1-13bb-4c10-a7bd-26388efa870d"
+    },
+    "indice": 39,
+    "pacienteId": "fe422ce2-a8da-4b2c-ad77-37b0acb7a6c8",
+    "atendimentoId": "d02f0acf-5fe1-4db9-a1fb-de8bc68b65a1",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "emitirTermoAutorizacao",
+      "ok": true,
+      "mensagem": "Termo assinado e arquivado."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A040 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "E13 · laudo que chega dias depois",
+    "porque": "anexar ao cadastro e acompanhar o paciente",
+    "perfil": {
+     "porque": "E13 · laudo que chega dias depois — anexar ao cadastro e acompanhar o paciente",
+     "nome": "Ofélia Santiago Bulhões 41",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "RAIOX",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    },
+    "desvios": [
+     "anexar_laudo_depois"
+    ]
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "E13 · laudo que chega dias depois — anexar ao cadastro e acompanhar o paciente",
+     "nome": "Ofélia Santiago Bulhões 41",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "RAIOX",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 40,
+    "pacienteId": "5cfea1c2-e5c9-4790-8c98-bfc3bc982b9d",
+    "atendimentoId": "34261e47-281b-4fda-a6d6-d434793606b9",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "RAIOX+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A041 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     },
+     {
+      "acao": "anexarExame",
+      "ok": true,
+      "mensagem": "Laudo anexado."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F1 · nascido em 29 de fevereiro",
+    "porque": "ano bissexto: a idade impressa já saiu errada aqui",
+    "perfil": {
+     "porque": "F1 · nascido em 29 de fevereiro — ano bissexto: a idade impressa já saiu errada aqui",
+     "nome": "Pedro Henrique Valadares 42",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F1 · nascido em 29 de fevereiro — ano bissexto: a idade impressa já saiu errada aqui",
+     "nome": "Pedro Henrique Valadares 42",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 41,
+    "pacienteId": "eb55e0f6-1814-4df9-8962-26be1f456a17",
+    "atendimentoId": "05398aee-edce-4d89-9be9-a6f409b213c7",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A042 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F2 · sem data de nascimento",
+    "porque": "o documento precisa imprimir travessão, não data errada",
+    "perfil": {
+     "porque": "F2 · sem data de nascimento — o documento precisa imprimir travessão, não data errada",
+     "nome": "Quitéria Lopes Sobral 43",
+     "nascimento": null,
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F2 · sem data de nascimento — o documento precisa imprimir travessão, não data errada",
+     "nome": "Quitéria Lopes Sobral 43",
+     "nascimento": null,
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 42,
+    "pacienteId": "320db2f1-ea46-48c8-bd20-642a5921b275",
+    "atendimentoId": "4bf0a057-f5b1-4028-8126-23827b848d44",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A043 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F3 · nascido em 31 de dezembro",
+    "porque": "virada de ano no cálculo de idade",
+    "perfil": {
+     "porque": "F3 · nascido em 31 de dezembro — virada de ano no cálculo de idade",
+     "nome": "Ricardo Nogueira Estrela 44",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F3 · nascido em 31 de dezembro — virada de ano no cálculo de idade",
+     "nome": "Ricardo Nogueira Estrela 44",
+     "nascimento": "1965-12-31",
+     "sexo": "masculino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 43,
+    "pacienteId": "6825f0a3-987a-4888-8385-a4cb2af6a2a2",
+    "atendimentoId": "8ca10f32-4ea7-430e-82b5-4c3f816b3f85",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A044 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F4 · nascido em 1º de janeiro de 1901",
+    "porque": "idade alta, e a borda inferior do calendário",
+    "perfil": {
+     "porque": "F4 · nascido em 1º de janeiro de 1901 — idade alta, e a borda inferior do calendário",
+     "nome": "Simone Padilha Werneck 45",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F4 · nascido em 1º de janeiro de 1901 — idade alta, e a borda inferior do calendário",
+     "nome": "Simone Padilha Werneck 45",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 44,
+    "pacienteId": "56e22967-7368-4ed5-910c-810d9701bc68",
+    "atendimentoId": "50794277-1215-4133-9782-85819abc41b7",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A045 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F5 · prioritário",
+    "porque": "a senha tem prefixo próprio e fura a fila de exames",
+    "perfil": {
+     "porque": "F5 · prioritário — a senha tem prefixo próprio e fura a fila de exames",
+     "nome": "Tobias Rezende Mascarenhas 46",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "prioritario"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F5 · prioritário — a senha tem prefixo próprio e fura a fila de exames",
+     "nome": "Tobias Rezende Mascarenhas 46",
+     "nascimento": "1980-06-15",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "prioritario"
+    },
+    "indice": 45,
+    "pacienteId": "c19e9e4b-d582-439f-9698-7d04250c93e0",
+    "atendimentoId": "4192cad1-9d51-4aef-8438-f7515eec634c",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha P001 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F6 · encaixe",
+    "porque": "a terceira prioridade, que quase nunca se testa",
+    "perfil": {
+     "porque": "F6 · encaixe — a terceira prioridade, que quase nunca se testa",
+     "nome": "Ursula Campos Linhares 47",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "encaixe"
+    },
+    "espera": {
+     "etapa": "finalizado"
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F6 · encaixe — a terceira prioridade, que quase nunca se testa",
+     "nome": "Ursula Campos Linhares 47",
+     "nascimento": "1988-02-29",
+     "sexo": "feminino",
+     "exames": [
+      "AUDIO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "encaixe"
+    },
+    "indice": 46,
+    "pacienteId": "3127b666-31d6-4fa4-81f4-c896d6a369da",
+    "atendimentoId": "0799827a-b0bb-439b-bdad-0a3409622cca",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não saiu: A.S.O. (a consulta ainda não tem o parecer de aptidão preenchido). Não se aplica a este atendimento: ficha clínica (o paciente não passou por consulta médica)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F7 · nome muito longo",
+    "porque": "o A.S.O. cabe numa folha só — o nome não pode empurrar a assinatura",
+    "perfil": {
+     "porque": "F7 · nome muito longo — o A.S.O. cabe numa folha só — o nome não pode empurrar a assinatura",
+     "nome": "Maria das Graças Aparecida do Nascimento Albuquerque Ferreira dos Santos Neto",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F7 · nome muito longo — o A.S.O. cabe numa folha só — o nome não pode empurrar a assinatura",
+     "nome": "Maria das Graças Aparecida do Nascimento Albuquerque Ferreira dos Santos Neto",
+     "nascimento": "1995-11-03",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal"
+    },
+    "indice": 47,
+    "pacienteId": "cb52cf6d-5f83-4b72-91b8-f4639e71f22d",
+    "atendimentoId": "38b36fb6-5277-4ec6-beaf-f4aec02d2a3f",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "AUDIO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A046 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "F8 · cargo e setor preenchidos",
+    "porque": "os campos que vão impressos no A.S.O.",
+    "perfil": {
+     "porque": "F8 · cargo e setor preenchidos — os campos que vão impressos no A.S.O.",
+     "nome": "Wanessa Lira Bonfim 49",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "cargo": "Soldador de estruturas metálicas"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "F8 · cargo e setor preenchidos — os campos que vão impressos no A.S.O.",
+     "nome": "Wanessa Lira Bonfim 49",
+     "nascimento": "2004-10-25",
+     "sexo": "feminino",
+     "exames": [
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "cargo": "Soldador de estruturas metálicas"
+    },
+    "indice": 48,
+    "pacienteId": "10e14e8a-d056-45d2-b121-cb77bc1efcda",
+    "atendimentoId": "34e7a55a-ef6c-4ebe-998d-976a2b010793",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para módulo médico.",
+      "detalhe": "CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A047 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "G1 · dois exames na mesma sala, um não realizado",
+    "porque": "a chamada traz os dois; um não acontece e a sala precisa soltar",
+    "perfil": {
+     "porque": "G1 · dois exames na mesma sala, um não realizado — a chamada traz os dois; um não acontece e a sala precisa soltar",
+     "nome": "Ygor Medeiros Guerreiro 50",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "naoRealiza": "DINAMO_PAL"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "G1 · dois exames na mesma sala, um não realizado — a chamada traz os dois; um não acontece e a sala precisa soltar",
+     "nome": "Ygor Medeiros Guerreiro 50",
+     "nascimento": null,
+     "sexo": "masculino",
+     "exames": [
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": false,
+     "prioridade": "normal",
+     "naoRealiza": "DINAMO_PAL"
+    },
+    "indice": 49,
+    "pacienteId": "e5e07570-66c0-45f9-ac09-7efb67d99310",
+    "atendimentoId": "b5af86ee-78f8-42de-ada6-907d3b747216",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para exames.",
+      "detalhe": "DINAMO_PAL+DINAMO_ESC+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "updateExamStatus(nao_realizado)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A048 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "G2 · fadiga mais consulta",
+    "porque": "ficha de bancada com laudo próprio",
+    "perfil": {
+     "porque": "G2 · fadiga mais consulta — ficha de bancada com laudo próprio",
+     "nome": "Amanda Bezerra Quintal 51",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "FADIGA",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "laudosMinimos": 1
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "G2 · fadiga mais consulta — ficha de bancada com laudo próprio",
+     "nome": "Amanda Bezerra Quintal 51",
+     "nascimento": "1901-03-17",
+     "sexo": "feminino",
+     "exames": [
+      "FADIGA",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 50,
+    "pacienteId": "f09ed2c3-07ea-4977-bcbf-5ea14d7581b2",
+    "atendimentoId": "447ac4e2-5e0d-4f49-b22f-daca2680a626",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "FADIGA+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A049 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  },
+  {
+   "rota": {
+    "nome": "G3 · todos os exames de uma vez",
+    "porque": "o limite: tudo que a clínica oferece, num paciente só",
+    "perfil": {
+     "porque": "G3 · todos os exames de uma vez — o limite: tudo que a clínica oferece, num paciente só",
+     "nome": "Bernardo Achilles Fontoura 52",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "ISHIHARA",
+      "ROMBERG",
+      "FADIGA",
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "DINAMO_LOM",
+      "ECG",
+      "ESPIRO",
+      "EEG",
+      "RAIOX",
+      "LAB",
+      "PSICO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "espera": {
+     "etapa": "finalizado",
+     "temConsulta": true,
+     "temAso": true,
+     "laudosMinimos": 5
+    }
+   },
+   "percurso": {
+    "perfil": {
+     "porque": "G3 · todos os exames de uma vez — o limite: tudo que a clínica oferece, num paciente só",
+     "nome": "Bernardo Achilles Fontoura 52",
+     "nascimento": "1944-02-29",
+     "sexo": "masculino",
+     "exames": [
+      "AUDIO",
+      "ACUIDADE",
+      "ISHIHARA",
+      "ROMBERG",
+      "FADIGA",
+      "DINAMO_PAL",
+      "DINAMO_ESC",
+      "DINAMO_LOM",
+      "ECG",
+      "ESPIRO",
+      "EEG",
+      "RAIOX",
+      "LAB",
+      "PSICO",
+      "CLINICO"
+     ],
+     "procedencia": "particular",
+     "triagem": true,
+     "prioridade": "normal"
+    },
+    "indice": 51,
+    "pacienteId": "ab42448a-59b8-42fa-b629-886007692195",
+    "atendimentoId": "526ed31b-4326-4f19-99e8-910d349928bc",
+    "passos": [
+     {
+      "acao": "createPatient",
+      "ok": true,
+      "mensagem": "Paciente cadastrado com sucesso."
+     },
+     {
+      "acao": "performCheckin",
+      "ok": true
+     },
+     {
+      "acao": "startReception",
+      "ok": true,
+      "mensagem": "Atendimento iniciado."
+     },
+     {
+      "acao": "definirProcedencia",
+      "ok": true,
+      "mensagem": "Procedência P registrada."
+     },
+     {
+      "acao": "finishReception",
+      "ok": true,
+      "mensagem": "Recepção concluída — paciente encaminhado para triagem.",
+      "detalhe": "AUDIO+ACUIDADE+ISHIHARA+ROMBERG+FADIGA+DINAMO_PAL+DINAMO_ESC+DINAMO_LOM+ECG+ESPIRO+EEG+RAIOX+LAB+PSICO+CLINICO"
+     },
+     {
+      "acao": "gerarCobrancaRecepcao",
+      "ok": true,
+      "mensagem": "Cobranca criada. Configure a chave Pix para gerar o QR Code."
+     },
+     {
+      "acao": "chamarParaTriagem",
+      "ok": true,
+      "mensagem": "Chamado para Triagem."
+     },
+     {
+      "acao": "saveTriage",
+      "ok": true,
+      "mensagem": "Triagem concluída."
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ACUIDADE"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "FADIGA"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ISHIHARA"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "AUDIO"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_ESC"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_LOM"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "DINAMO_PAL"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ECG"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "EEG"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "ESPIRO"
+     },
+     {
+      "acao": "callNextForRoom",
+      "ok": true,
+      "mensagem": "Paciente chamado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "saveExamResult",
+      "ok": true,
+      "mensagem": "Resultado registrado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "updateExamStatus(concluido)",
+      "ok": true,
+      "mensagem": "Exame atualizado.",
+      "detalhe": "LAB"
+     },
+     {
+      "acao": "chamarProximoNoConsultorio",
+      "ok": true,
+      "mensagem": "Senha A050 chamada em Consultorio Medico."
+     },
+     {
+      "acao": "saveExamResult(na consulta)",
+      "ok": true,
+      "mensagem": "Exame concluído.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "gerarLaudoDeExame",
+      "ok": true,
+      "mensagem": "Laudo emitido.",
+      "detalhe": "ROMBERG"
+     },
+     {
+      "acao": "saveConsultation",
+      "ok": true,
+      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+     },
+     {
+      "acao": "quitarAtendimento",
+      "ok": true,
+      "mensagem": "Pagamento confirmado (1 cobrança(s))."
+     },
+     {
+      "acao": "encerrarAtendimento",
+      "ok": true,
+      "mensagem": "Atendimento encerrado. 12 documentos no kit (9 já estavam prontos)."
+     }
+    ],
+    "falhas": []
+   }
+  }
+ ]
+}

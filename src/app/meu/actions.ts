@@ -60,7 +60,29 @@ export interface PortalPaciente {
   agendamentos: AgendamentoDoPaciente[];
 }
 
-/** Confere CPF + nascimento e devolve o paciente, ou null. */
+/**
+ * Motivo de nao ter entrado. `travado` existe para a tela poder dizer
+ * "espere" em vez de "seus dados estao errados" — quem errou a propria
+ * data de nascimento merece saber que a porta so esta fechada por tempo.
+ */
+type Recusa = { travado: boolean };
+
+/**
+ * Confere CPF + nascimento e devolve o paciente, ou a recusa.
+ *
+ * ---------------------------------------------------------------------
+ * Por que ha uma trava aqui
+ * ---------------------------------------------------------------------
+ * CPF no Brasil nao e segredo, e a data de nascimento de uma pessoa cabe
+ * em ~11 mil tentativas. Sem contador, o portal entregava o cadastro de
+ * qualquer paciente a quem tivesse paciencia — e o CPF e a data de
+ * nascimento vem impressos no A.S.O. que vai ao RH da empresa.
+ *
+ * Cinco erros no mesmo CPF fecham a porta por quinze minutos. A contagem
+ * vive no banco (`portal_login_attempts`), nao na memoria do servidor:
+ * em serverless cada requisicao pode cair em outra instancia, e um
+ * contador em memoria nao conta nada.
+ */
 async function autenticar(cpfBruto: string, nascimento: string) {
   const cpf = onlyDigits(cpfBruto);
   if (cpf.length !== 11 || !nascimento) return null;
@@ -75,6 +97,14 @@ async function autenticar(cpfBruto: string, nascimento: string) {
   const tenant = { id: marca.tenantId, trade_name: marca.tradeName };
 
   const admin = createAdminClient();
+
+  // Trava antes do banco de pacientes: quem esta bloqueado nem consulta.
+  const { data: liberado } = await admin.rpc('portal_pode_tentar', {
+    p_tenant: tenant.id,
+    p_cpf: cpf,
+  });
+  if (liberado === false) return { travado: true } satisfies Recusa;
+
   const { data: paciente } = await admin
     .from('patients')
     .select('id, full_name, social_name')
@@ -84,8 +114,30 @@ async function autenticar(cpfBruto: string, nascimento: string) {
     .is('deleted_at', null)
     .maybeSingle<{ id: string; full_name: string; social_name: string | null }>();
 
-  if (!paciente) return null;
+  // Conta sempre, acerto e erro: e o acerto que zera o contador de quem
+  // simplesmente digitou errado antes.
+  const { data: podeSeguir } = await admin.rpc('portal_registrar_tentativa', {
+    p_tenant: tenant.id,
+    p_cpf: cpf,
+    p_ok: !!paciente,
+  });
+
+  if (!paciente) return { travado: podeSeguir === false } satisfies Recusa;
   return { tenant, paciente, admin };
+}
+
+/** A recusa ja tem mensagem propria; distingue de sessao valida. */
+function recusado(
+  sessao: Awaited<ReturnType<typeof autenticar>>,
+): sessao is null | Recusa {
+  return sessao === null || 'travado' in sessao;
+}
+
+const MENSAGEM_TRAVADO =
+  'Muitas tentativas. Aguarde 15 minutos ou fale com a clínica pelo telefone.';
+
+function mensagemDaRecusa(sessao: null | Recusa, padrao: string): string {
+  return sessao !== null && sessao.travado ? MENSAGEM_TRAVADO : padrao;
 }
 
 /** Tudo que o paciente pode ver sobre si mesmo. */
@@ -95,7 +147,9 @@ export async function obterPortal(
 ): Promise<ActionResult<PortalPaciente>> {
   try {
     const sessao = await autenticar(cpf, nascimento);
-    if (!sessao) return fail('Não localizamos seu cadastro com esses dados.');
+    if (recusado(sessao)) {
+      return fail(mensagemDaRecusa(sessao, 'Não localizamos seu cadastro com esses dados.'));
+    }
     const { tenant, paciente, admin } = sessao;
 
     const [atendimentoRes, recibosRes, documentosRes, agendamentosRes] = await Promise.all([
@@ -239,7 +293,9 @@ export async function baixarDocumento(
 ): Promise<ActionResult<{ url: string }>> {
   try {
     const sessao = await autenticar(cpf, nascimento);
-    if (!sessao) return fail('Sessão expirada. Consulte novamente.');
+    if (recusado(sessao)) {
+      return fail(mensagemDaRecusa(sessao, 'Sessão expirada. Consulte novamente.'));
+    }
     const { tenant, paciente, admin } = sessao;
 
     // O documento precisa ser do proprio paciente e estar liberado para ele.
@@ -366,7 +422,9 @@ export async function agendarAtendimento(input: {
 }): Promise<ActionResult<{ id: string; quando: string }>> {
   try {
     const sessao = await autenticar(input.cpf, input.nascimento);
-    if (!sessao) return fail('Não localizamos seu cadastro com esses dados.');
+    if (recusado(sessao)) {
+      return fail(mensagemDaRecusa(sessao, 'Não localizamos seu cadastro com esses dados.'));
+    }
     const { tenant, paciente, admin } = sessao;
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.data) || !/^\d{2}:\d{2}$/.test(input.hora)) {

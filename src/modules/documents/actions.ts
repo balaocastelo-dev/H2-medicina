@@ -21,6 +21,7 @@ import { montarComprovanteImpresso } from './comprovante-texto';
 import { gerarLaudoDeExame } from './laudo-actions';
 import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
 import { umDo, type Embutido } from '@/lib/embed';
+import { ehDocumentoClinico, pacientePodeVer } from './visivel-ao-paciente';
 import type { SessionContext } from '@/lib/auth';
 import {
   BLOCO_PSICOSSOCIAL,
@@ -424,7 +425,10 @@ export async function generateAttendanceDocument(
         file_path: path,
         size_bytes: pdfBytes.byteLength,
         verification_code: verificationCode,
-        is_patient_visible: true,
+        // Por tipo, nao "true" em tudo: o portal do paciente autentica com
+        // CPF + nascimento, que sao os dois campos impressos no A.S.O. que
+        // vai ao RH. Ficha clinica e psicossocial ficam fora dele.
+        is_patient_visible: pacientePodeVer(kind),
         generated_by: ctx.userId,
       })
       .select('id')
@@ -762,17 +766,39 @@ export async function getDocumentUrl(
 
     const { data: doc } = await supabase
       .from('documents')
-      .select('id, bucket, file_path, patient_id, payload')
+      .select('id, kind, bucket, file_path, patient_id, payload')
       .eq('id', documentId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
+        kind: string;
         bucket: string;
         file_path: string;
         patient_id: string | null;
         payload: Record<string, unknown> | null;
       }>();
     if (!doc?.file_path) return fail('Documento não encontrado.');
+
+    // Abrir documento clinico deixa rastro nominal.
+    //
+    // A auditoria apontou que `documentos.emitir` — permissao de balcao —
+    // abre ficha clinica e avaliacao psicossocial de qualquer paciente da
+    // clinica. Exigir `clinico.ver` aqui seria fechar a aba Documentos para
+    // a recepcao, e foi a propria clinica que pediu para emitir A.S.O. e
+    // ficha clinica por ali: a recepcao imprime e entrega.
+    //
+    // Entao a fronteira nao e quem pode, e sim quem fez. Cada abertura de
+    // documento clinico entra na trilha de acesso da LGPD com nome, hora e
+    // paciente — a clinica consegue responder "quem olhou o prontuario de
+    // quem", que e a pergunta que a lei faz.
+    if (ehDocumentoClinico(doc.kind) && doc.patient_id) {
+      await supabase.rpc('registrar_acesso_clinico', {
+        p_tenant: ctx.tenant.id,
+        p_patient: doc.patient_id,
+        p_context: `documento:${doc.kind}`,
+        p_reference: doc.id,
+      });
+    }
 
     const caminhoDocx =
       typeof doc.payload?.docx_path === 'string' ? doc.payload.docx_path : null;

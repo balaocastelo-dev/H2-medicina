@@ -2,7 +2,7 @@ import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardBody, CardHeader, EmptyState, StatCard, Table, Td, Th } from '@/components/ui';
-import { formatMoney, todayISO } from '@/lib/format';
+import { diaEmSaoPaulo, formatMoney, todayISO } from '@/lib/format';
 import {
   evolucaoMensal,
   janelaDoPeriodo,
@@ -102,11 +102,14 @@ export default async function FluxoDeCaixaPage({
 
   const movimentos: Movimento[] = [];
 
+  // `diaEmSaoPaulo` em vez de `.slice(0, 10)`: o banco guarda em UTC, e das
+  // 21h a meia-noite UTC ja e o dia seguinte. Cortando a string, o
+  // movimento das noites de semana caia no dia — e as vezes no mes — errado.
   for (const p of pagamentos.data ?? []) {
     if (['cancelado', 'estornado', 'falhou'].includes(p.status)) continue;
     movimentos.push({
-      competencia: (p.due_date ?? p.created_at).slice(0, 10),
-      pagoEm: p.status === 'pago' ? (p.paid_at ?? p.created_at).slice(0, 10) : null,
+      competencia: diaEmSaoPaulo(p.due_date ?? p.created_at),
+      pagoEm: p.status === 'pago' ? diaEmSaoPaulo(p.paid_at ?? p.created_at) : null,
       tipo: 'receita',
       valor: p.net_amount,
       categoria: p.description?.trim() || 'Atendimento',
@@ -117,7 +120,7 @@ export default async function FluxoDeCaixaPage({
     if (c.status === 'cancelada') continue;
     movimentos.push({
       competencia: c.due_date,
-      pagoEm: c.status === 'paga' ? (c.paid_at ?? c.due_date).slice(0, 10) : null,
+      pagoEm: c.status === 'paga' ? diaEmSaoPaulo(c.paid_at ?? c.due_date) : null,
       tipo: 'despesa',
       valor: c.amount,
       categoria: c.category,
@@ -125,9 +128,18 @@ export default async function FluxoDeCaixaPage({
   }
 
   for (const r of repasses.data ?? []) {
+    if (r.status === 'cancelado') continue;
     movimentos.push({
-      competencia: r.created_at.slice(0, 10),
-      pagoEm: r.status === 'pago' ? (r.paid_at ?? r.created_at).slice(0, 10) : null,
+      // A competencia do repasse e a COLUNA `competencia`, nao a data em que
+      // o lancamento foi criado.
+      //
+      // `created_at` e quando o medico assinou a consulta; a competencia e o
+      // mes em que o paciente foi atendido. Consulta de dia 31 assinada no
+      // dia 1o caia em meses diferentes nas duas telas: o medico via em
+      // "Meus ganhos" um total que nao fechava com o "Repasse medico" da
+      // clinica, e ninguem conseguia dizer qual dos dois estava certo.
+      competencia: r.competencia,
+      pagoEm: r.status === 'pago' ? diaEmSaoPaulo(r.paid_at ?? r.created_at) : null,
       tipo: 'repasse',
       valor: r.fee,
       categoria: 'Repasse médico',

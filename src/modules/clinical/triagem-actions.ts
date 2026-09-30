@@ -86,8 +86,45 @@ export async function chamarParaTriagem(
 
     const nome = atendimento.patients?.social_name ?? atendimento.patients?.full_name ?? null;
 
-    // A TV é o que faz o paciente levantar da cadeira: se a chamada não
-    // aparecer, o resto não adianta. Por isso ela vem antes.
+    // Tomar o paciente ANTES de anunciar.
+    //
+    // A ordem era a inversa — a TV primeiro, porque e ela que faz o paciente
+    // levantar da cadeira. Mas o UPDATE nao tinha condicao nenhuma e o
+    // resultado nao era nem lido: duas telas de triagem clicando junto
+    // "davam certo" nas duas, e a TV anunciava a mesma senha em duas salas.
+    // O paciente ouve o nome duas vezes e nao sabe para onde ir.
+    //
+    // `in_service = false` na condicao e o que faz a tomada ser atomica: o
+    // Postgres serializa os dois updates e o segundo encontra `true`,
+    // afetando zero linhas. Mesmo padrao do consultorio, que ja funcionava.
+    // Repetir a chamada e um caso legitimo: o paciente nao ouviu, ou nao
+    // apareceu, e a triagem clica de novo. Nesse caso ele JA esta
+    // `em_triagem` e a trava nao pode valer — senao o botao para de repetir.
+    //
+    // A trava vale para a PRIMEIRA chamada, que e onde duas telas disputam o
+    // mesmo paciente na fila.
+    const repetindo = atendimento.stage_code === 'em_triagem';
+
+    let tomada = supabase
+      .from('attendances')
+      .update({
+        stage_code: 'em_triagem',
+        current_room_id: sala.id,
+        in_service: true,
+        updated_by: ctx.userId,
+      })
+      .eq('id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id);
+    if (!repetindo) tomada = tomada.eq('in_service', false);
+
+    const { data: tomado, error: erroTomada } = await tomada
+      .select('id')
+      .maybeSingle<{ id: string }>();
+    if (erroTomada) return fail(toFriendlyError(erroTomada));
+    if (!tomado) {
+      return fail('Este paciente já foi chamado em outra sala. Atualize a fila.');
+    }
+
     if (senha?.code) {
       await supabase.from('tv_calls').insert({
         tenant_id: ctx.tenant.id,
@@ -99,17 +136,6 @@ export async function chamarParaTriagem(
         priority: atendimento.priority ?? 'normal',
       });
     }
-
-    await supabase
-      .from('attendances')
-      .update({
-        stage_code: 'em_triagem',
-        current_room_id: sala.id,
-        in_service: true,
-        updated_by: ctx.userId,
-      })
-      .eq('id', attendanceId)
-      .eq('tenant_id', ctx.tenant.id);
 
     await supabase
       .from('rooms')

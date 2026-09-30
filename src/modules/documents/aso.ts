@@ -306,7 +306,11 @@ export async function gerarAso(
         // botao de baixar nao precisar adivinhar o nome do arquivo.
         payload: caminhoDocx ? { docx_path: caminhoDocx } : {},
         verification_code: codigo,
-        is_patient_visible: true,
+        // O A.S.O. e entregue em maos e vai ao RH da empresa. No portal de
+        // baixo atrito (CPF + nascimento, os dois campos impressos nele
+        // proprio) ele nao entra: quem tem o papel na mao baixaria o
+        // historico inteiro da pessoa.
+        is_patient_visible: false,
         signed_by: signatario.id,
         signer_name: signatario.nome,
         signer_council: signatario.numero
