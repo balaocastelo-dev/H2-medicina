@@ -1,7 +1,8 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { CATEGORIAS, type Riscos } from './riscos';
-import { protegerPagina } from './texto-do-pdf';
+import { protegerFonte, protegerPagina } from './texto-do-pdf';
+import { escreverRodapeEmTodasAsPaginas } from './rodape-de-todas-as-paginas';
 
 /**
  * A.S.O. no modelo que a clinica ja usa em papel.
@@ -148,8 +149,16 @@ function quebrar(texto: string, fonte: PDFFont, tamanho: number, largura: number
 
 export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const fonte = await pdf.embedFont(StandardFonts.Helvetica);
-  const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // `protegerFonte` faz a MEDIDA coincidir com o que vai ser desenhado.
+  //
+  // `protegerPagina` filtra o texto na hora de escrever, mas a fonte media o
+  // ORIGINAL: o filtro transtitera em vez de apagar, e o resultado e mais
+  // longo — "≤" vira "<=", "±" vira "+/-", "½" vira "1/2", "…" vira "...".
+  // Toda quebra de linha e todo corte de coluna media curto e desenhava
+  // longo, invadindo a margem e a coluna vizinha. A protecao existia pronta
+  // e nunca tinha sido ligada.
+  const fonte = protegerFonte(await pdf.embedFont(StandardFonts.Helvetica));
+  const negrito = protegerFonte(await pdf.embedFont(StandardFonts.HelveticaBold));
   const cor = hexParaRgb(d.clinica.cor);
   const cinza = rgb(0.42, 0.45, 0.5);
   const preto = rgb(0.1, 0.1, 0.12);
@@ -180,20 +189,63 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     y -= 20;
   };
 
-  /** Linha com duas colunas de rotulo/valor, como as tabelas do modelo. */
+  /**
+   * Linha com duas colunas de rotulo/valor, como as tabelas do modelo.
+   *
+   * ---------------------------------------------------------------------
+   * Valor longo quebra em mais linhas; nao e mais cortado
+   * ---------------------------------------------------------------------
+   * Aqui havia `quebrar(...)[0]`: a funcao devolvia o texto ja quebrado em
+   * linhas e o codigo pegava a PRIMEIRA, jogando o resto fora sem
+   * reticencias e sem aviso. A largura util da a ~55 caracteres, entao
+   * "COMPANHIA BRASILEIRA DE DISTRIBUICAO E LOGISTICA INTEGRADA LTDA" saia
+   * cortada no meio — e este bloco imprime RAZAO SOCIAL, NOME DO
+   * FUNCIONARIO, ENDERECO, CARGO, SETOR e NOME DO MEDICO DO PCMSO.
+   *
+   * Nome e empresa cortados num documento legal que vai ao RH e a
+   * fiscalizacao: o A.S.O. deixava de identificar quem examinou quem.
+   *
+   * Agora a coluna desce quantas linhas precisar, e o par de colunas avanca
+   * pela mais alta das duas — as duas ficam alinhadas pelo topo, como no
+   * modelo em papel. Duas linhas sao raras (nome muito longo, razao social
+   * muito longa); o A.S.O. continua caindo numa folha no caso comum.
+   */
   const paresEmDuasColunas = (pares: [string, string | null][]) => {
     const validos = pares.filter(([, v]) => v !== null && String(v).trim() !== '');
+    const alturaDaLinha = 11;
+
     for (let i = 0; i < validos.length; i += 2) {
-      espaco(14);
-      validos.slice(i, i + 2).forEach(([rotulo, valor], coluna) => {
+      const doPar = validos.slice(i, i + 2);
+
+      // Quebra os dois valores ANTES de escrever, para saber de quanto
+      // espaco o par precisa e pedir a folha certa uma unica vez.
+      const colunas = doPar.map(([rotulo, valor], coluna) => {
         const x = MARGEM + 4 + coluna * (LARGURA / 2);
-        pagina.drawText(`${rotulo}:`, { x, y, size: 7.5, font: negrito, color: cinza });
         const desloc = negrito.widthOfTextAtSize(`${rotulo}: `, 7.5);
         const larguraValor = LARGURA / 2 - desloc - 10;
-        const texto = quebrar(String(valor), fonte, 8, larguraValor)[0] ?? '';
-        pagina.drawText(texto, { x: x + desloc, y, size: 8, font: fonte, color: preto });
+        // Tres linhas e o teto: acima disso o campo nao e nome nem empresa,
+        // e uma observacao no lugar errado.
+        const linhas = quebrar(String(valor), fonte, 8, larguraValor).slice(0, 3);
+        return { x, desloc, rotulo, linhas };
       });
-      y -= 12.5;
+
+      const linhasDoPar = Math.max(1, ...colunas.map((c) => c.linhas.length));
+      espaco(linhasDoPar * alturaDaLinha + 4);
+
+      for (const c of colunas) {
+        pagina.drawText(`${c.rotulo}:`, { x: c.x, y, size: 7.5, font: negrito, color: cinza });
+        c.linhas.forEach((linha, n) => {
+          pagina.drawText(linha, {
+            x: c.x + c.desloc,
+            y: y - n * alturaDaLinha,
+            size: 8,
+            font: fonte,
+            color: preto,
+          });
+        });
+      }
+
+      y -= linhasDoPar * alturaDaLinha + 1.5;
     }
     y -= 4;
   };
@@ -291,12 +343,22 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const linhasRestricoes = d.restricoes
     ? quebrar(`Restrições: ${d.restricoes}`, fonte, 8, LARGURA - 10)
     : [];
-  const linhasObservacoes = quebrar(
-    d.observacoes?.trim() || '—',
-    fonte,
-    8,
-    LARGURA - 10,
-  ).slice(0, 8);
+  // As observacoes trazem `observations ?? conclusion` — ou seja, quando o
+  // medico nao preenche observacao, e a CONCLUSAO DELE que cai aqui.
+  //
+  // O corte em 8 linhas descartava o resto em silencio, e o .docx do mesmo
+  // atendimento saia completo: o RH que abrisse o Word lia mais do que estava
+  // no PDF que a clinica declara como documento oficial. Vinte e quatro
+  // linhas cobrem qualquer conclusao real, e o que passar disso e dito.
+  const TETO_OBSERVACOES = 24;
+  const observacoesInteiras = quebrar(d.observacoes?.trim() || '—', fonte, 8, LARGURA - 10);
+  const observacoesCortadas = observacoesInteiras.length > TETO_OBSERVACOES;
+  const linhasObservacoes = observacoesCortadas
+    ? [
+        ...observacoesInteiras.slice(0, TETO_OBSERVACOES),
+        '(texto completo registrado no sistema — consulte pelo código de verificação)',
+      ]
+    : observacoesInteiras;
 
   const aptidoesExtras = [
     d.aptoAltura ? 'Apto para trabalho em altura (NR-35)' : null,
@@ -373,6 +435,14 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   // -------------------------------------------------------------------
   faixa('Avaliação Clínica e Exames Realizados');
   const larguraColuna = LARGURA / colunasDeExame;
+  // Pede a folha pelo bloco INTEIRO, antes de escrever a primeira linha.
+  //
+  // Este era o unico bloco variavel que nao pedia espaco: o `y` de cada
+  // linha saia de `yExames - linha * dy(11.5)`, sem piso nenhum. Com 15 ou 20
+  // exames, as linhas desciam pela faixa da assinatura, pelo bloco de
+  // assinatura e pelo rodape — escrevendo por cima do codigo de verificacao e
+  // podendo sair da folha. Os exames sao a lista que a fiscalizacao confere.
+  espaco(linhasDeExame * dy(11.5) + dy(6));
   const yExames = y;
   examesParaImprimir.forEach((exame, i) => {
     const coluna = Math.floor(i / linhasDeExame);
@@ -404,7 +474,39 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   // Parecer, em caixas de marcar como no modelo da clinica
   // -------------------------------------------------------------------
   faixa('Parecer');
+
+  // Parecer que nao esta entre as opcoes do modelo em papel.
+  //
+  // O banco tem QUATRO valores de parecer e a tela da consulta oferece os
+  // quatro, mas o modelo em papel da clinica tem tres caixas. Com
+  // "inconclusivo" o A.S.O. saia com a faixa "Parecer" e NENHUMA caixa
+  // marcada: um documento que nao diz se a pessoa esta apta — e o .docx do
+  // mesmo atendimento dizia "INCONCLUSIVO", os dois discordando.
+  //
+  // Nao se inventa uma quarta caixa no modelo: escreve-se o que o medico
+  // concluiu, em destaque, onde a caixa estaria.
+  const foraDoModelo = !OPCOES_DE_PARECER.some(([chave]) => chave === d.parecer);
+  if (foraDoModelo) {
+    espaco(dy(30));
+    pagina.drawRectangle({
+      x: MARGEM + 5, y: y - 5, width: LARGURA - 10, height: dy(18),
+      color: rgb(0.99, 0.96, 0.9), borderColor: rgb(0.85, 0.6, 0.2), borderWidth: 0.9,
+    });
+    pagina.drawText('EXAME INCONCLUSIVO — CONCLUSÃO PENDENTE', {
+      x: MARGEM + 11, y: y + 2, size: fs(9), font: negrito, color: rgb(0.55, 0.35, 0.05),
+    });
+    y -= dy(24);
+    pagina.drawText(
+      'O médico examinador não concluiu a avaliação de aptidão. Este documento não atesta aptidão nem inaptidão.',
+      { x: MARGEM + 5, y, size: fs(7.5), font: fonte, color: cinza },
+    );
+    y -= dy(13);
+  }
+
   for (const [chave, rotulo] of OPCOES_DE_PARECER) {
+    // Com parecer fora do modelo nenhuma caixa e desenhada: tres caixas
+    // vazias abaixo do aviso pareceriam formulario esquecido em branco.
+    if (foraDoModelo) break;
     espaco(dy(15));
     const marcada = d.parecer === chave;
     pagina.drawRectangle({
@@ -525,17 +627,21 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   // -------------------------------------------------------------------
   // Rodape
   // -------------------------------------------------------------------
-  let yr = 40;
-  const rodape = [
-    d.rodape,
-    `Código de verificação: ${d.codigoVerificacao}${d.urlVerificacao ? ` — ${d.urlVerificacao}` : ''}`,
-  ].filter(Boolean) as string[];
-  for (const parte of rodape.reverse()) {
-    for (const linha of quebrar(parte, fonte, 6.5, LARGURA).reverse()) {
-      pagina.drawText(linha, { x: MARGEM, y: yr, size: 6.5, font: fonte, color: cinza });
-      yr += 9;
-    }
-  }
+  // Em TODAS as folhas, nao so na ultima.
+  //
+  // O laco escrevia em `pagina`, que apos uma quebra aponta para a ultima
+  // folha: num A.S.O. de duas paginas, a folha 1 saia sem codigo de
+  // verificacao e sem o rodape da clinica. Folha de A.S.O. sem codigo nao
+  // se confere em /verificar e nao se liga a outra.
+  escreverRodapeEmTodasAsPaginas(pdf, {
+    texto: d.rodape,
+    codigoVerificacao: d.codigoVerificacao,
+    url: d.urlVerificacao,
+    margem: MARGEM,
+    fonte,
+    base: 40,
+    tamanho: 6.5,
+  });
 
   return pdf.save();
 }

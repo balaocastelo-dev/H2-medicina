@@ -286,6 +286,42 @@ export function startOfTodayISO(): string {
 }
 
 /**
+ * Quantos dias para tras as telas de PENDENCIA olham.
+ *
+ * ---------------------------------------------------------------------
+ * Por que existe
+ * ---------------------------------------------------------------------
+ * As telas de operacao cortam em `startOfTodayISO()` para a fila do dia nao
+ * virar um deposito de atendimento esquecido — e isso esta certo para quem
+ * esta chamando paciente agora.
+ *
+ * O problema e que TODAS cortavam assim, inclusive as que mostram conta
+ * aberta. Um atendimento que virou a noite em `aguardando_pagamento` deixava
+ * de aparecer na tela de Pagamentos, no CRM e no painel: a clinica nao tinha
+ * de onde tirar a conta, e o unico vestigio era a ficha do paciente, que
+ * ninguem abre sem saber o nome.
+ *
+ * Trinta dias porque e o horizonte em que a clinica ainda cobra, e porque
+ * uma pendencia mais velha que isso nao e mais fila — e cobranca, que se
+ * resolve pelo Financeiro.
+ */
+export const DIAS_DE_PENDENCIA = 30;
+
+/**
+ * Inicio da janela das telas de pendencia: o comeco do dia, N dias atras,
+ * no fuso da clinica.
+ *
+ * Usado onde deixar de ver o que ficou aberto custa dinheiro — Pagamentos e
+ * o CRM. As telas de chamada (filas, triagem, consultorio) continuam no dia,
+ * porque ali a lista precisa ser o que esta na sala de espera AGORA.
+ */
+export function inicioDasPendenciasISO(dias: number = DIAS_DE_PENDENCIA): string {
+  const d = new Date(startOfTodayISO());
+  d.setUTCDate(d.getUTCDate() - dias);
+  return d.toISOString();
+}
+
+/**
  * Converte o horario escolhido na tela para o instante correto em UTC.
  *
  * O campo `datetime-local` do navegador manda "2026-08-21T14:30", sem fuso

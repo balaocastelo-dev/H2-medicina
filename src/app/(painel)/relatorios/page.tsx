@@ -39,6 +39,10 @@ export default async function RelatoriosPage({
       .select('id, status, duration_seconds, exam_types(name)')
       .eq('tenant_id', ctx.tenant.id)
       .gte('created_at', `${from}T00:00:00`)
+      // Faltava o `.lte`: escolher 01/08 a 15/08 trazia tudo de 01/08 ATE
+      // HOJE, com o cabecalho dizendo "Periodo de 01/08 a 15/08". Fechava-se
+      // um mes com numero de dois.
+      .lte('created_at', `${to}T23:59:59`)
       .returns<
         {
           id: string;
@@ -53,6 +57,8 @@ export default async function RelatoriosPage({
           .select('status, net_amount, method')
           .eq('tenant_id', ctx.tenant.id)
           .gte('created_at', `${from}T00:00:00`)
+          // Mesmo `.lte` que faltava nos exames — aqui o numero e dinheiro.
+          .lte('created_at', `${to}T23:59:59`)
           .is('deleted_at', null)
           .returns<{ status: string; net_amount: number; method: string }[]>()
       : Promise.resolve({ data: [] as { status: string; net_amount: number; method: string }[] }),
@@ -62,7 +68,17 @@ export default async function RelatoriosPage({
   const exams = examsRes.data ?? [];
   const payments = paymentsRes.data ?? [];
 
-  const finished = attendances.filter((a) => a.finished_at);
+  // Cancelado e ausente nao sao atendimento.
+  //
+  // As contagens usavam a lista inteira, e `finished_at` e gravado tambem
+  // quando o paciente e marcado ausente no totem — entao um no-show entrava
+  // como atendimento concluido, e a "jornada" dele era o tempo entre a
+  // primeira chegada e a volta ao totem. Isso inflava os tres indicadores de
+  // uma vez.
+  const NAO_CONTAM = ['cancelado', 'ausente'];
+  const realizados = attendances.filter((a) => !NAO_CONTAM.includes(a.stage_code));
+
+  const finished = realizados.filter((a) => a.finished_at);
   const avgJourney =
     finished.length > 0
       ? finished.reduce(
@@ -72,8 +88,10 @@ export default async function RelatoriosPage({
         ) / finished.length
       : 0;
 
+  const cancelados = attendances.length - realizados.length;
+
   const byCompany = new Map<string, number>();
-  for (const a of attendances) {
+  for (const a of realizados) {
     const key = a.companies?.trade_name ?? a.companies?.legal_name ?? 'Sem empresa';
     byCompany.set(key, (byCompany.get(key) ?? 0) + 1);
   }
@@ -83,8 +101,16 @@ export default async function RelatoriosPage({
     const key = e.exam_types?.name ?? 'Outro';
     const entry = byExam.get(key) ?? { total: 0, done: 0, seconds: 0 };
     entry.total += 1;
-    if (e.status === 'concluido') entry.done += 1;
-    entry.seconds += e.duration_seconds ?? 0;
+    // Somar a duracao so de quem entra no divisor.
+    //
+    // `duration_seconds` e gerado de started_at -> finished_at, e o sistema
+    // grava `finished_at` tambem quando o exame e marcado "nao realizado".
+    // Exame iniciado e abandonado somava no numerador e nao no denominador:
+    // o tempo medio saia inflado, e ninguem entendia por que.
+    if (e.status === 'concluido') {
+      entry.done += 1;
+      entry.seconds += e.duration_seconds ?? 0;
+    }
     byExam.set(key, entry);
   }
 
@@ -97,7 +123,13 @@ export default async function RelatoriosPage({
       <PageHeader title="Relatorios" description={`Periodo de ${from} a ${to}`} />
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Atendimentos" value={attendances.length} />
+        <StatCard
+          label="Atendimentos"
+          value={realizados.length}
+          // A clinica precisa saber quantos cairam, e nao ver o numero cheio
+          // sem saber que ha cancelados dentro.
+          hint={cancelados > 0 ? `${cancelados} cancelado(s) ou ausente(s) fora da conta` : undefined}
+        />
         <StatCard label="Finalizados" value={finished.length} color="#22C55E" />
         <StatCard label="Tempo medio de jornada" value={formatDuration(avgJourney)} />
         {ctx.permissions.has('financeiro.ver') && (

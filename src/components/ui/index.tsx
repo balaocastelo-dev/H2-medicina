@@ -307,7 +307,13 @@ export function Alert({
     error: 'border-red-200 bg-red-50 text-red-900',
   };
   return (
-    <div className={cn('rounded-lg border p-3 text-sm', styles[variant])} role="status">
+    <div
+      className={cn('rounded-lg border p-3 text-sm', styles[variant])}
+      // `role="status"` e polite: o leitor de tela espera terminar o que
+      // estava dizendo. Recusa precisa interromper, senao a pessoa clica de
+      // novo antes de ouvir que nao deu.
+      role={variant === 'error' ? 'alert' : 'status'}
+    >
       {title && <p className="font-semibold">{title}</p>}
       {children}
     </div>

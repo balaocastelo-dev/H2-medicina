@@ -732,7 +732,16 @@ export async function moveAttendanceStage(
       entityId: attendanceId,
       description: `Movido manualmente para ${stage}`,
     });
-    revalidatePath('/crm');
+    // Nao so o CRM.
+    //
+    // Esta acao e chamada de tres telas: arrastar o cartao no CRM, "Devolver
+    // as filas" em /filas, e "Cancelar atendimento" em /recepcao. Revalidando
+    // apenas /crm, quem clicava em "Devolver as filas" via a mensagem verde e
+    // o paciente CONTINUAVA na mesma lista — e clicava de novo, tres, quatro
+    // vezes, cada clique gravando uma movimentacao e uma linha de auditoria.
+    for (const caminho of ['/crm', '/filas', '/recepcao', '/triagem', '/medico', '/pagamentos']) {
+      revalidatePath(caminho);
+    }
     return ok(undefined, 'Paciente movido.');
   } catch (error) {
     return fail(toFriendlyError(error));

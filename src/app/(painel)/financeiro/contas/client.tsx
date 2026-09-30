@@ -107,12 +107,16 @@ export function ContasClient({
 }) {
   const [emEdicao, setEmEdicao] = useState<ContaRow | null>(null);
   const [rodando, setRodando] = useState<string | null>(null);
-  const [aviso, setAviso] = useState<string | null>(null);
+  // Guarda tambem se deu certo: o aviso saia sempre em azul, inclusive
+  // quando era recusa. "Sem permissao" numa caixinha azul-celeste, ao lado
+  // das mensagens de sucesso, era lido como confirmacao — e uma conta que
+  // NAO foi baixada parecia baixada.
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null);
 
   const executar = async (id: string, acao: () => Promise<ActionResult>) => {
     setRodando(id);
     const r = await acao();
-    setAviso(r.ok ? (r.message ?? 'Feito.') : r.error);
+    setAviso({ ok: r.ok, texto: r.ok ? (r.message ?? 'Conta atualizada.') : r.error });
     setRodando(null);
   };
 
@@ -126,7 +130,9 @@ export function ContasClient({
   return (
     <div className="space-y-4">
       {emEdicao && <NovaConta key={emEdicao.id} conta={emEdicao} />}
-      {aviso && <Alert variant="info">{aviso}</Alert>}
+      {aviso && (
+        <Alert variant={aviso.ok ? 'success' : 'error'}>{aviso.texto}</Alert>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-4">

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { dinheiroDigitado } from '@/lib/dinheiro-digitado';
 
 // ---------------------------------------------------------------------
 // Perigos e fatores de risco por cargo
@@ -153,15 +154,27 @@ export async function salvarValoresDaEmpresa(
       const bruto = formData.get(`preco_${exame.id}`);
       if (bruto === null) continue;
 
-      const texto = String(bruto).trim().replace(',', '.');
-      if (texto === '') {
+      // `dinheiroDigitado` no lugar de `.replace(',', '.')`.
+      //
+      // O `replace` antigo transformava "1.234,56" em "1.234.56" -> NaN, e
+      // lia "1.234" (mil duzentos e trinta e quatro) como 1,234 -> gravava
+      // R$ 1,23. Pior: num navegador configurado em ingles o campo
+      // `type=number` com virgula devolve STRING VAZIA, e vazio aqui
+      // significa "apagar" — o valor negociado da empresa desaparecia com a
+      // mensagem "Valores salvos.".
+      //
+      // O campo agora e texto (`painel-valores.tsx`), entao o que chega e o
+      // que a pessoa digitou, e as duas notacoes sao aceitas.
+      const valor = dinheiroDigitado(bruto);
+      if (valor === null) {
+        // Vazio de verdade: usar o preco de tabela.
         paraApagar.push(exame.id);
         continue;
       }
-
-      const valor = Number(texto);
-      if (!Number.isFinite(valor) || valor < 0) {
-        return fail('Há um valor inválido na tabela. Use apenas números.');
+      if (Number.isNaN(valor) || valor < 0) {
+        return fail(
+          'Há um valor inválido na tabela. Use apenas números — pode usar vírgula nos centavos.',
+        );
       }
 
       paraGravar.push({

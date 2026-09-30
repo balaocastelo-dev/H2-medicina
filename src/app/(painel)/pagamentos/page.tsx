@@ -2,7 +2,7 @@ import { requirePermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { PageHeader } from '@/components/layout/page-header';
 import { Alert, Card, EmptyState, StatCard } from '@/components/ui';
-import { startOfTodayISO } from '@/lib/format';
+import { inicioDasPendenciasISO, startOfTodayISO } from '@/lib/format';
 import { PainelPagamentos, type LinhaPagamento } from './painel';
 
 export const dynamic = 'force-dynamic';
@@ -22,13 +22,26 @@ export default async function PagamentosPage() {
     .in('stage_code', ['aguardando_pagamento', 'aguardando_documentos'])
     .is('finished_at', null)
     .is('deleted_at', null)
-    .gte('checkin_at', startOfTodayISO())
+    // Trinta dias, e nao "hoje".
+    //
+    // A tela cortava no inicio do dia. Um atendimento que virou a noite em
+    // `aguardando_pagamento` — exatamente a etapa onde a CONTA ESTA ABERTA —
+    // desaparecia daqui, e de todas as outras telas junto: a de Documentos
+    // exige `aguardando_documentos`, o modulo medico nao lista esta etapa, e
+    // o CRM tambem cortava em hoje. A clinica ficava sem lugar nenhum de
+    // onde cobrar.
+    .gte('checkin_at', inicioDasPendenciasISO())
     .order('checkin_at')
     .returns<LinhaPagamento[]>();
 
   const linhas = data ?? [];
   const aguardando = linhas.filter((l) => l.stage_code === 'aguardando_pagamento');
   const liberados = linhas.filter((l) => l.stage_code === 'aguardando_documentos');
+
+  // O que ficou de outro dia precisa ser dito, nao so listado: a esteira de
+  // hoje e uma coisa, conta velha em aberto e outra.
+  const hoje = startOfTodayISO();
+  const deOutrosDias = linhas.filter((l) => l.checkin_at < hoje);
 
   const emAberto = linhas.reduce(
     (soma, l) =>
@@ -54,11 +67,23 @@ export default async function PagamentosPage() {
         description="Etapa entre a consulta e a emissão dos documentos"
       />
 
-      <div className="mb-4">
+      <div className="mb-4 space-y-2">
         <Alert variant="info">
           Nenhum documento é emitido antes de a conta fechar. Confirme o pagamento e clique em
           <strong> Liberar documentos</strong> para o paciente seguir na esteira.
         </Alert>
+        {deOutrosDias.length > 0 && (
+          <Alert variant="warning">
+            <strong>
+              {deOutrosDias.length} atendimento{deOutrosDias.length > 1 ? 's' : ''} de dias
+              anteriores
+            </strong>{' '}
+            ainda {deOutrosDias.length > 1 ? 'estão' : 'está'} nesta esteira — aparece
+            {deOutrosDias.length > 1 ? 'm' : ''} com a data de chegada na lista. Confirme o
+            pagamento ou cancele o atendimento no CRM para tirá-
+            {deOutrosDias.length > 1 ? 'los' : 'lo'} daqui.
+          </Alert>
+        )}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

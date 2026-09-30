@@ -77,12 +77,35 @@ export default async function FilasPage() {
   const contagem = contarNaFila(distribuicao);
   const semSala = distribuicao.semSala.filter((e) => NA_FILA.includes(e.status));
 
-  // Quem foi movido manualmente para frente pode ter deixado exames por fazer.
-  // Esses exames nao aparecem em fila nenhuma — e preciso avisar.
+  // Quem foi movido manualmente PARA FRENTE pode ter deixado exames por
+  // fazer. Esses exames nao aparecem em fila nenhuma — e preciso avisar.
+  //
+  // ---------------------------------------------------------------------
+  // "Para frente" e a palavra importante
+  // ---------------------------------------------------------------------
+  // A consulta excluia so `aguardando_exames` e `em_exames`, entao
+  // `aguardando_recepcao`, `na_recepcao`, `aguardando_triagem` e
+  // `em_triagem` CAIAM aqui. Mas nessas etapas ter exame pendente e o
+  // normal, nao um problema: o `checkin_patient` ja cria os exames do
+  // agendamento como pendentes, logo TODO paciente agendado aparecia neste
+  // aviso no segundo em que tirava a senha.
+  //
+  // E o botao do aviso manda para `aguardando_exames`. Um clique tirava da
+  // recepcao um paciente que nunca passou pelo balcao: sem procedencia, sem
+  // cobranca gerada, sem `reception_finished_at` — e ele nao voltava a
+  // aparecer na recepcao, que so lista as duas etapas dela. Aviso falso que
+  // treinava a equipe a clicar, e o clique furava o caixa.
+  const ANTES_DOS_EXAMES = [
+    'aguardando_recepcao',
+    'na_recepcao',
+    'aguardando_triagem',
+    'em_triagem',
+  ];
+
   const { data: presos } = await supabase
     .from('patient_exams')
     .select(
-      'id, attendance_id, exam_types!inner(name, ocupa_sala), attendances!inner(stage_code), patients(full_name)',
+      'id, attendance_id, room_id, exam_types!inner(name, ocupa_sala, default_room_id), attendances!inner(stage_code), patients(full_name)',
     )
     .eq('tenant_id', ctx.tenant.id)
     .in('status', ['pendente', 'em_fila', 'chamado', 'em_andamento'])
@@ -92,11 +115,13 @@ export default async function FilasPage() {
     .eq('exam_types.ocupa_sala', true)
     .not('attendances.stage_code', 'in', '("aguardando_exames","em_exames")')
     .not('attendances.stage_code', 'in', '("finalizado","cancelado","ausente")')
+    .not('attendances.stage_code', 'in', `(${ANTES_DOS_EXAMES.map((e) => `"${e}"`).join(',')})`)
     .returns<
       {
         id: string;
         attendance_id: string;
-        exam_types: { name: string } | null;
+        room_id: string | null;
+        exam_types: { name: string; default_room_id: string | null } | null;
         attendances: { stage_code: string } | null;
         patients: { full_name: string } | null;
       }[]
@@ -107,6 +132,12 @@ export default async function FilasPage() {
     { nome: string; etapa: string; exames: string[] }
   >();
   for (const e of presos ?? []) {
+    // Exame de bancada da triagem tem sala — so nao e sala desta tela.
+    // Mesma exclusao que a consulta principal faz acima; sem ela, acuidade,
+    // Ishihara e fadiga apareciam como exame "sem fila".
+    const sala = e.room_id ?? e.exam_types?.default_room_id ?? null;
+    if (sala !== null && idsDeTriagem.has(sala)) continue;
+
     const atual = foraDaFila.get(e.attendance_id) ?? {
       nome: e.patients?.full_name ?? 'Paciente',
       etapa: e.attendances?.stage_code ?? '',

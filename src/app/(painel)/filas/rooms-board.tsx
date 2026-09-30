@@ -139,7 +139,29 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                           run(async () => {
                             // Devolve o paciente inteiro, não um exame só:
                             // deixar metade chamada prende a sala.
-                            for (const e of ativos) await updateExamStatus(e.id, 'pendente');
+                            //
+                            // E confere cada um. O laço descartava os
+                            // resultados e devolvia `ok: true` fixo: se um
+                            // exame falhasse, o paciente ficava metade
+                            // chamado e metade na fila — prendendo a sala,
+                            // que é exatamente o que este botão existe para
+                            // evitar — com mensagem verde na tela.
+                            const falhas: string[] = [];
+                            for (const e of ativos) {
+                              const r = await updateExamStatus(e.id, 'pendente');
+                              if (!r.ok) {
+                                falhas.push(`${e.exam_types?.name ?? 'Exame'}: ${r.error}`);
+                              }
+                            }
+                            if (falhas.length > 0) {
+                              return {
+                                ok: false as const,
+                                error:
+                                  falhas.length === ativos.length
+                                    ? falhas[0]!
+                                    : `Devolvido em parte — ${falhas.join('; ')}. A sala pode ter ficado ocupada: atualize a tela.`,
+                              };
+                            }
                             return { ok: true as const, message: 'Devolvido à fila.' };
                           })
                         }
@@ -228,8 +250,16 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                 {queue.length === 0 ? (
                   <EmptyState title="Fila vazia" />
                 ) : (
-                  <ul className="divide-y divide-slate-100">
-                    {queue.slice(0, 6).map((e) => (
+                  // Rolagem propria em vez de `slice(0, 6)`.
+                  //
+                  // O cabecalho dizia "9 na fila" e a lista mostrava seis. Os
+                  // tres ultimos eram inalcancaveis — inclusive pelo botao de
+                  // tirar da fila: se o setimo paciente foi embora, ninguem
+                  // conseguia remove-lo, e ele seguia contando na fila e nas
+                  // bolinhas do menu. Manha de empresa grande passa de seis
+                  // com facilidade.
+                  <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto">
+                    {queue.map((e) => (
                       <li key={e.id} className="flex items-center justify-between py-2 text-sm">
                         <div className="min-w-0">
                           <p className="truncate font-medium">

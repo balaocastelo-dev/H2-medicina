@@ -77,8 +77,21 @@ export function Consultorios({
                       size="sm"
                       variant="outline"
                       loading={pendente}
+                      disabled={pendente}
+                      // `void` sem `await`: a transicao acabava no mesmo
+                      // instante, o botao nao travava, e o resultado ia para o
+                      // lixo. Cada clique insere uma chamada em `tv_calls` — o
+                      // duplo clique anunciava a senha duas vezes na TV, com
+                      // gongo dobrado, e o medico nao sabia se a primeira
+                      // tinha funcionado.
                       onClick={() =>
-                        iniciar(() => void recallTicket(sala.atendimentoId!, sala.id))
+                        iniciar(async () => {
+                          const r = await recallTicket(sala.atendimentoId!, sala.id);
+                          setAviso({
+                            ok: r.ok,
+                            texto: r.ok ? (r.message ?? 'Senha rechamada no painel.') : r.error,
+                          });
+                        })
                       }
                     >
                       <RotateCcw className="h-4 w-4" /> Rechamar
@@ -87,10 +100,22 @@ export function Consultorios({
                       size="sm"
                       variant="ghost"
                       loading={pendente}
+                      disabled={pendente}
                       onClick={() =>
                         iniciar(async () => {
-                          await devolverParaFilaDoMedico(sala.atendimentoId!, sala.id);
-                          router.refresh();
+                          // O resultado era ignorado e so se chamava
+                          // `router.refresh()`: quando a devolucao falhava, o
+                          // paciente continuava no cartao da sala sem nenhuma
+                          // explicacao, e o consultorio ficava preso.
+                          const r = await devolverParaFilaDoMedico(
+                            sala.atendimentoId!,
+                            sala.id,
+                          );
+                          setAviso({
+                            ok: r.ok,
+                            texto: r.ok ? (r.message ?? 'Paciente devolvido à fila.') : r.error,
+                          });
+                          if (r.ok) router.refresh();
                         })
                       }
                     >

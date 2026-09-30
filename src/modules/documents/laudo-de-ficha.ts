@@ -2,7 +2,8 @@ import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import type { FichaDeExame } from '@/modules/clinical/fichas-de-exame';
-import { protegerPagina } from './texto-do-pdf';
+import { protegerFonte, protegerPagina } from './texto-do-pdf';
+import { escreverRodapeEmTodasAsPaginas } from './rodape-de-todas-as-paginas';
 
 /**
  * Laudo de qualquer exame que tenha ficha de preenchimento.
@@ -50,8 +51,9 @@ export interface DadosDoLaudoDeFicha {
 
 export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const F = await pdf.embedFont(StandardFonts.Helvetica);
-  const B = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // Medida e desenho pelo mesmo texto: ver o comentario em aso-pdf.ts.
+  const F = protegerFonte(await pdf.embedFont(StandardFonts.Helvetica));
+  const B = protegerFonte(await pdf.embedFont(StandardFonts.HelveticaBold));
 
   const cor = corDaMarca(d.clinica.cor);
   const preto = rgb(0.1, 0.1, 0.12);
@@ -68,12 +70,28 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
     alturaDaPagina: A4[1],
   });
 
-  /** Abre pagina nova quando o que vem nao cabe. */
+  /**
+   * Abre pagina nova quando o que vem nao cabe.
+   *
+   * A folha nova recebia SO a barra de cor: sem nome da clinica, sem nome do
+   * paciente, sem titulo do exame. A folha 2 de um laudo psicossocial era
+   * papel anonimo — inutil para fiscalizacao e impossivel de recasar com a
+   * folha 1 se as duas se separassem. Agora ela se identifica.
+   */
   const garantir = (altura: number) => {
     if (y - altura > 70) return;
     pagina = protegerPagina(pdf.addPage(A4));
     pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
     y = A4[1] - M;
+    pagina.drawText(`${d.ficha.titulo} — continuação`, {
+      x: M, y, size: 9, font: B, color: cor,
+    });
+    y -= 12;
+    pagina.drawText(
+      [d.clinica.razaoSocial, d.paciente.nome].filter(Boolean).join(' · '),
+      { x: M, y, size: 7.5, font: F, color: cinza },
+    );
+    y -= 16;
   };
 
   const faixa = (texto: string) => {
@@ -245,10 +263,17 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
   pagina.drawText(registro, { x: M, y, size: 7.5, font: F, color: cinza });
 
   // -------------------------------------------------------------- rodape
-  const pe = [d.rodape, `Código de verificação ${d.codigoVerificacao}`]
-    .filter(Boolean)
-    .join('  ·  ');
-  pagina.drawText(pe, { x: M, y: 38, size: 6.8, font: F, color: cinza });
+  // Em todas as folhas. A pagina nova criada por `garantir` recebia apenas a
+  // barra de cor no topo — sem clinica, sem paciente, sem titulo do exame, e
+  // o rodape com o codigo saia so na ultima. A folha 2 de um laudo
+  // psicossocial era papel anonimo.
+  escreverRodapeEmTodasAsPaginas(pdf, {
+    texto: d.rodape,
+    codigoVerificacao: d.codigoVerificacao,
+    margem: M,
+    fonte: F,
+    base: 38,
+  });
 
   return pdf.save();
 }

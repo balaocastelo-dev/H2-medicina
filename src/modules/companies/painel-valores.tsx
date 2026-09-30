@@ -74,11 +74,21 @@ export function PainelDeValores({
                     </Td>
                     <Td>
                       {podeEditar ? (
+                        // `type="text"` com `inputMode="decimal"`, e nao
+                        // `type="number"`.
+                        //
+                        // Em navegador configurado em ingles, `type="number"`
+                        // recusa a virgula e devolve STRING VAZIA — e vazio
+                        // aqui significa "apagar o valor negociado". A
+                        // empresa perdia o preco combinado com a mensagem
+                        // "Valores salvos.". Como texto, o que a pessoa
+                        // digitou chega intacto e o servidor aceita as duas
+                        // notacoes. `inputMode` ainda abre o teclado
+                        // numerico no celular.
                         <Input
                           name={`preco_${e.id}`}
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="tabela"
                           defaultValue={e.precoNegociado ?? ''}
                         />

@@ -3,7 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import { desenharAudiograma, desenharLegenda } from './audiograma-pdf';
 import { lerLimiares, resumirOrelha, rotuloFrequencia, FREQUENCIAS } from './audiograma';
-import { protegerPagina } from './texto-do-pdf';
+import { protegerFonte, protegerPagina } from './texto-do-pdf';
 
 /**
  * Laudo da audiometria tonal ocupacional.
@@ -62,8 +62,9 @@ function hexParaRgb(hex: string) {
 
 export async function buildLaudoAudiometria(d: DadosDoLaudo): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const fonte = await pdf.embedFont(StandardFonts.Helvetica);
-  const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // Medida e desenho pelo mesmo texto: ver o comentario em aso-pdf.ts.
+  const fonte = protegerFonte(await pdf.embedFont(StandardFonts.Helvetica));
+  const negrito = protegerFonte(await pdf.embedFont(StandardFonts.HelveticaBold));
   const pagina = protegerPagina(pdf.addPage(A4));
 
   const cor = hexParaRgb(d.clinica.cor);
@@ -240,9 +241,51 @@ export async function buildLaudoAudiometria(d: DadosDoLaudo): Promise<Uint8Array
   // Conclusao e assinatura
   // ---------------------------------------------------------------
   faixa('Conclusão');
-  const conclusao = d.conclusao?.trim() || '—';
-  for (const linha of conclusao.split('\n').slice(0, 6)) {
-    pagina.drawText(linha.slice(0, 120), { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
+
+  // A conclusao do medico e a unica parte do laudo escrita por ele.
+  //
+  // Aqui havia `split('\n').slice(0, 6)` e `linha.slice(0, 120)` — nenhuma
+  // quebra por largura. Uma conclusao digitada em TEXTO CORRIDO, sem Enter,
+  // e uma linha so: 600 caracteres viravam 120, e 80% do que o medico
+  // escreveu desaparecia do papel sem nenhum aviso.
+  //
+  // Agora quebra pela largura da folha. O teto em linhas continua, porque
+  // este laudo e de uma pagina e abaixo dele vem a assinatura em y=110 —
+  // mas agora o que nao couber e dito, em vez de sumir.
+  const LARGURA_TEXTO = largura - 8;
+  const LIMITE_DE_LINHAS = 9;
+
+  const linhasDaConclusao: string[] = [];
+  for (const paragrafo of (d.conclusao?.trim() || '—').split('\n')) {
+    if (paragrafo.trim() === '') {
+      linhasDaConclusao.push('');
+      continue;
+    }
+    let atual = '';
+    for (const palavra of paragrafo.trim().split(/\s+/)) {
+      const teste = atual ? `${atual} ${palavra}` : palavra;
+      if (fonte.widthOfTextAtSize(teste, 8) > LARGURA_TEXTO && atual) {
+        linhasDaConclusao.push(atual);
+        atual = palavra;
+      } else {
+        atual = teste;
+      }
+    }
+    if (atual) linhasDaConclusao.push(atual);
+  }
+
+  const cortou = linhasDaConclusao.length > LIMITE_DE_LINHAS;
+  for (const linha of linhasDaConclusao.slice(0, LIMITE_DE_LINHAS)) {
+    pagina.drawText(linha, { x: MARGEM + 4, y, size: 8, font: fonte, color: preto });
+    y -= 10;
+  }
+  if (cortou) {
+    // Dizer que faltou e o minimo: quem le o papel precisa saber que a
+    // conclusao continua no sistema.
+    pagina.drawText(
+      'Conclusão completa registrada no sistema — consulte pelo código de verificação abaixo.',
+      { x: MARGEM + 4, y, size: 7, font: negrito, color: rgb(0.6, 0.4, 0.1) },
+    );
     y -= 10;
   }
 

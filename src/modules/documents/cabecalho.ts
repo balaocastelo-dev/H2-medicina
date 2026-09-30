@@ -119,10 +119,23 @@ export async function desenharCabecalho(
   }
 
   // Titulo do documento, a direita.
+  //
+  // O titulo encolhe ate caber no espaco que sobra depois da identificacao
+  // da clinica. Antes ele era desenhado sempre a 15pt, e o espaco reservado
+  // para ele era um numero fixo (150pt) que nao correspondia a nada: titulo
+  // de 41 caracteres — "Avaliação de fatores de risco psicossocial" —
+  // ocupa ~380pt a 15pt e era impresso POR CIMA do nome da clinica, os dois
+  // textos sobrepostos na mesma linha de base.
+  const LARGURA_DA_CLINICA = 170;
+  const espacoDoTitulo = largura - margem - (recuo + LARGURA_DA_CLINICA);
+  let tamanhoTitulo = 15;
+  while (tamanhoTitulo > 8 && negrito.widthOfTextAtSize(titulo, tamanhoTitulo) > espacoDoTitulo) {
+    tamanhoTitulo -= 0.5;
+  }
   pagina.drawText(titulo, {
-    x: largura - margem - negrito.widthOfTextAtSize(titulo, 15),
+    x: largura - margem - negrito.widthOfTextAtSize(titulo, tamanhoTitulo),
     y: y - 4,
-    size: 15,
+    size: tamanhoTitulo,
     font: negrito,
     color: rgb(0.11, 0.12, 0.14),
   });
@@ -131,11 +144,16 @@ export async function desenharCabecalho(
   pagina.drawText(d.nome, { x: recuo, y: y - 2, size: 9.5, font: negrito, color: cor });
   let yTexto = y - 14;
   for (const linha of [d.razaoSocial, d.cnpj, d.endereco, d.contato].filter(Boolean) as string[]) {
-    // Corta em vez de invadir o titulo.
+    // Corta em vez de invadir o titulo. O espaco e o mesmo reservado acima,
+    // e o corte termina em reticencias: endereco cortado no meio parecia
+    // endereco errado, nao endereco abreviado.
+    const disponivel = LARGURA_DA_CLINICA - 6;
     let texto = linha;
-    const disponivel = largura - margem * 2 - (recuo - margem) - 150;
-    while (fonte.widthOfTextAtSize(texto, 7.2) > disponivel && texto.length > 8) {
-      texto = texto.slice(0, -2);
+    if (fonte.widthOfTextAtSize(texto, 7.2) > disponivel) {
+      while (fonte.widthOfTextAtSize(`${texto}...`, 7.2) > disponivel && texto.length > 8) {
+        texto = texto.slice(0, -2);
+      }
+      texto = `${texto}...`;
     }
     pagina.drawText(texto, { x: recuo, y: yTexto, size: 7.2, font: fonte, color: cinza });
     yTexto -= 9.2;

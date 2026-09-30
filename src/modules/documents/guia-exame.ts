@@ -1,7 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
-import { protegerPagina } from './texto-do-pdf';
+import { protegerFonte, protegerPagina } from './texto-do-pdf';
 
 /**
  * Guia de solicitacao de exame, no modelo "Guia de Exame.docx" da clinica.
@@ -50,8 +50,9 @@ const LARGURA = A4[0] - M * 2;
 
 export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const F = await pdf.embedFont(StandardFonts.Helvetica);
-  const B = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // Medida e desenho pelo mesmo texto: ver o comentario em aso-pdf.ts.
+  const F = protegerFonte(await pdf.embedFont(StandardFonts.Helvetica));
+  const B = protegerFonte(await pdf.embedFont(StandardFonts.HelveticaBold));
   const pagina = protegerPagina(pdf.addPage(A4));
 
   const cor = corDaMarca(d.clinica.cor);
@@ -121,14 +122,35 @@ export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
     pagina.drawText('—', { x: M + 4, y, size: 8, font: F, color: cinza });
     y -= 13.5;
   }
+  // O piso e sagrado: abaixo dele ficam "Local do Exame" e o rodape, e o
+  // endereco e o motivo de existir da guia.
+  //
+  // O `break` antigo saia apenas do `while` interno — o `for` externo
+  // continuava e escrevia o proximo exame no mesmo `y` ja abaixo do piso.
+  // Lista longa de laboratoriais (a recepcao digita em texto livre) escrevia
+  // POR CIMA da caixa do endereco e depois fora da folha: o paciente saia
+  // com uma guia sem conseguir ler para onde ir.
+  const PISO_DA_LISTA = 190;
+  let cortados = 0;
+
   for (const exame of d.exames) {
-    // Uma linha por exame, quebrando o que nao couber.
+    if (y < PISO_DA_LISTA) {
+      cortados += 1;
+      continue;
+    }
+
     let resto = exame;
     let primeira = true;
-    while (resto.length > 0) {
+    while (resto.length > 0 && y >= PISO_DA_LISTA) {
       let linha = resto;
-      while (F.widthOfTextAtSize(linha, 9) > LARGURA - 24 && linha.includes(' ')) {
-        linha = linha.slice(0, linha.lastIndexOf(' '));
+      // `linha.includes(' ')` fazia palavra unica longa — nome de exame
+      // colado por barras, por exemplo — sair pela margem direita. Sem
+      // espaco para quebrar, corta na letra.
+      while (F.widthOfTextAtSize(linha, 9) > LARGURA - 24) {
+        const ultimoEspaco = linha.lastIndexOf(' ');
+        if (ultimoEspaco > 0) linha = linha.slice(0, ultimoEspaco);
+        else linha = linha.slice(0, -1);
+        if (linha.length <= 1) break;
       }
       if (primeira) {
         pagina.drawText('•', { x: M + 6, y, size: 9, font: B, color: cor });
@@ -137,8 +159,18 @@ export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
       pagina.drawText(linha, { x: M + 18, y, size: 9, font: F, color: preto });
       resto = resto.slice(linha.length).trim();
       y -= 13;
-      if (y < 170) break;
     }
+    if (resto.length > 0) cortados += 1;
+  }
+
+  if (cortados > 0) {
+    // Guia que esconde exame manda o paciente ao laboratorio sem fazer
+    // parte do que foi pedido. Dizer quantos faltam e o minimo.
+    pagina.drawText(
+      `+ ${cortados} exame(s) não couberam nesta folha — solicite a segunda via na recepção.`,
+      { x: M + 6, y, size: 7.5, font: B, color: rgb(0.75, 0.35, 0.1) },
+    );
+    y -= 13;
   }
   y -= 8;
 
@@ -159,7 +191,24 @@ export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
     borderWidth: 0.9,
   });
   pagina.drawText('Local do Exame', { x: M + 10, y: y - 2, size: 8, font: B, color: cor });
-  pagina.drawText(d.localDoExame, { x: M + 10, y: y - 16, size: 9.5, font: B, color: preto });
+  // Endereco completo de laboratorio passa dos 90 caracteres e transbordava
+  // a caixa e a folha: era desenhado a 9.5 bold sem corte nenhum. Encolhe a
+  // fonte ate caber, com piso de legibilidade — o endereco e o unico dado
+  // que a guia existe para transmitir, nao da para corta-lo.
+  let tamanhoLocal = 9.5;
+  while (
+    tamanhoLocal > 7 &&
+    B.widthOfTextAtSize(d.localDoExame, tamanhoLocal) > LARGURA - 20
+  ) {
+    tamanhoLocal -= 0.5;
+  }
+  pagina.drawText(d.localDoExame, {
+    x: M + 10,
+    y: y - 16,
+    size: tamanhoLocal,
+    font: B,
+    color: preto,
+  });
   y -= 46;
 
   // --------------------------------------------------------- rodape

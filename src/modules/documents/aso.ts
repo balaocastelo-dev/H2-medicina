@@ -109,6 +109,22 @@ export async function gerarAso(
     const contatoCfg = (ctx.settings.contato ?? {}) as Record<string, string | null>;
     const respCfg = (ctx.settings.responsavel_tecnico ?? {}) as Record<string, string | null>;
     const signatario = await carregarSignatario(ctx, signatarioId ?? ctx.userId, respCfg);
+
+    // A.S.O. sem registro do conselho do examinador nao vale.
+    //
+    // Nada validava isso em camada nenhuma: sem CRM cadastrado, o rodape do
+    // documento saia "Carimbo e Assinatura — Médico Examinador", sem numero,
+    // e a pagina /verificar tambem mostrava o conselho em branco. A clinica
+    // so descobria quando a fiscalizacao ou o RH devolvia o papel.
+    //
+    // O caminho e curto: Perfil > dados profissionais. Melhor recusar a
+    // emissao agora, com a instrucao, do que imprimir cem A.S.O. invalidos.
+    if (!signatario.numero?.trim()) {
+      return fail(
+        `Falta o número do ${signatario.conselho} de ${signatario.nome} para emitir o A.S.O. ` +
+          'Cadastre o registro profissional em Perfil (ou em Usuários, se for outro médico) e emita novamente.',
+      );
+    }
     const pcmsoCfg = (ctx.settings.pcmso ?? {}) as Record<string, string | null>;
     const docsCfg = (ctx.settings.documentos ?? {}) as Record<string, string | null>;
 
@@ -329,7 +345,15 @@ export async function gerarAso(
       description: 'A.S.O. emitido ao finalizar a consulta',
     });
 
-    return ok({ documentId: doc.id });
+    // Emitido, mas com aviso: o documento existe e esta certo em tudo menos
+    // na imagem da assinatura. Melhor a clinica saber agora do que o RH
+    // devolver o papel amanha.
+    return ok(
+      { documentId: doc.id },
+      signatario.assinaturaFalhou
+        ? 'A.S.O. emitido, mas SEM a imagem da assinatura do médico — verifique a assinatura em Perfil e emita novamente.'
+        : undefined,
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -354,6 +378,12 @@ interface Signatario {
   uf: string | null;
   /** PNG em data URI, ou null quando o profissional ainda nao registrou. */
   assinatura: string | null;
+  /**
+   * Verdadeiro quando existe assinatura cadastrada mas nao foi possivel
+   * carrega-la. Diferente de "nao cadastrou": aqui ha algo errado no
+   * sistema, e quem emitiu precisa saber antes de entregar o papel.
+   */
+  assinaturaFalhou?: boolean;
 }
 
 /**
@@ -398,19 +428,37 @@ async function carregarSignatario(
 
   // Assinatura ilegivel nao pode impedir a emissao: o documento sai com a
   // linha e o nome, como sempre saiu.
+  //
+  // Mas a falha tem de APARECER. O `createSignedUrl` recusado pela RLS
+  // devolve `{ data: null, error }` — nao lanca excecao —, entao o `catch`
+  // abaixo nunca era acionado e o unico teste era `if (data?.signedUrl)`. O
+  // A.S.O. saia sem assinatura, com mensagem de sucesso, e nem o medico nem
+  // a recepcao nem o log ficavam sabendo. Foi assim que a captura de
+  // assinatura passou meses quebrada pela politica do bucket (0052).
   try {
-    const { data } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from('signatures')
       .createSignedUrl(perfil.signature_path, 120);
-    if (data?.signedUrl) {
-      const resposta = await fetch(data.signedUrl);
-      if (resposta.ok) {
-        const buf = Buffer.from(await resposta.arrayBuffer());
-        base.assinatura = `data:image/png;base64,${buf.toString('base64')}`;
-      }
+    if (error || !data?.signedUrl) {
+      console.error(
+        '[aso] assinatura cadastrada mas inacessivel para este usuario:',
+        perfil.signature_path,
+        error?.message,
+      );
+      base.assinaturaFalhou = true;
+      return base;
     }
+    const resposta = await fetch(data.signedUrl);
+    if (!resposta.ok) {
+      console.error('[aso] assinatura nao baixou:', resposta.status);
+      base.assinaturaFalhou = true;
+      return base;
+    }
+    const buf = Buffer.from(await resposta.arrayBuffer());
+    base.assinatura = `data:image/png;base64,${buf.toString('base64')}`;
   } catch (erro) {
     console.error('[aso] não consegui carregar a assinatura do médico:', erro);
+    base.assinaturaFalhou = true;
   }
 
   return base;

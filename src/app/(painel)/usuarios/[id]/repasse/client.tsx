@@ -56,9 +56,11 @@ export function FormValoresDoMedico({
                   <Td>
                     <Input
                       name={`fee_${p.code}`}
-                      type="number"
-                      step="0.01"
-                      min="0"
+                      // Texto, nao `number`: em navegador configurado em
+                      // ingles o `number` recusa a virgula e manda vazio, e
+                      // vazio aqui apaga o valor proprio do medico.
+                      type="text"
+                      inputMode="decimal"
                       placeholder="padrão"
                       defaultValue={p.proprio ?? ''}
                     />

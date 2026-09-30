@@ -35,16 +35,34 @@ export function PedidosOnline({ pedidos }: { pedidos: PedidoOnline[] }) {
 
   if (lista.length === 0) return null;
 
-  const decidir = (id: string, acao: 'confirmar' | 'recusar') =>
+  const decidir = (id: string, acao: 'confirmar' | 'recusar') => {
+    // O Cancelar do prompt devolve `null`, e o `?? ''` que estava aqui
+    // transformava isso em motivo vazio — a recusa seguia. Clicar em
+    // "Recusar" por engano e depois cancelar o prompt recusava o pedido de
+    // qualquer forma, liberando o horario, e nao ha desfazer na tela.
+    let motivo = '';
+    if (acao === 'recusar') {
+      const digitado = window.prompt('Motivo da recusa (opcional):');
+      if (digitado === null) return;
+      motivo = digitado;
+    }
+
     startTransition(async () => {
       const r =
         acao === 'confirmar'
           ? await confirmarPedidoOnline(id)
-          : await recusarPedidoOnline(id, window.prompt('Motivo da recusa (opcional):') ?? '');
+          : await recusarPedidoOnline(id, motivo);
 
-      setMensagem({ ok: r.ok, texto: r.ok ? (r.message ?? 'Feito.') : r.error });
+      setMensagem({
+        ok: r.ok,
+        texto: r.ok
+          ? (r.message ??
+            (acao === 'confirmar' ? 'Pedido confirmado na agenda.' : 'Pedido recusado.'))
+          : r.error,
+      });
       if (r.ok) setLista((prev) => prev.filter((p) => p.id !== id));
     });
+  };
 
   return (
     <div className="mb-4">

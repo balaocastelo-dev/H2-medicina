@@ -209,7 +209,11 @@ export function CatalogoProcedimentos({ procedimentos }: { procedimentos: Proced
   );
   const [editando, setEditando] = useState<Procedimento | null>(null);
   const [restaurando, setRestaurando] = useState(false);
-  const [avisoCatalogo, setAvisoCatalogo] = useState<string | null>(null);
+  // Com o `ok`: o aviso saia sempre azul, mesmo em recusa — lido como
+  // confirmacao de uma restauracao que nao aconteceu.
+  const [avisoCatalogo, setAvisoCatalogo] = useState<{ ok: boolean; texto: string } | null>(
+    null,
+  );
   const erros = state && !state.ok ? state.fieldErrors : undefined;
 
   return (
@@ -225,7 +229,10 @@ export function CatalogoProcedimentos({ procedimentos }: { procedimentos: Proced
             onClick={async () => {
               setRestaurando(true);
               const r = await restaurarCatalogo();
-              setAvisoCatalogo(r.ok ? (r.message ?? 'Catálogo restaurado.') : r.error);
+              setAvisoCatalogo({
+                ok: r.ok,
+                texto: r.ok ? (r.message ?? 'Catálogo restaurado.') : r.error,
+              });
               setRestaurando(false);
             }}
           >
@@ -234,7 +241,9 @@ export function CatalogoProcedimentos({ procedimentos }: { procedimentos: Proced
         }
       />
       <CardBody>
-        {avisoCatalogo && <Alert variant="info">{avisoCatalogo}</Alert>}
+        {avisoCatalogo && (
+          <Alert variant={avisoCatalogo.ok ? 'success' : 'error'}>{avisoCatalogo.texto}</Alert>
+        )}
         {state?.ok && <Alert variant="success">{state.message}</Alert>}
         {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
 

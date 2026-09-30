@@ -1,6 +1,6 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import { protegerPagina } from './texto-do-pdf';
+import { protegerFonte, protegerPagina } from './texto-do-pdf';
 
 export interface PdfBrand {
   systemName: string;
@@ -181,8 +181,9 @@ export async function buildDocumentPdf(input: {
   verificationUrl?: string | null;
 }): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
+  // Medida e desenho pelo mesmo texto: ver o comentario em aso-pdf.ts.
+  const font = protegerFonte(await pdf.embedFont(StandardFonts.Helvetica));
+  const bold = protegerFonte(await pdf.embedFont(StandardFonts.HelveticaBold));
   const brandColor = hexToRgb(input.brand.primaryColor);
 
   let page: PDFPage = protegerPagina(pdf.addPage([595.28, 841.89])); // A4

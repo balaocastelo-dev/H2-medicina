@@ -98,10 +98,39 @@ export function PaymentActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [showPix, setShowPix] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
   const pix = payment.pix_charges?.[0];
+
+  /**
+   * Executa a acao esperando a resposta e mostrando o que aconteceu.
+   *
+   * Antes era `startTransition(() => void confirmPayment(id))`: o callback
+   * nao era `async` e a promise nao era aguardada, entao a transicao acabava
+   * no mesmo instante, `pending` voltava a `false` e o `loading` do botao nao
+   * travava NADA. O resultado ia para o lixo com `void`.
+   *
+   * Em dinheiro isso e grave duas vezes: o duplo clique gravava duas
+   * confirmacoes da mesma cobranca no livro (receita dobrada), e a recusa —
+   * cobranca ja estornada, sessao expirada, RLS — nao aparecia em lugar
+   * nenhum. O operador achava que tinha confirmado.
+   */
+  const executar = (acao: () => Promise<{ ok: boolean; message?: string; error?: string }>) =>
+    startTransition(async () => {
+      const r = await acao();
+      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Pronto.') : (r.error ?? 'Não foi possível.') });
+    });
 
   return (
     <div className="flex flex-wrap items-center gap-1">
+      {msg && (
+        <span
+          className={`mr-1 text-xs ${msg.ok ? 'text-emerald-700' : 'text-red-700'}`}
+          role={msg.ok ? 'status' : 'alert'}
+        >
+          {msg.texto}
+        </span>
+      )}
+
       {pix && (
         <Button size="sm" variant="outline" onClick={() => setShowPix((v) => !v)}>
           <QrCode className="h-4 w-4" />
@@ -113,7 +142,8 @@ export function PaymentActions({
           size="sm"
           variant="success"
           loading={pending}
-          onClick={() => startTransition(() => void confirmPayment(payment.id))}
+          disabled={pending}
+          onClick={() => executar(() => confirmPayment(payment.id))}
         >
           Confirmar
         </Button>
@@ -124,9 +154,10 @@ export function PaymentActions({
           size="sm"
           variant="ghost"
           loading={pending}
+          disabled={pending}
           onClick={() => {
             if (window.confirm('Cancelar esta cobrança?')) {
-              startTransition(() => void cancelPayment(payment.id));
+              executar(() => cancelPayment(payment.id));
             }
           }}
         >
@@ -139,9 +170,13 @@ export function PaymentActions({
           size="sm"
           variant="danger"
           loading={pending}
+          disabled={pending}
           onClick={() => {
             const reason = window.prompt('Motivo do estorno:');
-            if (reason) startTransition(() => void refundPayment(payment.id, reason));
+            // `prompt` devolve null no Cancelar e '' no vazio: os dois param
+            // aqui. Estorno disparado por engano nao tem desfazer.
+            if (reason === null || reason.trim() === '') return;
+            executar(() => refundPayment(payment.id, reason));
           }}
         >
           Estornar
@@ -149,8 +184,30 @@ export function PaymentActions({
       )}
 
       {showPix && pix && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-sm p-5 text-center">
+        // Tres saidas: Esc, clique no fundo e o botao Fechar.
+        //
+        // Este modal tinha apenas o botao. Operador de balcao fecha tudo com
+        // Esc por reflexo, e aqui ficava preso procurando o botao no pe do
+        // cartao — com o paciente esperando para pagar. As outras telas do
+        // sistema (menu lateral, mapa da jornada) ja tem fundo clicavel.
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pix para pagamento"
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setShowPix(false);
+          }}
+          onClick={() => setShowPix(false)}
+        >
+          <Card
+            className="w-full max-w-sm p-5 text-center"
+            // O clique dentro do cartao nao fecha: copiar o codigo e marcar
+            // texto na textarea sao cliques legitimos.
+            onClick={(e) => e.stopPropagation()}
+          >
             <Badge color="#22C55E">Pix</Badge>
             {pix.qrcode_data_url && (
               // eslint-disable-next-line @next/next/no-img-element

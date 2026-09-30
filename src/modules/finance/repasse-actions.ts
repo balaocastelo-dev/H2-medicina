@@ -8,8 +8,25 @@ import type { SessionContext } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { CATALOGO_PADRAO, competenciaDe } from './repasse';
+import { dinheiroDigitado } from '@/lib/dinheiro-digitado';
 
-const REVALIDAR = ['/financeiro', '/financeiro/repasse', '/financeiro/contas', '/financeiro/calendario'];
+/**
+ * Telas que leem `fee_entries` e `procedure_types`.
+ *
+ * `/financeiro/fluxo-caixa` e `/meus-ganhos` estavam de fora: dar baixa num
+ * repasse nao atualizava nem o fechamento de caixa nem a tela do medico, que
+ * continuava vendo "a pagar" — e cobrando um repasse ja pago. Nenhuma das
+ * duas esta na lista do refresh automatico, entao nao cicatrizava sozinho:
+ * so com F5.
+ */
+const REVALIDAR = [
+  '/financeiro',
+  '/financeiro/repasse',
+  '/financeiro/contas',
+  '/financeiro/calendario',
+  '/financeiro/fluxo-caixa',
+  '/meus-ganhos',
+];
 const revalidarFinanceiro = () => REVALIDAR.forEach((p) => revalidatePath(p));
 
 // ---------------------------------------------------------------------
@@ -119,14 +136,19 @@ export async function salvarValoresDoMedico(
     for (const p of procedimentos ?? []) {
       const bruto = formData.get(`fee_${p.code}`);
       if (bruto === null) continue;
-      const texto = String(bruto).trim().replace(',', '.');
-      if (texto === '') {
+      // Mesmo motivo dos valores por empresa: `.replace(',', '.')` quebrava
+      // "1.234,56" e lia "1.234" como 1,23. E vazio aqui APAGA o valor
+      // proprio do medico — num navegador em ingles, a virgula chegava como
+      // vazio e o valor desaparecia com mensagem de sucesso.
+      const valor = dinheiroDigitado(bruto);
+      if (valor === null) {
         paraApagar.push(p.id);
         continue;
       }
-      const valor = Number(texto);
-      if (!Number.isFinite(valor) || valor < 0) {
-        return fail(`Valor invalido em ${p.code}.`);
+      if (Number.isNaN(valor) || valor < 0) {
+        return fail(
+          `Valor inválido em ${p.code}. Use apenas números — pode usar vírgula nos centavos.`,
+        );
       }
       paraGravar.push({
         tenant_id: ctx.tenant.id,
@@ -158,9 +180,14 @@ export async function salvarValoresDoMedico(
       entityId: profileId,
       description: 'Valores de repasse do medico',
     });
+    // O formulario vive em /usuarios/<id>/repasse, e `revalidatePath` e
+    // caminho EXATO, nao prefixo: revalidar '/usuarios' nao alcancava a tela
+    // que a pessoa estava olhando. Ela via "Valores do medico salvos." com os
+    // campos mostrando os valores antigos, e digitava tudo de novo.
     revalidatePath('/usuarios');
+    revalidatePath(`/usuarios/${profileId}/repasse`);
     revalidarFinanceiro();
-    return ok(undefined, 'Valores do medico salvos.');
+    return ok(undefined, 'Valores do médico salvos.');
   } catch (e) {
     return fail(toFriendlyError(e));
   }

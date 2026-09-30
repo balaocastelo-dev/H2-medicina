@@ -139,14 +139,24 @@ export async function confirmPayment(paymentId: string): Promise<ActionResult> {
     const ctx = await assertPermission('financeiro.registrar');
     const supabase = await createClient();
 
+    // `status` na condicao: confirmar e para cobranca em aberto.
+    //
+    // Sem isso, dois cliques rapidos (ou dois operadores) gravavam DUAS
+    // linhas 'confirmada' em `payment_transactions` para a mesma cobranca, e
+    // o livro passava a mostrar a receita em dobro. `quitarAtendimento` e
+    // `cancelPayment` ja faziam essa guarda; estas duas ficaram de fora.
     const { data, error } = await supabase
       .from('payments')
       .update({ status: 'pago', paid_at: new Date().toISOString(), updated_by: ctx.userId })
       .eq('id', paymentId)
       .eq('tenant_id', ctx.tenant.id)
+      .in('status', ['pendente', 'em_analise'])
       .select('*')
-      .single<Payment>();
+      .maybeSingle<Payment>();
     if (error) return fail(toFriendlyError(error));
+    if (!data) {
+      return fail('Esta cobrança não está em aberto — verifique se o pagamento já foi confirmado.');
+    }
 
     await supabase.from('payment_transactions').insert({
       tenant_id: ctx.tenant.id,
@@ -199,9 +209,15 @@ export async function refundPayment(paymentId: string, reason: string): Promise<
       })
       .eq('id', paymentId)
       .eq('tenant_id', ctx.tenant.id)
+      // So se estorna o que foi pago, e so uma vez: o duplo clique gravava
+      // dois estornos e rodava `desfazerAtendimento` duas vezes.
+      .eq('status', 'pago')
       .select('*')
-      .single<Payment>();
+      .maybeSingle<Payment>();
     if (error) return fail(toFriendlyError(error));
+    if (!data) {
+      return fail('Só é possível estornar cobrança paga — verifique se ela já foi estornada.');
+    }
 
     await supabase.from('payment_transactions').insert({
       tenant_id: ctx.tenant.id,
