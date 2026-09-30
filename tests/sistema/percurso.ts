@@ -22,6 +22,7 @@ import { quitarAtendimento, encerrarAtendimento } from '@/modules/finance/attend
 import { createPatient } from '@/modules/patients/actions';
 import { gerarLaudoDeExame } from '@/modules/documents/laudo-actions';
 import { fichaDoExame } from '@/modules/clinical/fichas-de-exame';
+import { valoresDaFicha, conclusaoDaFicha } from './fichas-realistas';
 import { moveAttendanceStage } from '@/modules/queue/actions';
 import type { Clinica, Pessoa } from './clinica';
 
@@ -73,6 +74,8 @@ export interface Passo {
 
 export interface Percurso {
   perfil: Perfil;
+  /** Posicao no lote. Decide qual quadro clinico o paciente recebe. */
+  indice: number;
   pacienteId: string | null;
   atendimentoId: string | null;
   passos: Passo[];
@@ -142,8 +145,16 @@ export async function passarPeloSistema(
   equipe: Equipe,
   perfil: Perfil,
   catalogo: Map<string, { id: string; ocupaSala: boolean; respondidoPeloMedico: boolean }>,
+  indice = 0,
 ): Promise<Percurso> {
-  const p: Percurso = { perfil, pacienteId: null, atendimentoId: null, passos: [], falhas: [] };
+  const p: Percurso = {
+    perfil,
+    indice,
+    pacienteId: null,
+    atendimentoId: null,
+    passos: [],
+    falhas: [],
+  };
 
   /* ---------------- cadastro ---------------- */
   const paciente = await c.como(equipe.recepcao, () =>
@@ -314,7 +325,14 @@ export async function passarPeloSistema(
           await passo(
             p,
             'saveExamResult(na consulta)',
-            () => saveExamResult(f.id, { resultado: 'sem alteração' }, 'Sem alterações.', false, true),
+            () =>
+              saveExamResult(
+                f.id,
+                valoresDaFicha(f.code, p.indice),
+                conclusaoDaFicha(f.code, p.indice),
+                false,
+                true,
+              ),
             f.code,
           );
           await passo(p, 'gerarLaudoDeExame', () => gerarLaudoDeExame(f.id), f.code);
@@ -412,10 +430,21 @@ async function percorrerAsSalas(
 
       await c.como(equipe.examinador, async () => {
         if (!naoRealiza) {
+          // Valores do tipo que a clinica digita de verdade, e nao um
+          // "normal" generico. Sem isto o laudo de audiometria sai com os
+          // dois audiogramas desenhados e VAZIOS -- foi o que aconteceu na
+          // primeira exportacao de cem pacientes.
           await passo(
             p,
             'saveExamResult',
-            () => saveExamResult(ch.id, { observacao: 'normal' }, 'Sem alteracoes.', false, false),
+            () =>
+              saveExamResult(
+                ch.id,
+                valoresDaFicha(ch.code, p.indice),
+                conclusaoDaFicha(ch.code, p.indice),
+                false,
+                false,
+              ),
             ch.code,
           );
         }

@@ -25,6 +25,7 @@ import {
   type LancamentoRepasse,
 } from '@/modules/finance/repasse';
 import { arquivosDoStorage } from '../integration/banco-vivo';
+import { textoDoPdf } from '../integration/texto-do-pdf';
 import { construirRelatorioDeRepasse } from './relatorio-repasse';
 
 const QUANTOS = Number(process.env.PACIENTES_EXPORT ?? 100);
@@ -136,7 +137,12 @@ beforeAll(async () => {
   );
 
   for (let i = 0; i < perfis.length; i++) {
-    percursos.push(await passarPeloSistema(c, equipes[i % equipes.length]!, perfis[i]!, catalogo));
+    // O indice decide o quadro clinico de cada ficha: audiogramas
+    // diferentes, acuidades diferentes, Ishihara com e sem alteracao. Cem
+    // documentos clonados nao serviriam de amostra para ninguem.
+    percursos.push(
+      await passarPeloSistema(c, equipes[i % equipes.length]!, perfis[i]!, catalogo, i),
+    );
   }
 }, 1_800_000);
 
@@ -201,6 +207,29 @@ describe('a varredura de cem pacientes', () => {
                           where fe.attendance_id = mc.attendance_id
                             and fe.profile_id = mc.doctor_id)`);
     expect(sem).toEqual([]);
+  });
+
+  it('nenhum laudo de audiometria saiu com o gráfico vazio', async () => {
+    // Na primeira exportacao os 21 laudos de audiometria sairam com os dois
+    // quadros desenhados e VAZIOS, porque a varredura preenchia as fichas
+    // com um "normal" generico. O sistema estava certo; o teste e que nunca
+    // chegava ao desenho.
+    const arquivos = arquivosDoStorage();
+    const laudos = await c.linhas<{ paciente: string; file_path: string }>(`
+      select p.full_name as paciente, d.file_path
+        from public.documents d
+        join public.patients p on p.id = d.patient_id
+        join public.patient_exams pe on pe.id::text = d.payload->>'patient_exam_id'
+        join public.exam_types et on et.id = pe.exam_type_id
+       where d.tenant_id = '${c.tenant}' and et.code = 'AUDIO' and d.file_path is not null`);
+
+    const vazios = laudos.filter((l) => {
+      const bytes = arquivos.get(`clinical-documents/${l.file_path}`);
+      return bytes ? textoDoPdf(bytes).includes('sem medição registrada') : true;
+    });
+
+    expect(laudos.length).toBeGreaterThan(0);
+    expect(vazios.map((v) => `${v.paciente}: audiograma sem curva`)).toEqual([]);
   });
 
   it('todo documento gravado tem arquivo de verdade por trás', async () => {
