@@ -1,5 +1,6 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { protegerPagina } from './texto-do-pdf';
 
 export interface PdfBrand {
   systemName: string;
@@ -184,14 +185,14 @@ export async function buildDocumentPdf(input: {
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold);
   const brandColor = hexToRgb(input.brand.primaryColor);
 
-  let page: PDFPage = pdf.addPage([595.28, 841.89]); // A4
+  let page: PDFPage = protegerPagina(pdf.addPage([595.28, 841.89])); // A4
   const margin = 48;
   const maxWidth = 595.28 - margin * 2;
   let y = 841.89 - margin;
 
   const ensureSpace = (needed: number) => {
     if (y - needed < margin + 90) {
-      page = pdf.addPage([595.28, 841.89]);
+      page = protegerPagina(pdf.addPage([595.28, 841.89]));
       y = 841.89 - margin;
     }
   };

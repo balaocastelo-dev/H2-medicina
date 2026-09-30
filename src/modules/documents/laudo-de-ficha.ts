@@ -2,6 +2,7 @@ import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import type { FichaDeExame } from '@/modules/clinical/fichas-de-exame';
+import { protegerPagina } from './texto-do-pdf';
 
 /**
  * Laudo de qualquer exame que tenha ficha de preenchimento.
@@ -57,7 +58,7 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
   const cinza = rgb(0.42, 0.45, 0.5);
   const claro = rgb(0.93, 0.95, 0.94);
 
-  let pagina = pdf.addPage(A4);
+  let pagina = protegerPagina(pdf.addPage(A4));
   let y = await desenharCabecalho(pdf, pagina, d.clinica, {
     titulo: d.ficha.titulo.toUpperCase(),
     fonte: F,
@@ -70,7 +71,7 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
   /** Abre pagina nova quando o que vem nao cabe. */
   const garantir = (altura: number) => {
     if (y - altura > 70) return;
-    pagina = pdf.addPage(A4);
+    pagina = protegerPagina(pdf.addPage(A4));
     pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
     y = A4[1] - M;
   };

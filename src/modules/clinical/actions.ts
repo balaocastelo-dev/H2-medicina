@@ -291,7 +291,14 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // INSERT — que marca 'em consulta' — e o paciente ficava travado ali.
     // Por isso a etapa e definida aqui, explicitamente.
     if (finish) {
-      await supabase
+      // O resultado E conferido.
+      //
+      // Se esta gravacao falhar, o que fica valendo e o que o gatilho
+      // escreveu -- 'aguardando_documentos'. O paciente pula o caixa, a
+      // tela de Documentos ja o lista para emissao, e a trava de
+      // `liberarDocumentos` deixa de ser exercida. Falhar calado aqui
+      // custa dinheiro.
+      const { error: erroEtapa } = await supabase
         .from('attendances')
         .update({
           stage_code: 'aguardando_pagamento',
@@ -302,6 +309,12 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
         })
         .eq('id', parsed.data.attendance_id)
         .eq('tenant_id', ctx.tenant.id);
+      if (erroEtapa) {
+        return fail(
+          'A consulta foi assinada, mas o paciente não seguiu para o pagamento: ' +
+            `${toFriendlyError(erroEtapa)}. Mova-o pelo quadro antes de liberar os documentos.`,
+        );
+      }
 
       // Sem isso o consultorio seguia "ocupado" pelo paciente que ja saiu, e
       // o botao de chamar o proximo nunca voltava.
@@ -337,7 +350,18 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
       // O repasse do medico nasce do atendimento, nao de digitacao no
       // financeiro: o procedimento e o que a recepcao escolheu.
-      await lancarRepasse(ctx, parsed.data.attendance_id, attendance.procedure_code);
+      //
+      // O resultado E lido. Descartar esta chamada foi o que manteve
+      // invisivel, desde que o sistema existe, o fato de que NENHUM repasse
+      // era lancado: a acao falhava, respondia "Atendimento nao
+      // encontrado", e ninguem nunca viu essa frase.
+      //
+      // A falha nao desfaz a consulta -- ela foi assinada de verdade --,
+      // mas aparece no aviso, para alguem poder lancar o repasse a mao.
+      const repasse = await lancarRepasse(ctx, parsed.data.attendance_id, attendance.procedure_code);
+      if (!repasse.ok) {
+        avisoAso += ` (o repasse do médico não foi lançado: ${repasse.error})`;
+      }
     }
 
     await sincronizarAgendamento(ctx.tenant.id, parsed.data.attendance_id);

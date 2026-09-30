@@ -835,7 +835,20 @@ export async function atribuirSalaAoExame(
 
     const { data: exame, error } = await supabase
       .from('patient_exams')
-      .update({ room_id: sala.id, updated_by: ctx.userId })
+      // `sala_escolhida_a_mao` e o que faz esta gravacao valer alguma coisa.
+      //
+      // Ate 30/09 esta acao escrevia so `room_id`, e `call_next_for_room`
+      // nunca leu essa coluna: ela decide quem pode ser chamado pelo
+      // vinculo da sala ou pela sala padrao do tipo. O botao gravava e a
+      // sala escolhida continuava sem conseguir chamar o paciente -- o
+      // exame ficava pendente para sempre, que e justamente o que esta
+      // funcao veio resolver.
+      //
+      // A marca distingue a escolha manual da copia da sala padrao, que
+      // fica desatualizada quando a clinica remaneja o equipamento. Sem
+      // essa distincao, a sala antiga voltaria a chamar -- o defeito da
+      // dinamometria de 21/09.
+      .update({ room_id: sala.id, sala_escolhida_a_mao: true, updated_by: ctx.userId })
       .eq('id', examId)
       .eq('tenant_id', ctx.tenant.id)
       // So faz sentido para quem ainda espera: exame em andamento ja esta

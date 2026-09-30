@@ -243,15 +243,30 @@ export async function finishReception(input: {
     // veio so fazer um eletroencefalograma termina e vai embora.
     const { data: escolhidos } = await supabase
       .from('exam_types')
-      .select('code, rooms:default_room_id(kind)')
+      .select('code, ocupa_sala, respondido_pelo_medico, rooms:default_room_id(kind)')
       .in('id', input.examTypeIds.length > 0 ? input.examTypeIds : ['00000000-0000-0000-0000-000000000000'])
-      .returns<{ code: string; rooms: { kind: string } | null }[]>();
+      .returns<
+        {
+          code: string;
+          ocupa_sala: boolean | null;
+          respondido_pelo_medico: boolean | null;
+          rooms: { kind: string } | null;
+        }[]
+      >();
 
-    const codigos = new Set((escolhidos ?? []).map((e) => e.code));
-    const temConsulta = [...codigos].some((c) => RESPONDIDOS_PELO_MEDICO.has(c));
+    // Quem decide e o CADASTRO do exame, e nao uma lista escrita aqui.
+    //
+    // Estas duas linhas liam as constantes de TypeScript
+    // `RESPONDIDOS_PELO_MEDICO` e `FORA_DA_CLINICA` -- a QUINTA copia da
+    // mesma regra, depois de tres em SQL e uma no encaminhamento da
+    // triagem. Hoje as listas coincidem por sorte com as colunas do banco.
+    // No dia em que divergirem, um exame novo marcado como respondido pelo
+    // medico mandaria o paciente ao caixa SEM passar pelo consultorio,
+    // enquanto os outros quatro pontos decidiriam o contrario.
+    const temConsulta = (escolhidos ?? []).some((e) => e.respondido_pelo_medico === true);
     // O que o medico responde e o que e feito fora nao ocupam sala aqui.
-    const temExamesNaClinica = [...codigos].some(
-      (c) => !RESPONDIDOS_PELO_MEDICO.has(c) && !FORA_DA_CLINICA.has(c),
+    const temExamesNaClinica = (escolhidos ?? []).some(
+      (e) => e.ocupa_sala !== false && !FORA_DA_CLINICA.has(e.code),
     );
 
     // Acuidade, visao de cores, Romberg e fadiga sao feitos na bancada da
@@ -290,12 +305,19 @@ export async function finishReception(input: {
 
     await sincronizarAgendamento(ctx.tenant.id, input.attendanceId);
 
+    // O caixa e um destino como os outros.
+    //
+    // Ele caia no `else` e a recepcao lia "encaminhado para o módulo
+    // médico" sobre um paciente que foi para o pagamento. A recepcionista
+    // depois procurava o paciente na fila do medico e nao achava.
     const destino =
       proximaEtapa === 'aguardando_triagem'
         ? 'triagem'
         : proximaEtapa === 'aguardando_exames'
           ? 'exames'
-          : 'módulo médico';
+          : proximaEtapa === 'aguardando_pagamento'
+            ? 'pagamento'
+            : 'módulo médico';
 
     await audit(ctx, {
       action: 'update',
@@ -310,6 +332,8 @@ export async function finishReception(input: {
     revalidatePath('/filas');
     revalidatePath('/medico');
     revalidatePath('/triagem');
+    // Quem vai direto ao caixa só aparecia lá no recarregamento seguinte.
+    revalidatePath('/pagamentos');
     return ok(undefined, `Recepção concluída — paciente encaminhado para ${destino}.`);
   } catch (error) {
     return fail(toFriendlyError(error));

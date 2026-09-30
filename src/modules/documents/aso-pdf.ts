@@ -1,6 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { CATEGORIAS, type Riscos } from './riscos';
+import { protegerPagina } from './texto-do-pdf';
 
 /**
  * A.S.O. no modelo que a clinica ja usa em papel.
@@ -154,11 +155,11 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
   const preto = rgb(0.1, 0.1, 0.12);
   const borda = rgb(0.75, 0.78, 0.81);
 
-  let pagina: PDFPage = pdf.addPage(A4);
+  let pagina: PDFPage = protegerPagina(pdf.addPage(A4));
   let y = A4[1] - MARGEM;
 
   const novaPagina = () => {
-    pagina = pdf.addPage(A4);
+    pagina = protegerPagina(pdf.addPage(A4));
     pagina.drawRectangle({ x: 0, y: A4[1] - 5, width: A4[0], height: 5, color: cor });
     y = A4[1] - MARGEM;
     pagina.drawText(`${d.funcionario.nome} — continuação do A.S.O.`, {

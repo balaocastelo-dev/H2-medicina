@@ -1,6 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
+import { protegerPagina } from './texto-do-pdf';
 
 /**
  * Guia de solicitacao de exame, no modelo "Guia de Exame.docx" da clinica.
@@ -51,7 +52,7 @@ export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const F = await pdf.embedFont(StandardFonts.Helvetica);
   const B = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const pagina = pdf.addPage(A4);
+  const pagina = protegerPagina(pdf.addPage(A4));
 
   const cor = corDaMarca(d.clinica.cor);
   const preto = rgb(0.1, 0.1, 0.12);

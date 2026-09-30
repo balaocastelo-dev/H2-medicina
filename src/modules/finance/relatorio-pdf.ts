@@ -2,6 +2,7 @@ import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import type { LinhaPorCategoria, ResumoDoFluxo } from './fluxo-caixa';
 import { desenharCabecalho, type DadosDoCabecalho } from '@/modules/documents/cabecalho';
+import { protegerPagina } from '@/modules/documents/texto-do-pdf';
 
 /**
  * Relatorio financeiro do periodo, em PDF.
@@ -51,7 +52,7 @@ export async function buildRelatorioFinanceiro(d: DadosDoRelatorio): Promise<Uin
   const pdf = await PDFDocument.create();
   const fonte = await pdf.embedFont(StandardFonts.Helvetica);
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const pagina = pdf.addPage(A4);
+  const pagina = protegerPagina(pdf.addPage(A4));
 
   const cinza = rgb(0.42, 0.45, 0.5);
   const preto = rgb(0.1, 0.1, 0.12);

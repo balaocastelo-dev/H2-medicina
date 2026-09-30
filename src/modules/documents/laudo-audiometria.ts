@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import { desenharAudiograma, desenharLegenda } from './audiograma-pdf';
 import { lerLimiares, resumirOrelha, rotuloFrequencia, FREQUENCIAS } from './audiograma';
+import { protegerPagina } from './texto-do-pdf';
 
 /**
  * Laudo da audiometria tonal ocupacional.
@@ -63,7 +64,7 @@ export async function buildLaudoAudiometria(d: DadosDoLaudo): Promise<Uint8Array
   const pdf = await PDFDocument.create();
   const fonte = await pdf.embedFont(StandardFonts.Helvetica);
   const negrito = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const pagina = pdf.addPage(A4);
+  const pagina = protegerPagina(pdf.addPage(A4));
 
   const cor = hexParaRgb(d.clinica.cor);
   const cinza = rgb(0.42, 0.45, 0.5);

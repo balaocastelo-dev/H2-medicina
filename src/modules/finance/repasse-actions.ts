@@ -198,21 +198,42 @@ export async function lancarRepasse(
       .maybeSingle<{ id: string; code: string; name: string; default_fee: number }>();
     if (!procedimento) return fail('Procedimento de repasse nao cadastrado.');
 
-    const { data: atendimento } = await supabase
+    // `attendances` NAO tem `doctor_id`. Quem tem e a consulta.
+    //
+    // Esta consulta pedia `attendances.doctor_id`, uma coluna que so existe
+    // em `medical_consultations`. O PostgREST responde 42703 a um select
+    // com coluna inexistente, o erro nao era conferido, `atendimento` vinha
+    // nulo e a funcao devolvia "Atendimento nao encontrado" -- que ninguem
+    // lia, porque `saveConsultation` descarta o resultado desta chamada.
+    //
+    // Efeito: NENHUM repasse foi lancado desde que o sistema existe. A tela
+    // "Meus ganhos" e a aba Repasse sempre estiveram vazias, e o motivo
+    // nunca apareceu em lugar nenhum.
+    const { data: atendimento, error: erroAtendimento } = await supabase
       .from('attendances')
-      .select('id, patient_id, company_id, doctor_id, created_at')
+      .select('id, patient_id, company_id, created_at')
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
         patient_id: string | null;
         company_id: string | null;
-        doctor_id: string | null;
         created_at: string;
       }>();
+    if (erroAtendimento) return fail(toFriendlyError(erroAtendimento));
     if (!atendimento) return fail('Atendimento nao encontrado.');
 
-    const medico = atendimento.doctor_id ?? ctx.userId;
+    // Quem recebe e quem ASSINOU a consulta. Cair em `ctx.userId` so
+    // quando nao houver consulta -- o repasse de um procedimento sem
+    // consulta (uma junta, por exemplo) e de quem o esta lancando.
+    const { data: consulta } = await supabase
+      .from('medical_consultations')
+      .select('doctor_id')
+      .eq('attendance_id', attendanceId)
+      .eq('tenant_id', ctx.tenant.id)
+      .maybeSingle<{ doctor_id: string | null }>();
+
+    const medico = consulta?.doctor_id ?? ctx.userId;
 
     const { data: valorProprio } = await supabase
       .from('medical_fees')

@@ -591,8 +591,27 @@ class Construtor<T = unknown> implements PromiseLike<Resposta<T>> {
     const fora: Record<string, unknown> = {};
 
     const tipoDe = (col: string) => this.esquema.tipos.get(`${tabela}.${col}`);
+    const colunasDaTabela = this.esquema.colunas.get(tabela);
 
     for (const campo of campos) {
+      // Coluna que nao existe e ERRO, como no PostgREST.
+      //
+      // Sem esta checagem o simulador devolvia `null` para qualquer nome
+      // inventado, e escondeu o defeito mais caro do sistema: `lancarRepasse`
+      // pedia `attendances.doctor_id`, uma coluna que so existe em
+      // `medical_consultations`. Em producao o PostgREST responde 42703, o
+      // erro nao era conferido, e NENHUM repasse jamais foi lancado. Aqui
+      // passava, porque o simulador era mais gentil que a realidade.
+      //
+      // Um simulador mais permissivo que o original nao testa: absolve.
+      if (campo.coluna && campo.coluna !== '*' && colunasDaTabela && !colunasDaTabela.has(campo.coluna)) {
+        const erro = new Error(
+          `column ${tabela}.${campo.coluna} does not exist`,
+        ) as Error & { code: string };
+        erro.code = '42703';
+        throw erro;
+      }
+
       if (campo.coluna === '*') {
         for (const [k, v] of Object.entries(linha)) fora[k] = comoJson(v, tipoDe(k));
         continue;
