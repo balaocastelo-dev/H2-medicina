@@ -648,7 +648,13 @@ function ReceptionDetail({
                   'cancelado',
                   motivo || 'Cancelado pela recepção',
                 );
-                return r.ok ? { ok: true, message: 'Atendimento cancelado.' } : r;
+                // A mensagem do servidor diz o que caiu junto — "2 cobrança(s)
+                // em aberto cancelada(s) (R$ 300,00). Repasse do médico
+                // cancelado (1)." — e era jogada fora por um texto fixo. Este
+                // e justamente o lugar onde quem cancela precisa saber.
+                return r.ok
+                  ? { ok: true, message: `Atendimento cancelado.${r.message?.replace('Paciente movido.', '') ?? ''}` }
+                  : r;
               });
             }}
           >

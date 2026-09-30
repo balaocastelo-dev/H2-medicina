@@ -422,6 +422,7 @@ function BrandingForm({ branding, tenantName }: { branding: TenantBranding; tena
 function ModulesPanel({ modules, allModules }: { modules: string[]; allModules: string[] }) {
   const [pending, startTransition] = useTransition();
   const [enabled, setEnabled] = useState(new Set(modules));
+  const [avisoModulos, setAvisoModulos] = useState<string | null>(null);
 
   return (
     <Card>
@@ -429,6 +430,11 @@ function ModulesPanel({ modules, allModules }: { modules: string[]; allModules: 
         title="Módulos habilitados"
         description="Controla o que aparece no menu deste tenant"
       />
+      {avisoModulos && (
+        <CardBody>
+          <Alert variant="error">{avisoModulos}</Alert>
+        </CardBody>
+      )}
       <CardBody className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {allModules.map((m) => (
           <label
@@ -440,11 +446,41 @@ function ModulesPanel({ modules, allModules }: { modules: string[]; allModules: 
               checked={enabled.has(m)}
               disabled={pending}
               onChange={(e) => {
+                const ligar = e.target.checked;
+
+                // Desligar um modulo tira uma tela inteira do ar para toda a
+                // clinica. Um clique errado na caixinha nao pode fazer isso
+                // sem perguntar.
+                if (!ligar) {
+                  const nome = m.replace(/_/g, ' ');
+                  if (
+                    !window.confirm(
+                      `Desligar o módulo "${nome}"? Ele some do menu para todos os usuários da clínica.`,
+                    )
+                  ) {
+                    return;
+                  }
+                }
+
+                const antes = new Set(enabled);
                 const next = new Set(enabled);
-                if (e.target.checked) next.add(m);
+                if (ligar) next.add(m);
                 else next.delete(m);
                 setEnabled(next);
-                startTransition(() => void toggleModule(m, e.target.checked));
+
+                // A caixinha marcava na hora e nunca voltava atras: o
+                // resultado era descartado com `void`, entao quando o
+                // servidor recusava a tela mentia — o administrador
+                // recarregava e o item continuava no menu.
+                startTransition(async () => {
+                  const r = await toggleModule(m, ligar);
+                  if (!r.ok) {
+                    setEnabled(antes);
+                    setAvisoModulos(r.error);
+                    return;
+                  }
+                  setAvisoModulos(null);
+                });
               }}
             />
             {m.replace(/_/g, ' ')}

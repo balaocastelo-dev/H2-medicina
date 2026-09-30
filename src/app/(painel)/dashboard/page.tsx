@@ -101,8 +101,25 @@ export default async function DashboardPage() {
 
   // ---- indicadores ----
   const agendados = (agendaRes.data ?? []).length;
-  const presentes = doDia.length;
-  const aguardando = abertos.filter((a) => a.stage_code.startsWith('aguardando')).length;
+
+  // "Presentes" era `doDia.length` — a lista inteira, incluindo cancelado e
+  // ausente. O indicador mais visivel da tela contava como gente presente
+  // quem desistiu ou nem apareceu. `abertos` ja existia logo acima, com a
+  // exclusao certa, e nao estava sendo usado aqui.
+  const presentes = doDia.filter((a) => a.stage_code !== 'cancelado' && a.stage_code !== 'ausente')
+    .length;
+
+  // "Aguardando" e quem espera para ser ATENDIDO. `startsWith('aguardando')`
+  // varria junto `aguardando_pagamento` e `aguardando_documentos`, que sao
+  // fila de caixa e de balcao — a recepcao lia o numero como gente sentada
+  // na sala de espera e ele nunca batia com a fila de verdade.
+  const ESPERANDO_ATENDIMENTO = [
+    'aguardando_recepcao',
+    'aguardando_triagem',
+    'aguardando_exames',
+    'aguardando_medico',
+  ];
+  const aguardando = abertos.filter((a) => ESPERANDO_ATENDIMENTO.includes(a.stage_code)).length;
   const emAtendimento = abertos.filter((a) =>
     ['na_recepcao', 'em_triagem', 'em_exames', 'em_consulta'].includes(a.stage_code),
   ).length;

@@ -14,11 +14,23 @@ import { lancarRepasse } from '@/modules/finance/repasse-actions';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import { isOriginKind, REGRAS } from '@/modules/queue/origin-kind';
+import { dinheiroDigitado } from '@/lib/dinheiro-digitado';
 
+/**
+ * Le um sinal vital digitado na triagem.
+ *
+ * Passou a usar `dinheiroDigitado` — que apesar do nome le qualquer numero
+ * escrito por gente — porque "36,5" precisa valer.
+ *
+ * O `Number()` anterior devolvia NaN para virgula, e isso virava `null`: a
+ * temperatura e o peso eram DESCARTADOS em silencio, com a tela dizendo
+ * "Triagem salva.". Em navegador configurado em portugues o campo
+ * `type=number` convertia a virgula sozinho e ninguem via o problema; em
+ * maquina com Windows em ingles, nao.
+ */
 function num(value: FormDataEntryValue | null): number | null {
-  if (value === null || value === '') return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? n : null;
+  const n = dinheiroDigitado(value);
+  return n === null || Number.isNaN(n) ? null : n;
 }
 
 /**

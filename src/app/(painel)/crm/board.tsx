@@ -68,6 +68,25 @@ export function CrmBoard({
     const card = items.find((c) => c.id === cardId);
     if (!card || card.stage_code === targetStage) return;
 
+    // Soltar o cartao em Cancelado ou Ausente agora mexe em dinheiro: fecha a
+    // cobranca em aberto e cancela o repasse do medico. Arrastar e solto e
+    // facil de errar — um cartao solto uma coluna ao lado nao pode cancelar
+    // conta sem perguntar. Reabrir depois devolve o paciente, mas NAO devolve
+    // a cobranca: a recepcao precisa gerar outra.
+    let motivo = 'Movido pelo CRM';
+    if (targetStage === 'cancelado' || targetStage === 'ausente') {
+      const rotulo = targetStage === 'cancelado' ? 'Cancelar' : 'Marcar como ausente';
+      const nome = card.patients?.full_name ?? 'este paciente';
+      const digitado = window.prompt(
+        `${rotulo} o atendimento de ${nome}?\n\n` +
+          'A cobrança em aberto será cancelada e o repasse do médico também. ' +
+          'Reabrir depois traz o paciente de volta, mas a cobrança precisa ser gerada de novo.\n\n' +
+          'Motivo (aparece no histórico):',
+      );
+      if (digitado === null) return;
+      motivo = digitado.trim() || `Movido pelo CRM para ${targetStage}`;
+    }
+
     const previous = items;
     setItems((prev) =>
       prev.map((c) =>
@@ -78,7 +97,7 @@ export function CrmBoard({
     );
 
     startTransition(async () => {
-      const result = await moveAttendanceStage(cardId, targetStage, 'Movido pelo CRM');
+      const result = await moveAttendanceStage(cardId, targetStage, motivo);
       if (!result.ok) {
         setItems(previous);
         setMessage({ ok: false, text: result.error });

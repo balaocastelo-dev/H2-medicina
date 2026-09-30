@@ -16,6 +16,7 @@ import {
   type SugestaoBusca,
 } from '@/modules/queue/busca-nome';
 import { podeVincularCpf, precisaGravar } from '@/modules/queue/vinculo-cpf';
+import { cancelarContaDoAtendimento } from '@/modules/finance/actions';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -261,7 +262,24 @@ export async function performCheckin(input: {
       await supabase
         .from('attendances')
         .update({
+          // As DUAS datas.
+          //
+          // `finished_at` continua obrigatorio aqui: a RPC `checkin_patient`
+          // decide se reaproveita o atendimento do dia olhando
+          // `finished_at is null and cancelled_at is null` — ela nao conhece
+          // `absent_at`. Sem `finished_at`, o paciente que volta ao totem
+          // recebe de volta a SENHA ANTIGA, continua em `ausente` e nao entra
+          // em fila nenhuma. E exatamente o que este bloco existe para
+          // impedir.
+          //
+          // `absent_at` entra junto para o motivo ficar gravado e para este
+          // caminho dizer a mesma coisa que o do CRM, que grava so ele.
+          //
+          // A contagem de "finalizados" nos relatorios nao se apoia mais
+          // nesta data: ela exclui `cancelado` e `ausente` pela ETAPA antes
+          // de olhar qualquer data.
           finished_at: new Date().toISOString(),
+          absent_at: new Date().toISOString(),
           stage_code: 'ausente',
           notes: 'Encerrado automaticamente: paciente retornou ao totem',
         })
@@ -669,13 +687,36 @@ export async function updateExamStatus(
     if (error) return fail(toFriendlyError(error));
 
     // Sai de atendimento por qualquer motivo -> a sala volta a ficar livre.
+    //
+    // Mas so quando NAO SOBRA NINGUEM na sala.
+    //
+    // A chamada leva de uma vez todos os exames daquele paciente que a sala
+    // atende (pedido da Isabella, 18/09). Concluir UM deles liberava a sala
+    // com o paciente ainda sentado nela: o cartao mostrava "disponivel" com
+    // gente dentro, e — pior — o cadastro de salas passava a PERMITIR
+    // desativar aquela sala, porque a trava de seguranca olha
+    // `current_attendance_id`. Desativada a sala, o exame que faltava ficava
+    // invisivel em todas as telas.
     const salaParaLiberar = antes?.room_id ?? data.room_id;
     if (salaParaLiberar && status !== 'em_andamento') {
-      await supabase
-        .from('rooms')
-        .update({ status: 'disponivel', current_attendance_id: null })
-        .eq('id', salaParaLiberar)
-        .eq('tenant_id', ctx.tenant.id);
+      const { data: irmaosNaSala } = await supabase
+        .from('patient_exams')
+        .select('id')
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('attendance_id', data.attendance_id)
+        .eq('room_id', salaParaLiberar)
+        .in('status', ['chamado', 'em_andamento'])
+        .neq('id', examId)
+        .limit(1)
+        .returns<{ id: string }[]>();
+
+      if ((irmaosNaSala?.length ?? 0) === 0) {
+        await supabase
+          .from('rooms')
+          .update({ status: 'disponivel', current_attendance_id: null })
+          .eq('id', salaParaLiberar)
+          .eq('tenant_id', ctx.tenant.id);
+      }
     }
 
     await supabase.from('queue_events').insert({
@@ -726,6 +767,28 @@ export async function moveAttendanceStage(
     await limparEstadoTerminal(ctx.tenant.id, attendanceId, stage);
     await sincronizarAgendamento(ctx.tenant.id, attendanceId);
 
+    // Cancelar o atendimento tem de fechar a conta dele.
+    //
+    // A RPC solta paciente, sala e exames, mas nao toca em dinheiro: a
+    // cobranca em aberto seguia contando como receita a receber no fluxo de
+    // caixa e no relatorio do contador, e o repasse do medico seguia como
+    // conta a pagar. O mes fechava com receita que nunca ia existir e
+    // despesa de repasse de verdade.
+    //
+    // Cobranca JA PAGA nao e tocada: dinheiro que entrou so sai por estorno,
+    // que e acao propria e pede o motivo. Arrastar um cartao no quadro nao
+    // devolve dinheiro a ninguem.
+    let consequencias = '';
+    if (stage === 'cancelado' || stage === 'ausente') {
+      consequencias = await cancelarContaDoAtendimento(
+        ctx,
+        attendanceId,
+        reason?.trim()
+          ? `Atendimento ${stage}: ${reason.trim()}`
+          : `Atendimento marcado como ${stage}`,
+      );
+    }
+
     await audit(ctx, {
       action: 'update',
       entity: 'attendances',
@@ -742,7 +805,7 @@ export async function moveAttendanceStage(
     for (const caminho of ['/crm', '/filas', '/recepcao', '/triagem', '/medico', '/pagamentos']) {
       revalidatePath(caminho);
     }
-    return ok(undefined, 'Paciente movido.');
+    return ok(undefined, `Paciente movido.${consequencias}`);
   } catch (error) {
     return fail(toFriendlyError(error));
   }

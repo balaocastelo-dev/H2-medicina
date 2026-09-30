@@ -319,6 +319,74 @@ export async function cancelPayment(paymentId: string): Promise<ActionResult> {
 }
 
 /**
+ * Fecha a conta de um atendimento que nao vai mais acontecer.
+ *
+ * Chamada quando o cartao vai para "Cancelado" ou "Ausente" no CRM. Ate
+ * aqui, mover o cartao gravava apenas `cancelled_at` no atendimento: a
+ * cobranca em aberto continuava contando como receita a receber no fluxo de
+ * caixa e no relatorio do contador, e o repasse do medico continuava como
+ * conta a pagar. O mes fechava com uma receita que nunca ia existir e uma
+ * despesa de repasse de verdade.
+ *
+ * O que ela NAO faz, de proposito: mexer em cobranca PAGA. Dinheiro que
+ * entrou so sai por estorno, que e acao propria, exige `financeiro.estornar`
+ * e pede o motivo. Arrastar um cartao no quadro nao pode devolver dinheiro ao
+ * paciente sem ninguem decidir isso.
+ *
+ * Devolve um pedaco de frase para a mensagem de sucesso: quem cancela precisa
+ * saber o que caiu junto.
+ */
+export async function cancelarContaDoAtendimento(
+  ctx: Awaited<ReturnType<typeof assertPermission>>,
+  attendanceId: string,
+  motivo: string,
+): Promise<string> {
+  const supabase = await createClient();
+
+  // So o que esta em aberto. `.select()` para saber o que realmente mudou:
+  // com RLS forcado, UPDATE barrado afeta zero linhas sem erro.
+  const { data: canceladas } = await supabase
+    .from('payments')
+    .update({
+      status: 'cancelado',
+      cancelled_at: new Date().toISOString(),
+      updated_by: ctx.userId,
+    })
+    .eq('tenant_id', ctx.tenant.id)
+    .eq('attendance_id', attendanceId)
+    .in('status', ['pendente', 'em_analise'])
+    .is('deleted_at', null)
+    .select('id, net_amount')
+    .returns<{ id: string; net_amount: number }[]>();
+
+  for (const c of canceladas ?? []) {
+    await supabase.from('payment_transactions').insert({
+      tenant_id: ctx.tenant.id,
+      payment_id: c.id,
+      event: 'cancelamento',
+      status: 'cancelado',
+      amount: c.net_amount,
+      performed_by: ctx.userId,
+      is_manual: true,
+    });
+  }
+
+  const resto = await desfazerAtendimento(ctx, attendanceId, motivo);
+  for (const caminho of ['/financeiro', '/financeiro/fluxo-caixa', '/pagamentos']) {
+    revalidatePath(caminho);
+  }
+
+  const quantas = canceladas?.length ?? 0;
+  const valor = (canceladas ?? []).reduce((s, c) => s + Number(c.net_amount), 0);
+  const cobranca =
+    quantas > 0
+      ? ` ${quantas} cobrança(s) em aberto cancelada(s) (R$ ${valor.toFixed(2).replace('.', ',')}).`
+      : '';
+
+  return `${cobranca}${resto}`;
+}
+
+/**
  * Desfaz o que a cobranca havia liberado no atendimento.
  *
  * Chamada por estorno e por cancelamento. Faz duas coisas que faltavam:

@@ -5,6 +5,7 @@ import { Card, EmptyState, StatCard } from '@/components/ui';
 import { RoomsBoard } from './rooms-board';
 import { ExamesForaDaFila } from './fora-da-fila';
 import { ExamesSemSala } from './sem-sala';
+import { ExamesSemFicha } from './sem-ficha';
 import { contarNaFila, distribuirExames, NA_FILA } from '@/modules/queue/distribuicao';
 
 import type { QueueExam, RoomInfo } from './types';
@@ -15,7 +16,7 @@ export default async function FilasPage() {
   const ctx = await requirePermission('filas.operar');
   const supabase = await createClient();
 
-  const [roomsRes, examsRes] = await Promise.all([
+  const [roomsRes, examsRes, semFichaRes] = await Promise.all([
     supabase
       .from('rooms')
       .select('id, name, code, kind, status, current_attendance_id')
@@ -46,6 +47,32 @@ export default async function FilasPage() {
       .in('attendances.stage_code', ['aguardando_exames', 'em_exames'])
       .order('queued_at', { ascending: true, nullsFirst: false })
       .returns<QueueExam[]>(),
+    // Exames CONCLUIDOS cuja ficha ficou em branco.
+    //
+    // O quadro acima so carrega exame em fila ou em andamento: concluido o
+    // exame sem preencher a ficha, o cartao sumia e nao havia lugar nenhum no
+    // sistema para reabrir aquele formulario. O laudo recusa exame sem
+    // medicao gravada — com razao —, entao ele virava inemitivel para sempre.
+    //
+    // A janela e o atendimento ainda aberto: ficha de atendimento encerrado
+    // nao e mais tarefa de quem opera as salas.
+    supabase
+      .from('patient_exams')
+      .select(
+        // `exam_types!inner` e obrigatorio: filtro sobre recurso embutido SEM
+        // `!inner` filtra o embed, nao a linha. O exame que nao ocupa sala
+        // (raio X, laboratoriais, consulta clinica) voltava com
+        // `exam_types: null` em vez de sair da lista — e como sao justamente
+        // os que nunca tem ficha, o aviso novo nasceria permanentemente
+        // cheio, com nome "Exame", e a equipe aprenderia a ignora-lo.
+        'id, status, priority, queued_at, called_at, started_at, room_id, exam_type_id, attendance_id, notes, exam_types!inner(name, code, default_room_id, ocupa_sala), exam_results(values, conclusion), attendances!inner(id, checkin_at, stage_code, patients(full_name), queue_tickets(code))',
+      )
+      .eq('tenant_id', ctx.tenant.id)
+      .eq('status', 'concluido')
+      .eq('exam_types.ocupa_sala', true)
+      .in('attendances.stage_code', ['aguardando_exames', 'em_exames'])
+      .order('started_at', { ascending: true, nullsFirst: false })
+      .returns<QueueExam[]>(),
   ]);
 
   const rooms = roomsRes.data ?? [];
@@ -61,6 +88,21 @@ export default async function FilasPage() {
     .returns<{ id: string }[]>();
 
   const idsDeTriagem = new Set((salasDeTriagem ?? []).map((s) => s.id));
+
+  /**
+   * Concluidos sem nada gravado na ficha.
+   *
+   * O filtro e o mesmo do gerador de laudo: `values` vazio e o que faz ele
+   * recusar. Exame de bancada da triagem sai daqui — a tela de Triagem ja
+   * reabre a ficha dele, de proposito.
+   */
+  const semFicha = (semFichaRes.data ?? []).filter((e) => {
+    const valores = e.exam_results?.[0]?.values;
+    const temResposta = !!valores && Object.keys(valores).length > 0;
+    if (temResposta) return false;
+    const sala = e.room_id ?? e.exam_types?.default_room_id ?? null;
+    return sala === null || !idsDeTriagem.has(sala);
+  });
   const exams = (examsRes.data ?? []).filter((e) => {
     // Consulta clínica e raio X não são feitos em sala daqui. Entravam
     // com sala nula e ficavam presos: nenhum cartão os mostrava e nenhum
@@ -187,6 +229,14 @@ export default async function FilasPage() {
           <ExamesForaDaFila itens={Array.from(foraDaFila.entries())} />
         </div>
       )}
+
+      {/*
+        So para quem pode preencher. `filas.operar` abre esta tela, mas
+        gravar ficha exige `exames.preencher`, que o papel da recepcao nao
+        tem de proposito (0044). Mostrar o cartao para ela seria oferecer um
+        formulario que recusa no fim — pior do que nao mostrar nada.
+      */}
+      {ctx.permissions.has('exames.preencher') && <ExamesSemFicha exames={semFicha} />}
 
       {rooms.length === 0 ? (
         <Card>

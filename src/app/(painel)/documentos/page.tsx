@@ -18,7 +18,11 @@ export interface DocRow {
   /** Guarda o caminho da copia em Word do A.S.O., quando existe. */
   payload: { docx_path?: string } | null;
   patients: { full_name: string } | null;
-  attendances: { finished_at: string | null } | null;
+  attendances: {
+    finished_at: string | null;
+    cancelled_at: string | null;
+    absent_at: string | null;
+  } | null;
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -52,7 +56,7 @@ export default async function DocumentosPage({
   let consulta = supabase
     .from('documents')
     .select(
-      'id, kind, title, verification_code, generated_at, payload, patients(full_name), attendances(finished_at)',
+      'id, kind, title, verification_code, generated_at, payload, patients(full_name), attendances(finished_at, cancelled_at, absent_at)',
     )
     .eq('tenant_id', ctx.tenant.id)
     .is('deleted_at', null)
@@ -130,7 +134,17 @@ export default async function DocumentosPage({
    * quer separar quem ainda esta na clinica de quem ja foi embora.
    */
   const todos = docsRes.data ?? [];
-  const emAberto = (d: DocRow) => !!d.attendances && !d.attendances.finished_at;
+  // Cancelado e ausente tambem estao encerrados.
+  //
+  // O teste era so `finished_at`, e a RPC do CRM nunca grava essa data para
+  // cancelado/ausente — so `cancelled_at` / `absent_at`. Documento de um
+  // atendimento cancelado ficava em "Em aberto" para sempre, e a etiqueta
+  // laranja dizia que o paciente ainda estava na clinica.
+  const emAberto = (d: DocRow) =>
+    !!d.attendances &&
+    !d.attendances.finished_at &&
+    !d.attendances.cancelled_at &&
+    !d.attendances.absent_at;
   const linhas =
     sp.situacao === 'aberto'
       ? todos.filter(emAberto)

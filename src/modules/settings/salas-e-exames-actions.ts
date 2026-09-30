@@ -102,6 +102,33 @@ export async function salvarSala(_prev: unknown, formData: FormData): Promise<Ac
       if (!veredito.pode) return fail(veredito.motivo ?? 'Não é possível desativar esta sala.');
     }
 
+    // Trocar o TIPO da sala com paciente dentro tem o mesmo efeito de
+    // desativa-la, e nao era conferido.
+    //
+    // A tela nasceu justamente para a clinica poder mudar o uso de uma sala
+    // ("a minha sala 3, que e a audiometria, mudar para fazer outra coisa").
+    // Mas o quadro de Filas so mostra sala de `kind = 'exame'`: mudar o tipo
+    // com um exame ja chamado tirava a sala do quadro e o exame ia para
+    // "sem sala" — que por sua vez so lista exame em fila, nao exame chamado.
+    // O paciente sumia das duas listas e a sala ficava ocupada para sempre.
+    //
+    // Sala vazia troca de tipo a qualquer hora, que e o caso normal: isto so
+    // pede para terminar quem esta lá dentro.
+    if (dados.id && dados.is_active) {
+      const { data: atual } = await supabase
+        .from('rooms')
+        .select('kind, current_attendance_id')
+        .eq('id', dados.id)
+        .eq('tenant_id', ctx.tenant.id)
+        .maybeSingle<{ kind: string; current_attendance_id: string | null }>();
+
+      if (atual && atual.kind !== dados.kind && atual.current_attendance_id) {
+        return fail(
+          'Esta sala está com um paciente em atendimento. Conclua ou devolva o exame à fila antes de mudar o tipo da sala.',
+        );
+      }
+    }
+
     const payload = {
       tenant_id: ctx.tenant.id,
       code: codigo,

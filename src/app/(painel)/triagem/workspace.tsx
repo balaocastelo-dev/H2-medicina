@@ -186,6 +186,46 @@ function TriageForm({ row }: { row: TriageRow }) {
   const triage = umDo(row.triages);
   const errors = state && !state.ok ? state.fieldErrors : undefined;
 
+  /**
+   * Campos controlados, pelo mesmo motivo da ficha da consulta.
+   *
+   * Formulario nao controlado e resetado pelo React quando a action termina,
+   * inclusive em erro: a examinadora media tudo, o servidor recusava por um
+   * campo, e os sinais vitais sumiam da tela. Com o paciente ali na frente,
+   * medindo de novo.
+   *
+   * Sao TEXTO e nao `type="number"` porque "36,5" tem de valer. Em navegador
+   * configurado em ingles o `type=number` recusa a virgula e manda string
+   * vazia — a temperatura era descartada em silencio, com "Triagem salva."
+   * na tela. `inputMode="decimal"` mantem o teclado numerico no tablet.
+   */
+  const [campos, setCampos] = useState<Record<string, string>>(() => ({
+    blood_pressure_systolic: String(triage?.blood_pressure_systolic ?? ''),
+    blood_pressure_diastolic: String(triage?.blood_pressure_diastolic ?? ''),
+    temperature_c: String(triage?.temperature_c ?? ''),
+    heart_rate: String(triage?.heart_rate ?? ''),
+    weight_kg: String(triage?.weight_kg ?? ''),
+    height_cm: String(triage?.height_cm ?? ''),
+    respiratory_rate: String(triage?.respiratory_rate ?? ''),
+    oxygen_saturation: String(triage?.oxygen_saturation ?? ''),
+    acuidade_od: triage?.acuidade_od ?? '',
+    acuidade_oe: triage?.acuidade_oe ?? '',
+    observations: triage?.observations ?? '',
+  }));
+
+  const campo = (nome: string) => ({
+    name: nome,
+    value: campos[nome] ?? '',
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+      setCampos((atual) => ({ ...atual, [nome]: e.target.value })),
+  });
+
+  /** Sinal vital: texto com teclado numerico. */
+  const numerico = (nome: string) => ({ ...campo(nome), inputMode: 'decimal' as const });
+
+  const [diabetes, setDiabetes] = useState(triage?.diabetes === true);
+  const [hipertenso, setHipertenso] = useState(triage?.hipertenso === true);
+
   return (
     <Card>
       <CardHeader
@@ -208,59 +248,28 @@ function TriageForm({ row }: { row: TriageRow }) {
 
           <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
             <Field label="PA sistolica" error={errors?.blood_pressure_systolic}>
-              <Input
-                type="number"
-                name="blood_pressure_systolic"
-                defaultValue={triage?.blood_pressure_systolic ?? ''}
-              />
+              <Input {...numerico('blood_pressure_systolic')} />
             </Field>
             <Field label="PA diastolica" error={errors?.blood_pressure_diastolic}>
-              <Input
-                type="number"
-                name="blood_pressure_diastolic"
-                defaultValue={triage?.blood_pressure_diastolic ?? ''}
-              />
+              <Input {...numerico('blood_pressure_diastolic')} />
             </Field>
             <Field label="Temperatura (C)" error={errors?.temperature_c}>
-              <Input
-                type="number"
-                step="0.1"
-                name="temperature_c"
-                defaultValue={triage?.temperature_c ?? ''}
-              />
+              <Input {...numerico('temperature_c')} placeholder="36,5" />
             </Field>
             <Field label="FC (bpm)" error={errors?.heart_rate}>
-              <Input type="number" name="heart_rate" defaultValue={triage?.heart_rate ?? ''} />
+              <Input {...numerico('heart_rate')} />
             </Field>
             <Field label="Peso (kg)" error={errors?.weight_kg}>
-              <Input
-                type="number"
-                step="0.1"
-                name="weight_kg"
-                defaultValue={triage?.weight_kg ?? ''}
-              />
+              <Input {...numerico('weight_kg')} placeholder="78,4" />
             </Field>
             <Field label="Altura (cm)" error={errors?.height_cm}>
-              <Input
-                type="number"
-                step="0.1"
-                name="height_cm"
-                defaultValue={triage?.height_cm ?? ''}
-              />
+              <Input {...numerico('height_cm')} placeholder="175" />
             </Field>
             <Field label="FR (irpm)" error={errors?.respiratory_rate}>
-              <Input
-                type="number"
-                name="respiratory_rate"
-                defaultValue={triage?.respiratory_rate ?? ''}
-              />
+              <Input {...numerico('respiratory_rate')} />
             </Field>
             <Field label="SpO2 (%)" error={errors?.oxygen_saturation}>
-              <Input
-                type="number"
-                name="oxygen_saturation"
-                defaultValue={triage?.oxygen_saturation ?? ''}
-              />
+              <Input {...numerico('oxygen_saturation')} />
             </Field>
           </div>
 
@@ -272,20 +281,32 @@ function TriageForm({ row }: { row: TriageRow }) {
 
           <div className="grid gap-4 sm:grid-cols-4">
             <Field label="Acuidade O.D." hint="Olho direito" error={errors?.acuidade_od}>
-              <Input name="acuidade_od" defaultValue={triage?.acuidade_od ?? ''} placeholder="20/20" />
+              <Input {...campo('acuidade_od')} placeholder="20/20" />
             </Field>
             <Field label="Acuidade O.E." hint="Olho esquerdo" error={errors?.acuidade_oe}>
-              <Input name="acuidade_oe" defaultValue={triage?.acuidade_oe ?? ''} placeholder="20/20" />
+              <Input {...campo('acuidade_oe')} placeholder="20/20" />
             </Field>
 
             <Field label="Diabetes">
               <div className="flex h-10 items-center gap-4">
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="diabetes" value="sim" defaultChecked={triage?.diabetes === true} />
+                  <input
+                    type="radio"
+                    name="diabetes"
+                    value="sim"
+                    checked={diabetes}
+                    onChange={() => setDiabetes(true)}
+                  />
                   Sim
                 </label>
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="diabetes" value="nao" defaultChecked={triage?.diabetes !== true} />
+                  <input
+                    type="radio"
+                    name="diabetes"
+                    value="nao"
+                    checked={!diabetes}
+                    onChange={() => setDiabetes(false)}
+                  />
                   Não
                 </label>
               </div>
@@ -294,11 +315,23 @@ function TriageForm({ row }: { row: TriageRow }) {
             <Field label="Hipertenso">
               <div className="flex h-10 items-center gap-4">
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="hipertenso" value="sim" defaultChecked={triage?.hipertenso === true} />
+                  <input
+                    type="radio"
+                    name="hipertenso"
+                    value="sim"
+                    checked={hipertenso}
+                    onChange={() => setHipertenso(true)}
+                  />
                   Sim
                 </label>
                 <label className="flex items-center gap-1.5 text-sm">
-                  <input type="radio" name="hipertenso" value="nao" defaultChecked={triage?.hipertenso !== true} />
+                  <input
+                    type="radio"
+                    name="hipertenso"
+                    value="nao"
+                    checked={!hipertenso}
+                    onChange={() => setHipertenso(false)}
+                  />
                   Não
                 </label>
               </div>
@@ -306,8 +339,12 @@ function TriageForm({ row }: { row: TriageRow }) {
           </div>
 
           <Field label="Observações">
-            <Textarea name="observations" defaultValue={triage?.observations ?? ''} rows={2} />
+            <Textarea {...campo('observations')} rows={2} />
           </Field>
+
+          {/* A recusa tambem ao lado do botao: o Alert do topo fica fora da
+              tela depois de rolar a ficha inteira. */}
+          {state && !state.ok && <Alert variant="error">{state.error}</Alert>}
 
           <div className="flex gap-2">
             <Button type="submit" variant="outline" loading={pending}>

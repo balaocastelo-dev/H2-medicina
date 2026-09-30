@@ -156,7 +156,7 @@ export async function obterPortal(
       admin
         .from('attendances')
         .select(
-          'id, stage_code, checkin_at, finished_at, queue_tickets(code), rooms:current_room_id(name), patient_exams(status, finished_at, exam_types(name), exam_results(conclusion, released_to_patient))',
+          'id, stage_code, checkin_at, finished_at, cancelled_at, absent_at, queue_tickets(code), rooms:current_room_id(name), patient_exams(status, finished_at, exam_types(name), exam_results(conclusion, released_to_patient))',
         )
         .eq('tenant_id', tenant.id)
         .eq('patient_id', paciente.id)
@@ -168,6 +168,8 @@ export async function obterPortal(
           stage_code: string;
           checkin_at: string;
           finished_at: string | null;
+          cancelled_at: string | null;
+          absent_at: string | null;
           queue_tickets: { code: string }[];
           rooms: { name: string } | null;
           patient_exams: {
@@ -235,7 +237,17 @@ export async function obterPortal(
     ]);
 
     const atendimento = atendimentoRes.data;
-    const aberto = !!atendimento && !atendimento.finished_at;
+    // Cancelado e ausente tambem estao encerrados.
+    //
+    // A RPC do CRM nunca grava `finished_at` para essas duas etapas — grava
+    // `cancelled_at` / `absent_at`. O portal dizia "atendimento em
+    // andamento" para quem tinha sido cancelado, e o aplicativo do paciente
+    // ligava o polling de senha, que nunca mais parava.
+    const aberto =
+      !!atendimento &&
+      !atendimento.finished_at &&
+      !atendimento.cancelled_at &&
+      !atendimento.absent_at;
 
     return ok({
       pacienteId: paciente.id,

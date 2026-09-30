@@ -61,6 +61,58 @@ export function ConsultationForm({
     return () => clearTimeout(t);
   }, [state, router]);
 
+  /**
+   * Os campos escritos a mao, em estado controlado.
+   *
+   * ---------------------------------------------------------------------
+   * Por que nao pode ser `defaultValue`
+   * ---------------------------------------------------------------------
+   * O React reseta formulario NAO CONTROLADO depois que a action termina —
+   * inclusive quando ela devolve erro. O medico preenchia historia clinica,
+   * antecedentes, exame fisico, diagnostico e conduta, esquecia de escolher a
+   * conclusao de aptidao, clicava em "Finalizar consulta", o servidor recusava
+   * ("Informe a conclusao de aptidao antes de finalizar") — e TUDO QUE ELE
+   * DIGITOU sumia.
+   *
+   * Pior do que sumir tudo: os blocos de selecao sao estado React e
+   * sobreviviam, entao a tela voltava meio preenchida e o medico nao percebia
+   * o que tinha perdido. Isso e prontuario digitado a mao, em consulta, com o
+   * paciente na sala.
+   *
+   * Controlado, o que esta na tela e o que esta na memoria, e nenhuma recusa
+   * do servidor apaga nada.
+   */
+  const [campos, setCampos] = useState<Record<string, string>>(() => ({
+    clinical_history: consultation?.clinical_history ?? '',
+    personal_history: consultation?.personal_history ?? '',
+    family_history: consultation?.family_history ?? '',
+    medications: consultation?.medications ?? '',
+    allergies: consultation?.allergies ?? '',
+    physical_exam: consultation?.physical_exam ?? '',
+    diagnosis: consultation?.diagnosis ?? '',
+    conclusion: consultation?.conclusion ?? '',
+    conduct: consultation?.conduct ?? '',
+    recommendations: consultation?.recommendations ?? '',
+    verdict: consultation?.verdict ?? '',
+    valid_until: consultation?.valid_until ?? '',
+    restrictions: consultation?.restrictions ?? '',
+    observations: consultation?.observations ?? '',
+  }));
+
+  /** `name`, `value` e `onChange` de uma vez, para nao repetir 14 vezes. */
+  const campo = (nome: keyof typeof campos) => ({
+    name: String(nome),
+    value: campos[nome] ?? '',
+    onChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+    ) => setCampos((atual) => ({ ...atual, [nome]: e.target.value })),
+  });
+
+  const [aptoAltura, setAptoAltura] = useState(consultation?.apto_altura ?? false);
+  const [aptoEletricidade, setAptoEletricidade] = useState(
+    consultation?.apto_eletricidade ?? false,
+  );
+
   // Blocos de selecao da ficha clinica. Comecam com o que ja foi gravado.
   const [blocos, setBlocos] = useState<Record<string, RespostasBloco>>(() =>
     Object.fromEntries(
@@ -95,58 +147,34 @@ export function ConsultationForm({
                 as colunas continuam no banco para nao perder o que ja foi
                 gravado; apenas sairam da tela. */}
             <Field label="Historia clínica">
-              <Textarea
-                name="clinical_history"
-                defaultValue={consultation?.clinical_history ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('clinical_history')} rows={2} />
             </Field>
             <Field label="Antecedentes pessoais">
-              <Textarea
-                name="personal_history"
-                defaultValue={consultation?.personal_history ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('personal_history')} rows={2} />
             </Field>
             <Field label="Antecedentes familiares">
-              <Textarea
-                name="family_history"
-                defaultValue={consultation?.family_history ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('family_history')} rows={2} />
             </Field>
             <Field label="Medicamentos em uso">
-              <Textarea
-                name="medications"
-                defaultValue={consultation?.medications ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('medications')} rows={2} />
             </Field>
             <Field label="Alergias">
-              <Textarea name="allergies" defaultValue={consultation?.allergies ?? ''} rows={2} />
+              <Textarea {...campo('allergies')} rows={2} />
             </Field>
             <Field label="Exame fisico">
-              <Textarea
-                name="physical_exam"
-                defaultValue={consultation?.physical_exam ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('physical_exam')} rows={2} />
             </Field>
             <Field label="Diagnostico">
-              <Textarea name="diagnosis" defaultValue={consultation?.diagnosis ?? ''} rows={2} />
+              <Textarea {...campo('diagnosis')} rows={2} />
             </Field>
             <Field label="Conclusao">
-              <Textarea name="conclusion" defaultValue={consultation?.conclusion ?? ''} rows={2} />
+              <Textarea {...campo('conclusion')} rows={2} />
             </Field>
             <Field label="Conduta">
-              <Textarea name="conduct" defaultValue={consultation?.conduct ?? ''} rows={2} />
+              <Textarea {...campo('conduct')} rows={2} />
             </Field>
             <Field label="Recomendacoes">
-              <Textarea
-                name="recommendations"
-                defaultValue={consultation?.recommendations ?? ''}
-                rows={2}
-              />
+              <Textarea {...campo('recommendations')} rows={2} />
             </Field>
           </div>
 
@@ -175,7 +203,14 @@ export function ConsultationForm({
 
           <div className="grid gap-4 md:grid-cols-3">
             <Field label="Conclusão de aptidão" error={errors?.verdict} required>
-              <Select name="verdict" defaultValue={consultation?.verdict ?? ''}>
+              {/*
+                `required` no campo: a asterisco do rotulo prometia uma
+                validacao que so existia no servidor. O medico so descobria
+                que faltava o parecer depois de mandar a ficha inteira e
+                receber a recusa no topo da tela, tres rolagens acima do
+                botao.
+              */}
+              <Select {...campo('verdict')} required>
                 <option value="">Selecione</option>
                 <option value="apto">Apto</option>
                 <option value="apto_com_restricoes">Apto com restrições</option>
@@ -184,11 +219,7 @@ export function ConsultationForm({
               </Select>
             </Field>
             <Field label="Validade">
-              <Input
-                type="date"
-                name="valid_until"
-                defaultValue={consultation?.valid_until ?? ''}
-              />
+              <Input type="date" {...campo('valid_until')} />
             </Field>
             {/*
               "no parecer do aso precisa incluir as opcs 'Apto para trabalho
@@ -207,7 +238,8 @@ export function ConsultationForm({
                     type="checkbox"
                     name="apto_altura"
                     value="on"
-                    defaultChecked={consultation?.apto_altura ?? false}
+                    checked={aptoAltura}
+                    onChange={(e) => setAptoAltura(e.target.checked)}
                     className="mt-0.5"
                   />
                   <span>
@@ -220,7 +252,8 @@ export function ConsultationForm({
                     type="checkbox"
                     name="apto_eletricidade"
                     value="on"
-                    defaultChecked={consultation?.apto_eletricidade ?? false}
+                    checked={aptoEletricidade}
+                    onChange={(e) => setAptoEletricidade(e.target.checked)}
                     className="mt-0.5"
                   />
                   <span>
@@ -231,7 +264,7 @@ export function ConsultationForm({
               </div>
             </Field>
             <Field label="Restricoes">
-              <Input name="restrictions" defaultValue={consultation?.restrictions ?? ''} />
+              <Input {...campo('restrictions')} />
             </Field>
           </div>
 
@@ -243,11 +276,7 @@ export function ConsultationForm({
           */}
 
           <Field label="Observacoes">
-            <Textarea
-              name="observations"
-              defaultValue={consultation?.observations ?? ''}
-              rows={2}
-            />
+            <Textarea {...campo('observations')} rows={2} />
           </Field>
 
           {/*
@@ -266,8 +295,26 @@ export function ConsultationForm({
             </p>
           )}
 
+          {/*
+            A recusa repetida ao lado do botao.
+
+            O `<Alert>` do topo fica tres rolagens acima daqui: o medico
+            clicava em "Finalizar consulta", o botao piscava, e nada
+            acontecia na parte visivel da tela. Ele clicava de novo — e cada
+            clique e uma tentativa de assinar A.S.O.
+          */}
+          {state && !state.ok && (
+            <Alert variant="error">{state.error}</Alert>
+          )}
+
           <div className="flex gap-2">
-            <Button type="submit" variant="outline" loading={pending}>
+            {/*
+              `formNoValidate`: o rascunho salva o que estiver na tela, com ou
+              sem conclusao de aptidao. E justamente para isso que ele existe —
+              o medico guarda a ficha no meio da consulta e volta depois.
+              So o "Finalizar" exige o parecer.
+            */}
+            <Button type="submit" variant="outline" loading={pending} formNoValidate>
               Salvar rascunho
             </Button>
             <Button type="submit" name="finalizar" value="sim" loading={pending}>
