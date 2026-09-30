@@ -51,6 +51,26 @@ const PROCEDENCIAS: { origem: string; triagem: boolean; porque: string }[] = [
   { origem: 'ingresso', triagem: true, porque: 'ingresso escolar termina em avaliacao medica' },
 ];
 
+/**
+ * Procedimentos do catalogo da clinica.
+ *
+ * Sao eles que decidem o valor do repasse do medico e se o atendimento
+ * emite ficha clinica -- pericia e junta medica nao emitem. `null` e o
+ * atendimento comum, que cai em "consulta ocupacional".
+ */
+const PROCEDIMENTOS: (string | null)[] = [
+  null,
+  'cps',
+  null,
+  'seduc',
+  null,
+  'pericia',
+  null,
+  'junta_medica',
+  null,
+  'ingresso',
+];
+
 /** Datas de nascimento que ja quebraram alguma coisa. */
 const NASCIMENTOS = [
   '1900-01-01',
@@ -82,8 +102,8 @@ const SOBRENOMES = [
  * O sorteio e determinístico: a mesma semente produz o mesmo dia. Um teste
  * que falha so as vezes nao e usado por ninguem.
  */
-export function gerarPerfis(quantos: number, empresas: string[]): Perfil[] {
-  let semente = 20260929;
+export function gerarPerfis(quantos: number, empresas: string[], semente0 = 20260929): Perfil[] {
+  let semente = semente0;
   const proximo = () => {
     semente = (semente * 1103515245 + 12345) % 2147483648;
     return semente / 2147483648;
@@ -111,6 +131,10 @@ export function gerarPerfis(quantos: number, empresas: string[]): Perfil[] {
       procedencia: proc.origem,
       triagem: proc.triagem,
       prioridade: i % 17 === 0 ? 'prioritario' : i % 23 === 0 ? 'encaixe' : 'normal',
+      // O procedimento decide o repasse do medico e se ha ficha clinica.
+      // Variar aqui e o que faz o relatorio de pagamento ter mais de uma
+      // linha -- e o que exercita a regra "pericia nao emite ficha".
+      procedimento: PROCEDIMENTOS[i % PROCEDIMENTOS.length]!,
       // Um em cada trinta desiste no meio: o sistema precisa solta-lo.
       desiste: i % 30 === 29,
       // Um em cada dezenove nao faz um dos exames.

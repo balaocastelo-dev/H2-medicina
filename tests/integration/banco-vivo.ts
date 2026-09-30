@@ -52,6 +52,19 @@ export function bancoLigado(): PGlite {
   return ligado.db;
 }
 
+/**
+ * Os arquivos que o sistema gravou no armazenamento durante o teste.
+ *
+ * A chave e "balde/caminho", igual ao que `documents.file_path` guarda com
+ * o balde na frente. Serve para conferir que todo documento do banco tem
+ * arquivo de verdade por tras -- e para escrever os PDFs em disco quando o
+ * teste precisa entregar amostras.
+ */
+export function arquivosDoStorage(): Map<string, Uint8Array> {
+  if (!ligado) throw new Error('nenhum banco ligado');
+  return ligado.storage.arquivos;
+}
+
 export function clienteDoMomento(): ClienteDeMentira {
   if (!ligado) {
     throw new Error(
