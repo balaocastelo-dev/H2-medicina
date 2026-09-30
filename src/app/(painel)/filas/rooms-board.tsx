@@ -225,12 +225,38 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
                             </p>
                           )}
 
+                          {/*
+                            O exame termina AQUI, na ficha.
+
+                            O botao "Concluir" do alto do cartao continua,
+                            para quem nao vai preencher nada. Mas o caminho
+                            normal e este: digitou o resultado, acabou.
+                            `aoSalvar` recebe se concluiu, para o laudo do
+                            exame que tem laudo proprio sair junto — depois de
+                            concluido o cartao some da tela, e um botao de
+                            laudo ali nunca mais apareceria.
+                          */}
                           <FichaDeExameForm
                             key={exame.id}
                             patientExamId={exame.id}
                             codigoExame={exame.exam_types?.code}
                             valoresIniciais={exame.exam_results?.[0]?.values ?? {}}
                             conclusaoInicial={exame.exam_results?.[0]?.conclusion ?? ''}
+                            comBotaoConcluir
+                            aoSalvar={(concluido) => {
+                              if (!concluido) return;
+                              const codigo = exame.exam_types?.code ?? '';
+                              if (!TEM_LAUDO.has(codigo)) return;
+                              startTransition(async () => {
+                                const laudo = await gerarLaudoDeExame(exame.id);
+                                setMessage({
+                                  ok: laudo.ok,
+                                  text: laudo.ok
+                                    ? 'Exame concluído e laudo emitido.'
+                                    : `Exame concluído, mas o laudo falhou: ${laudo.error}`,
+                                });
+                              });
+                            }}
                           />
                         </div>
                       ))}

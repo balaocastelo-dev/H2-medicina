@@ -17,6 +17,7 @@ import {
 } from '@/modules/queue/busca-nome';
 import { podeVincularCpf, precisaGravar } from '@/modules/queue/vinculo-cpf';
 import { cancelarContaDoAtendimento } from '@/modules/finance/actions';
+import { liberarSalaSeVazia } from '@/modules/queue/liberar-sala';
 
 export interface TotemLookupResult {
   appointmentId: string | null;
@@ -334,17 +335,54 @@ export async function callNextForRoom(roomId: string): Promise<ActionResult<{ fo
 
     // Guarda contra dois operadores clicando junto: se a sala ja tem alguem
     // chamado ou em atendimento, nao chama outro por cima.
+    //
+    // ---------------------------------------------------------------------
+    // A guarda so pode contar o que a TELA consegue mostrar
+    // ---------------------------------------------------------------------
+    // Antes ela procurava qualquer exame `chamado` naquela sala, sem olhar o
+    // atendimento. Um exame que ficou parado em `chamado` — de um paciente
+    // cancelado, de um atendimento ja encerrado, ou de alguem que avancou de
+    // etapa sem concluir o exame — travava a sala PARA SEMPRE.
+    //
+    // E travava em silencio: o quadro de Filas so carrega exame de
+    // atendimento em `aguardando_exames`/`em_exames`, entao o bloqueador nao
+    // aparecia em lugar nenhum. A sala mostrava "livre", o botao recusava
+    // dizendo que havia um paciente, e nao havia paciente nenhum para
+    // concluir. Beco sem saida, sem nada na tela para resolver.
+    //
+    // Os filtros abaixo sao os MESMOS do quadro de salas, de proposito: se a
+    // tela nao mostra, nao pode bloquear.
     const { data: ocupada } = await supabase
       .from('patient_exams')
-      .select('id')
+      .select(
+        'id, attendances!inner(id, stage_code, finished_at, cancelled_at, deleted_at, patients(full_name), queue_tickets(code))',
+      )
       .eq('tenant_id', ctx.tenant.id)
       .eq('room_id', roomId)
       .in('status', ['chamado', 'em_andamento'])
+      .is('attendances.finished_at', null)
+      .is('attendances.cancelled_at', null)
+      .is('attendances.deleted_at', null)
+      .in('attendances.stage_code', ['aguardando_exames', 'em_exames'])
       .limit(1)
-      .maybeSingle<{ id: string }>();
+      .maybeSingle<{
+        id: string;
+        attendances: {
+          patients: { full_name: string } | null;
+          queue_tickets: { code: string }[];
+        } | null;
+      }>();
 
     if (ocupada) {
-      return ok({ found: false }, 'Esta sala já está com um paciente. Conclua antes de chamar o próximo.');
+      // Dizer QUEM esta na sala. "Esta sala ja esta com um paciente" nao
+      // ajuda quem precisa achar a ficha para concluir.
+      const nome = ocupada.attendances?.patients?.full_name ?? 'um paciente';
+      const senha = ocupada.attendances?.queue_tickets?.[0]?.code;
+      return ok(
+        { found: false },
+        `Esta sala está com ${nome}${senha ? ` (senha ${senha})` : ''}. ` +
+          'Conclua o exame ou devolva à fila antes de chamar o próximo.',
+      );
     }
 
     const { data, error } = await supabase.rpc('call_next_for_room', {
@@ -698,25 +736,8 @@ export async function updateExamStatus(
     // `current_attendance_id`. Desativada a sala, o exame que faltava ficava
     // invisivel em todas as telas.
     const salaParaLiberar = antes?.room_id ?? data.room_id;
-    if (salaParaLiberar && status !== 'em_andamento') {
-      const { data: irmaosNaSala } = await supabase
-        .from('patient_exams')
-        .select('id')
-        .eq('tenant_id', ctx.tenant.id)
-        .eq('attendance_id', data.attendance_id)
-        .eq('room_id', salaParaLiberar)
-        .in('status', ['chamado', 'em_andamento'])
-        .neq('id', examId)
-        .limit(1)
-        .returns<{ id: string }[]>();
-
-      if ((irmaosNaSala?.length ?? 0) === 0) {
-        await supabase
-          .from('rooms')
-          .update({ status: 'disponivel', current_attendance_id: null })
-          .eq('id', salaParaLiberar)
-          .eq('tenant_id', ctx.tenant.id);
-      }
+    if (status !== 'em_andamento') {
+      await liberarSalaSeVazia(ctx.tenant.id, salaParaLiberar, data.attendance_id, examId);
     }
 
     await supabase.from('queue_events').insert({

@@ -15,6 +15,7 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import { isOriginKind, REGRAS } from '@/modules/queue/origin-kind';
 import { dinheiroDigitado } from '@/lib/dinheiro-digitado';
+import { liberarSalaSeVazia } from '@/modules/queue/liberar-sala';
 
 /**
  * Le um sinal vital digitado na triagem.
@@ -430,12 +431,14 @@ export async function saveExamResult(
 
     const { data: exam } = await supabase
       .from('patient_exams')
-      .select('id, patient_id, status, started_at')
+      .select('id, patient_id, attendance_id, room_id, status, started_at')
       .eq('id', patientExamId)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
         id: string;
         patient_id: string;
+        attendance_id: string;
+        room_id: string | null;
         status: string;
         started_at: string | null;
       }>();
@@ -464,8 +467,10 @@ export async function saveExamResult(
 
     if (error) return fail(toFriendlyError(error));
 
-    if (concluir && !['concluido', 'cancelado', 'nao_realizado'].includes(exam.status)) {
-      const agora = new Date().toISOString();
+    const agora = new Date().toISOString();
+    const jaEncerrado = ['concluido', 'cancelado', 'nao_realizado'].includes(exam.status);
+
+    if (concluir && !jaEncerrado) {
       const { error: erroStatus } = await supabase
         .from('patient_exams')
         .update({
@@ -478,6 +483,34 @@ export async function saveExamResult(
         .eq('id', patientExamId)
         .eq('tenant_id', ctx.tenant.id);
       if (erroStatus) return fail(toFriendlyError(erroStatus));
+
+      // Concluir pela ficha tem de soltar a sala igual ao botao Concluir do
+      // quadro. Este caminho nao soltava: quem terminasse o exame pela ficha
+      // deixava a sala ocupada, e a proxima chamada era recusada com "esta
+      // sala ja esta com um paciente".
+      await liberarSalaSeVazia(ctx.tenant.id, exam.room_id, exam.attendance_id, patientExamId);
+    }
+
+    // Salvar a ficha ja coloca o exame em andamento.
+    //
+    // Quem digitou o resultado obviamente comecou o exame. Exigir um clique
+    // em "Iniciar" ANTES de preencher fazia o examinador salvar a ficha, ver
+    // "Resultado registrado." e o exame continuar parado em `chamado` — com o
+    // botao de concluir nem aparecendo, porque ele so existe em
+    // `em_andamento`. Quatro exames na sala viravam oito cliques em ordem
+    // fixa, e o botao que parecia final nao fechava nada.
+    if (!concluir && exam.status === 'chamado') {
+      await supabase
+        .from('patient_exams')
+        .update({
+          status: 'em_andamento',
+          started_at: exam.started_at ?? agora,
+          professional_id: ctx.userId,
+          updated_by: ctx.userId,
+        })
+        .eq('id', patientExamId)
+        .eq('tenant_id', ctx.tenant.id)
+        .eq('status', 'chamado');
     }
 
     await audit(ctx, {
