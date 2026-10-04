@@ -160,6 +160,104 @@ export function lerLinhaPericia(linha: string): RegistroExtraido | null {
   return reg;
 }
 
+/**
+ * A mesma lista de pericias, mas COPIADA DA TELA DO PORTAL.
+ *
+ * ---------------------------------------------------------------------
+ * Por que precisa de um segundo leitor
+ * ---------------------------------------------------------------------
+ * O leitor de cima espera a linha posicional, separada por espacos. Mas
+ * quem copia direto da tabela HTML do eSisla recebe do navegador o texto
+ * separado por TABULACAO, uma celula por coluna — e ai `detectarFormato`
+ * via tabulacao, classificava como "tabela" e nem chegava no leitor de
+ * pericias.
+ *
+ * Pior: a tabela vem SEM o cabecalho (quem seleciona o corpo com o mouse
+ * raramente pega a linha de titulos), e sem cabecalho o leitor de tabela
+ * avalia celula por celula e pega a PRIMEIRA que parece nome. A coluna
+ * "Tipo" vem antes da coluna "Nome" e tem valor "JM REAP" — duas palavras,
+ * so letras. Resultado: 108 pessoas chamadas "Jm Reap", e o nome de
+ * verdade jogado fora.
+ *
+ * Aqui a leitura e por EVIDENCIA, nao por posicao fixa: a linha tem uma
+ * hora, um protocolo de 6+ digitos e termina no pontilhado da coluna
+ * "Compareceu". O nome e a ultima celula com cara de nome antes do
+ * pontilhado — e a coluna "Tipo", que vem antes do protocolo, fica de fora
+ * por construcao.
+ *
+ * As colunas do eSisla, na ordem:
+ *   Periciado(caixa) · Hora · Tipo · Protocolo · Seq · Read · Pessoa · NI ·
+ *   Nome · Compareceu(pontilhado) · Observacao
+ */
+export function lerLinhaPericiaCelulas(celulas: string[]): RegistroExtraido | null {
+  const cel = celulas.map((c) => limpar(c));
+
+  const iHora = cel.findIndex((c) => /^[0-2]?\d:[0-5]\d$/.test(c));
+  if (iHora === -1) return null;
+
+  // Protocolo: primeiro numero longo DEPOIS da hora.
+  const iProtocolo = cel.findIndex((c, i) => i > iHora && /^\d{6,}$/.test(c));
+  if (iProtocolo === -1) return null;
+
+  // O pontilhado da coluna "Compareceu" fecha a linha. Sem ele nao da para
+  // saber onde o nome termina, e a linha nao e desta lista.
+  //
+  // Procurado no texto CRU: `limpar` apaga ponto do comeco e do fim, entao a
+  // celula do pontilhado chega ate aqui como string vazia. Foi exatamente
+  // isso que fez a deteccao falhar na primeira tentativa de conserto.
+  const iPontilhado = celulas.findIndex(
+    (c, i) => i > iProtocolo && /^\s*\.{4,}\s*$/.test(c),
+  );
+  if (iPontilhado === -1) return null;
+
+  // O nome e a ultima celula com cara de nome antes do pontilhado. "Ultima"
+  // porque a coluna Tipo tambem passaria no teste — e ela vem antes.
+  let iNome = -1;
+  for (let i = iPontilhado - 1; i > iProtocolo; i -= 1) {
+    if (pareceNome(cel[i]!)) {
+      iNome = i;
+      break;
+    }
+  }
+  if (iNome === -1) return null;
+
+  // Matricula (coluna NI): o numero que fica entre o protocolo e o nome.
+  let matricula: string | null = null;
+  for (let i = iNome - 1; i > iProtocolo; i -= 1) {
+    if (/^\d{4,9}$/.test(cel[i]!)) {
+      matricula = cel[i]!;
+      break;
+    }
+  }
+
+  const reg = vazio(cel.filter(Boolean).join(' · '));
+  reg.hora = cel[iHora]!.padStart(5, '0');
+  reg.protocolo = cel[iProtocolo]!;
+  reg.matricula = matricula;
+  reg.nome = tituloDeNome(cel[iNome]!);
+
+  // O tipo fica entre a hora e o protocolo.
+  const tipo = cel.slice(iHora + 1, iProtocolo).find((c) => /[A-Za-zÀ-ÿ]/.test(c));
+  if (tipo) {
+    reg.tipoAtendimento = normalizarTipoAtendimento(tipo);
+    reg.observacoes = `${tipo} · protocolo ${reg.protocolo}`;
+  } else {
+    reg.observacoes = `protocolo ${reg.protocolo}`;
+  }
+
+  reg.avisos.push('Sem CPF: conferir documento na recepção');
+  return reg;
+}
+
+/** A linha tem a cara da lista de pericias, posicional ou em celulas? */
+function ehLinhaDePericia(linha: string): boolean {
+  if (RE_PERICIA.test(linha)) return true;
+  for (const delim of ['\t', ';', '|']) {
+    if (linha.includes(delim) && lerLinhaPericiaCelulas(linha.split(delim))) return true;
+  }
+  return false;
+}
+
 /** Data do cabecalho "Perícias Agendadas para: 19/08/2026". */
 export function dataDoCabecalhoPericias(texto: string): string | null {
   const casa = texto.match(/agendadas?\s+para\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
@@ -174,7 +272,12 @@ export function detectarFormato(texto: string): Deteccao {
   // Lista de pericias: linha posicional que termina em pontilhado. Vem antes
   // dos outros testes porque nao tem delimitador nenhum e seria confundida
   // com texto corrido.
-  if (linhas.filter((l) => RE_PERICIA.test(l)).length >= 2) return { formato: 'pericias' };
+  // `ehLinhaDePericia` cobre as duas formas: a linha posicional (colada de
+  // um PDF ou do texto puro) e a linha em celulas (copiada da tabela do
+  // portal, que o navegador entrega separada por tabulacao). Sem a segunda,
+  // a tabela caia no leitor generico logo abaixo e a coluna "Tipo" virava o
+  // nome de todo mundo.
+  if (linhas.filter(ehLinhaDePericia).length >= 2) return { formato: 'pericias' };
 
   // Tabela: o mesmo delimitador aparece em quase toda linha, sempre a mesma
   // quantidade de vezes. Virgula fica de fora porque texto corrido tem virgula.
@@ -623,8 +726,9 @@ export function lerTextoColado(texto: string, hoje = new Date()): ResultadoLeitu
   if (det.formato === 'pericias') {
     registros = limpo
       .split(/\r?\n/)
-      .map((l) => lerLinhaPericia(l))
+      .map((l) => lerPericiaDeQualquerJeito(l))
       .filter((r): r is RegistroExtraido => r !== null);
+    registros = juntarPericiasDaMesmaPessoa(registros);
   } else if (det.formato === 'tabela' && det.delimitador) {
     registros = lerTabela(limpo, det.delimitador, det.temCabecalho ?? false, hoje);
   } else {
@@ -641,6 +745,59 @@ export function lerTextoColado(texto: string, hoje = new Date()): ResultadoLeitu
   };
 }
 
+/** Le a linha de pericia venha ela posicional ou em celulas. */
+function lerPericiaDeQualquerJeito(linha: string): RegistroExtraido | null {
+  const posicional = lerLinhaPericia(linha);
+  if (posicional) return posicional;
+  for (const delim of ['\t', ';', '|']) {
+    if (!linha.includes(delim)) continue;
+    const emCelulas = lerLinhaPericiaCelulas(linha.split(delim));
+    if (emCelulas) return emCelulas;
+  }
+  return null;
+}
+
+/**
+ * Uma pessoa, um agendamento — mesmo que o portal repita a linha.
+ *
+ * No eSisla cada pericia aparece uma vez por SEQUENCIA: a mesma pessoa, no
+ * mesmo horario, com o mesmo protocolo, listada tres vezes (Seq 1, 2 e 3).
+ * Sao tres avaliacoes dentro da mesma pericia, nao tres visitas.
+ *
+ * Colando 108 linhas, a clinica agendava 108 vezes — 36 pessoas em
+ * triplicata. A agenda do dia seguinte nascia errada, e a recepcao
+ * descobria com o paciente na frente.
+ *
+ * O protocolo e a chave: ele identifica a pericia. Sem protocolo (origem
+ * diferente), cai para nome + hora.
+ */
+function juntarPericiasDaMesmaPessoa(registros: RegistroExtraido[]): RegistroExtraido[] {
+  const porChave = new Map<string, { reg: RegistroExtraido; vezes: number }>();
+
+  for (const reg of registros) {
+    const chave = reg.protocolo
+      ? `p:${reg.protocolo}`
+      : `n:${normalizar(reg.nome ?? '')}|${reg.hora ?? ''}`;
+    const ja = porChave.get(chave);
+    if (ja) {
+      ja.vezes += 1;
+      continue;
+    }
+    porChave.set(chave, { reg, vezes: 1 });
+  }
+
+  return [...porChave.values()].map(({ reg, vezes }) => {
+    if (vezes > 1) {
+      // Dizer que juntou: quem confere a lista na tela precisa entender por
+      // que 108 linhas viraram 36 pessoas.
+      reg.observacoes = [reg.observacoes, `${vezes} avaliações nesta perícia`]
+        .filter(Boolean)
+        .join(' · ');
+    }
+    return reg;
+  });
+}
+
 /** Tabela com delimitador: usa o cabecalho quando existe, senao adivinha. */
 function lerTabela(
   texto: string,
@@ -652,13 +809,39 @@ function lerTabela(
   const cabecalho = temCabecalho ? linhas[0]!.split(delimitador).map((c) => limpar(c)) : null;
   const corpo = temCabecalho ? linhas.slice(1) : linhas;
 
+  // -------------------------------------------------------------------
+  // Coluna com o MESMO valor em todas as linhas nao e nome de pessoa.
+  //
+  // Sem cabecalho, o leitor avalia celula por celula e aceita a primeira
+  // que pareca nome. Uma coluna de categoria — "JM REAP", "ADMISSIONAL",
+  // "CLINICO" — passa nesse teste e vem antes do nome de verdade na maioria
+  // dos relatorios. Foi assim que 108 pessoas viraram "Jm Reap".
+  //
+  // Nome de gente varia linha a linha. Uma coluna constante, com tres ou
+  // mais linhas para comparar, e rotulo — e sai da disputa.
+  const colunasConstantes = new Set<number>();
+  if (!cabecalho && corpo.length >= 3) {
+    const matriz = corpo.map((l) => l.split(delimitador).map((c) => limpar(c)));
+    const colunas = Math.max(...matriz.map((c) => c.length));
+    for (let i = 0; i < colunas; i += 1) {
+      const valores = matriz.map((c) => normalizar(c[i] ?? ''));
+      const primeiro = valores[0] ?? '';
+      if (primeiro !== '' && valores.every((v) => v === primeiro)) colunasConstantes.add(i);
+    }
+  }
+
   return corpo.map((linha) => {
     const celulas = linha.split(delimitador).map((c) => limpar(c));
 
     if (!cabecalho) {
       // Sem cabecalho, cada celula e avaliada isolada e o registro sai da
       // juncao — o mesmo caminho do texto corrido.
-      return extrairRegistro(celulas.join('\n'), hoje);
+      const uteis = celulas.filter((_, i) => !colunasConstantes.has(i));
+      const reg = extrairRegistro(uteis.join('\n'), hoje);
+      // O bruto mostra a linha INTEIRA na conferencia: o que foi ignorado
+      // para achar o nome continua visivel para quem confere.
+      reg.bruto = linha.trim();
+      return reg;
     }
 
     // Com cabecalho, monta "Rotulo: valor" e reaproveita o leitor rotulado,
