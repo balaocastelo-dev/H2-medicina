@@ -29,6 +29,16 @@ export async function aplicarImportacaoPlanilha(input: {
   linhas: LinhaNormalizada[];
   examTypeIds?: string[];
 }): Promise<ActionResult<ResultadoImportacao>> {
+  // Fora do `try` para o `catch` alcancar: e la que a importacao
+  // interrompida e marcada como falha, com o que entrou antes.
+  const resultado: ResultadoImportacao = {
+    pacientesCriados: 0,
+    pacientesAtualizados: 0,
+    agendamentosCriados: 0,
+    ignorados: [],
+  };
+  let registroImportacao: { id: string } | null = null;
+
   try {
     if (!isOriginKind(input.originKind)) return fail('Procedência inválida.');
     const ctx = await assertPermission('importacoes.aprovar');
@@ -37,15 +47,26 @@ export async function aplicarImportacaoPlanilha(input: {
     const validas = input.linhas.filter((l) => l.erros.length === 0 && l.agendadoEm);
     if (validas.length === 0) return fail('Nenhuma linha válida para importar.');
 
-    const originKind = input.originKind as OriginKind;
-    const resultado: ResultadoImportacao = {
-      pacientesCriados: 0,
-      pacientesAtualizados: 0,
-      agendamentosCriados: 0,
-      ignorados: [],
-    };
+    // Teto por importacao.
+    //
+    // Cada linha faz de 2 a 4 idas ao banco, em serie. Uma planilha de 400
+    // funcionarios passa do tempo que a funcao tem para rodar, e o estouro e
+    // o pior tipo: a tela devolve erro generico com METADE dos pacientes ja
+    // criados, e o registro da importacao fica preso em "processando".
+    // Reimportar depois duplica.
+    //
+    // Recusar antes de comecar e honesto; parar no meio nao e.
+    const TETO_POR_IMPORTACAO = 250;
+    if (validas.length > TETO_POR_IMPORTACAO) {
+      return fail(
+        `Esta planilha tem ${validas.length} linhas válidas, e o limite por importação é ${TETO_POR_IMPORTACAO}. ` +
+          'Divida o arquivo em partes e importe uma por vez — assim nenhuma importação fica pela metade.',
+      );
+    }
 
-    const { data: registroImportacao } = await supabase
+    const originKind = input.originKind as OriginKind;
+
+    const { data: criado } = await supabase
       .from('file_imports')
       .insert({
         tenant_id: ctx.tenant.id,
@@ -60,33 +81,65 @@ export async function aplicarImportacaoPlanilha(input: {
       })
       .select('id')
       .maybeSingle<{ id: string }>();
+    registroImportacao = criado ?? null;
+
+    // -------------------------------------------------------------------
+    // Quem ja existe, numa consulta so.
+    //
+    // Antes era uma consulta de deduplicacao POR LINHA — 250 idas ao banco
+    // em serie so para descobrir quem ja estava cadastrado, antes de
+    // escrever qualquer coisa. Com uma planilha de empresa isso dominava o
+    // tempo da importacao.
+    //
+    // Duas buscas resolvem a planilha inteira: uma pelos CPFs, outra pelos
+    // nomes de quem veio sem CPF. A regra de casamento continua a mesma —
+    // CPF e a chave confiavel; sem ele, nome + nascimento evita o duplicado
+    // obvio sem arriscar juntar dois homonimos quaisquer.
+    // -------------------------------------------------------------------
+    const cpfs = [...new Set(validas.map((l) => l.cpf).filter((c): c is string => !!c))];
+    const semCpf = validas.filter((l) => !l.cpf && l.nascimento);
+
+    const [porCpfRes, porNomeRes] = await Promise.all([
+      cpfs.length > 0
+        ? supabase
+            .from('patients')
+            .select('id, cpf')
+            .eq('tenant_id', ctx.tenant.id)
+            .in('cpf', cpfs)
+            .is('deleted_at', null)
+            .returns<{ id: string; cpf: string | null }[]>()
+        : Promise.resolve({ data: [] as { id: string; cpf: string | null }[] }),
+      semCpf.length > 0
+        ? supabase
+            .from('patients')
+            .select('id, full_name, birth_date')
+            .eq('tenant_id', ctx.tenant.id)
+            .in('full_name', [...new Set(semCpf.map((l) => l.nome))])
+            .is('deleted_at', null)
+            .returns<{ id: string; full_name: string; birth_date: string | null }[]>()
+        : Promise.resolve({
+            data: [] as { id: string; full_name: string; birth_date: string | null }[],
+          }),
+    ]);
+
+    const idPorCpf = new Map<string, string>();
+    for (const p of porCpfRes.data ?? []) {
+      if (p.cpf) idPorCpf.set(p.cpf, p.id);
+    }
+    // A chave do segundo mapa junta nome e nascimento: nome igual com
+    // nascimento diferente e outra pessoa, e nao pode casar.
+    const idPorNomeNascimento = new Map<string, string>();
+    for (const p of porNomeRes.data ?? []) {
+      if (p.birth_date) idPorNomeNascimento.set(`${p.full_name}|${p.birth_date}`, p.id);
+    }
 
     for (const linha of validas) {
       try {
-        let patientId: string | null = null;
-
-        // CPF e a chave confiavel. Sem ele, nome + nascimento evita o
-        // duplicado obvio sem arriscar juntar dois homonimos quaisquer.
-        if (linha.cpf) {
-          const { data } = await supabase
-            .from('patients')
-            .select('id')
-            .eq('tenant_id', ctx.tenant.id)
-            .eq('cpf', linha.cpf)
-            .is('deleted_at', null)
-            .maybeSingle<{ id: string }>();
-          patientId = data?.id ?? null;
-        } else if (linha.nascimento) {
-          const { data } = await supabase
-            .from('patients')
-            .select('id')
-            .eq('tenant_id', ctx.tenant.id)
-            .eq('full_name', linha.nome)
-            .eq('birth_date', linha.nascimento)
-            .is('deleted_at', null)
-            .maybeSingle<{ id: string }>();
-          patientId = data?.id ?? null;
-        }
+        let patientId: string | null = linha.cpf
+          ? (idPorCpf.get(linha.cpf) ?? null)
+          : linha.nascimento
+            ? (idPorNomeNascimento.get(`${linha.nome}|${linha.nascimento}`) ?? null)
+            : null;
 
         if (patientId) {
           await supabase
@@ -219,6 +272,31 @@ export async function aplicarImportacaoPlanilha(input: {
           : '.'),
     );
   } catch (error) {
+    // A importacao nunca fica presa em "processando".
+    //
+    // Se algo estourar no meio, o registro ficava nesse estado para sempre —
+    // a tela de importacoes mostrava um processo rodando que ja tinha morrido,
+    // e ninguem sabia se podia reimportar. Marcar como falha, com o motivo,
+    // e o minimo: a clinica ve o que aconteceu e quanto entrou antes.
+    try {
+      if (registroImportacao) {
+        const supabase = await createClient();
+        await supabase
+          .from('file_imports')
+          .update({
+            status: 'falhou',
+            rows_ok: resultado.agendamentosCriados,
+            rows_error: resultado.ignorados.length,
+            errors: [
+              ...resultado.ignorados,
+              { linha: 0, nome: '(importação interrompida)', motivo: toFriendlyError(error) },
+            ],
+          })
+          .eq('id', registroImportacao.id);
+      }
+    } catch {
+      // Falha ao registrar a falha nao pode esconder a falha original.
+    }
     return fail(toFriendlyError(error));
   }
 }

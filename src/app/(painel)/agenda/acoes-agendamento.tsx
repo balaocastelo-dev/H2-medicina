@@ -32,7 +32,7 @@ export function AcoesDoAgendamento({
   const executar = (acao: () => Promise<ActionResult>) =>
     iniciar(async () => {
       const r = await acao();
-      setAviso({ ok: r.ok, texto: r.ok ? (r.message ?? 'Feito.') : r.error });
+      setAviso({ ok: r.ok, texto: r.ok ? (r.message ?? 'Agendamento atualizado.') : r.error });
     });
 
   if (status === 'cancelado') {

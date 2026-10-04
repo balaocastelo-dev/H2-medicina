@@ -36,7 +36,7 @@ export function ExamesSemSala({
     if (!roomId) return;
     startTransition(async () => {
       const r = await atribuirSalaAoExame(exame.id, roomId);
-      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Enviado.') : r.error });
+      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Exame enviado para a sala.') : r.error });
     });
   };
 

@@ -22,7 +22,7 @@ export function RoomsBoard({ rooms, exams }: { rooms: RoomInfo[]; exams: QueueEx
       const result = await fn();
       setMessage({
         ok: result.ok,
-        text: result.ok ? (result.message ?? 'Concluido.') : (result.error ?? 'Erro.'),
+        text: result.ok ? (result.message ?? 'Exame atualizado.') : (result.error ?? 'Erro.'),
       });
     });
 

@@ -295,7 +295,7 @@ function ReceptionDetail({
       const result = await fn();
       setMessage({
         ok: result.ok,
-        text: result.ok ? (result.message ?? 'Concluido.') : (result.error ?? 'Erro.'),
+        text: result.ok ? (result.message ?? 'Recepção atualizada.') : (result.error ?? 'Erro.'),
       });
     });
 

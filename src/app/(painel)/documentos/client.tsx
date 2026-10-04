@@ -99,7 +99,7 @@ export function GenerateDocumentCard({
                 const result = await generateAttendanceDocument(attendanceId, tipoEscolhido);
                 setMessage({
                   ok: result.ok,
-                  text: result.ok ? (result.message ?? 'Gerado.') : result.error,
+                  text: result.ok ? (result.message ?? 'Documento gerado — aparece na lista abaixo.') : result.error,
                 });
               })
             }

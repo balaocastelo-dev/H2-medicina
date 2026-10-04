@@ -2,7 +2,7 @@ import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
 import type { FichaDeExame } from '@/modules/clinical/fichas-de-exame';
-import { protegerFonte, protegerPagina } from './texto-do-pdf';
+import { cortarComReticencias, protegerFonte, protegerPagina } from './texto-do-pdf';
 import { escreverRodapeEmTodasAsPaginas } from './rodape-de-todas-as-paginas';
 
 /**
@@ -111,10 +111,11 @@ export async function buildLaudoDeFicha(d: DadosDoLaudoDeFicha): Promise<Uint8Ar
     const escrever = (x: number, [rotulo, valor]: [string, string | null], limite: number) => {
       pagina.drawText(`${rotulo}:`, { x, y, size: 8, font: B, color: cinza });
       const recuo = B.widthOfTextAtSize(`${rotulo}:`, 8) + 5;
-      let texto = (valor ?? '').trim() || '—';
-      while (F.widthOfTextAtSize(texto, 8.5) > limite - recuo && texto.length > 4) {
-        texto = texto.slice(0, -2);
-      }
+      const bruto = (valor ?? '').trim() || '—';
+      // Reticencias em vez de corte seco: nome ou empresa cortada no meio
+      // parece dado errado no cadastro, e a clinica recebia o laudo de volta
+      // pedindo correcao do que estava certo.
+      const texto = cortarComReticencias(bruto, F, 8.5, limite - recuo);
       pagina.drawText(texto, { x: x + recuo, y, size: 8.5, font: F, color: preto });
     };
     escrever(M, esquerda, direita ? meia - 12 : LARGURA);

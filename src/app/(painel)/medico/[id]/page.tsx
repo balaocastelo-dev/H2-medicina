@@ -291,7 +291,17 @@ export default async function MedicoAtendimentoPage({
         </div>
 
         <div className="xl:col-span-2">
+          {/*
+            `key={id}`: a ficha guarda o que o medico digita em estado
+            React, e sem a chave o React reaproveitaria o componente ao
+            trocar de paciente — o texto de um cairia na ficha do outro.
+            Hoje nao ha link direto entre duas fichas (toda navegacao passa
+            por /medico, que desmonta o formulario), mas isso e acidente de
+            rota: o dia em que alguem puser um botao "proximo paciente", o
+            buraco abre em silencio. E prontuario.
+          */}
           <ConsultationForm
+            key={id}
             psicossocialSolicitado={psicossocialSolicitado}
             attendanceId={id}
             consultation={consultation ?? null}

@@ -25,6 +25,15 @@ Preencha `.env.local`:
 | `SUPABASE_DB_URL`               | **somente servidor** | string de conexao para migrations                |
 | `SECRETS_ENCRYPTION_KEY`        | **somente servidor** | 32 bytes base64, cifra credenciais de conectores |
 
+Só as três primeiras são obrigatórias. `SUPABASE_DB_URL` serve para rodar as
+migrations da sua máquina; a aplicação não usa. E a `SUPABASE_SERVICE_ROLE_KEY`
+é obrigatória de fato, apesar de parecer acessório: sem ela param o agendamento
+pelo site, a página `/verificar`, o portal do paciente e **a criação de
+qualquer usuário**.
+
+Para colocar a clínica no ar pela primeira vez, a ordem completa — com o que
+acontece se cada coisa faltar — está em [`docs/primeiro-dia.md`](docs/primeiro-dia.md).
+
 Gere a chave de criptografia:
 
 ```bash
@@ -41,8 +50,8 @@ Tres caminhos equivalentes — escolha um.
 
 ```bash
 export SUPABASE_DB_URL="postgresql://postgres:SENHA@db.<ref>.supabase.co:5432/postgres"
-npm run db:push     # aplica as 15 migrations em ordem, com controle de versao
-npm run db:seed     # cria o primeiro tenant e os dados iniciais
+npm run db:push     # aplica as migrations em ordem, com controle de versao
+npm run db:seed     # cria a primeira clinica e os dados iniciais
 ```
 
 **B. Supabase CLI**
@@ -56,12 +65,25 @@ psql "$SUPABASE_DB_URL" -f supabase/seed/0001_tenant_inicial.sql
 **C. SQL Editor do painel**
 
 ```bash
-npm run db:full     # gera supabase/full_schema.sql
+npm run db:full     # REGENERA supabase/full_schema.sql antes de usar
 ```
 
-Cole o conteudo no SQL Editor e execute.
+Cole o conteudo no SQL Editor e execute. Ele ja inclui os seeds, entao nao
+precisa do passo de seed depois.
+
+> **Rode o `db:full` primeiro, sempre.** O arquivo versionado e so um
+> retrato: ele ficou parado na migration 0015 por semanas enquanto o
+> repositorio passava da 0050, e quem colasse aquele arquivo levantava um
+> banco de dois meses atras sem perceber. O comando o reconstroi a partir
+> das migrations e dos seeds que estao no repositorio agora.
 
 As migrations sao **idempotentes**: reexecutar nao quebra nem duplica nada.
+
+> Banco **ja em uso**, parado numa migration anterior? Nao use nenhum dos
+> tres caminhos acima: eles sao para banco novo. Use o script de entrega em
+> `supabase/scripts/RODAR-AGORA-TUDO-DE-UMA-VEZ.sql`, que traz so o que
+> falta, e valide antes com
+> `node scripts/valida-script-entregue.mjs <arquivo> <ultima-migration-aplicada>`.
 
 ### Validacao offline
 

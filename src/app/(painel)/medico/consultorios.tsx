@@ -43,7 +43,7 @@ export function Consultorios({
   const chamar = (salaId: string) =>
     iniciar(async () => {
       const r = await chamarProximoNoConsultorio(salaId);
-      setAviso({ ok: r.ok, texto: r.ok ? (r.message ?? 'Chamado.') : r.error });
+      setAviso({ ok: r.ok, texto: r.ok ? (r.message ?? 'Paciente chamado.') : r.error });
       if (r.ok && r.data?.attendanceId) router.push(`/medico/${r.data.attendanceId}`);
     });
 

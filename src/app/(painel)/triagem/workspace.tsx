@@ -159,7 +159,7 @@ function ChamarParaTriagem({
                 const r = jaChamado
                   ? await repetirChamadaDaTriagem(row.id)
                   : await chamarParaTriagem(row.id, sala || null);
-                setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Chamado.') : r.error });
+                setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Paciente chamado para a triagem.') : r.error });
               })
             }
           >

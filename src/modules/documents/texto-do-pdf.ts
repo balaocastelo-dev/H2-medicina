@@ -142,6 +142,50 @@ export function cabeNoPdf(valor: string | null | undefined): boolean {
   return textoSeguroParaPdf(valor) === String(valor ?? '');
 }
 
+/**
+ * Corta o texto na largura disponivel, terminando em reticencias.
+ *
+ * ---------------------------------------------------------------------
+ * Por que as reticencias importam
+ * ---------------------------------------------------------------------
+ * Os geradores cortavam com `texto = texto.slice(0, -2)` ate caber, e
+ * paravam ali. Quem le o papel nao tinha como saber que faltava pedaco:
+ *
+ *   "RUA SAO JOAO, 1250, CENTRO, BOTUCA"
+ *
+ * e indistinguivel de um endereco cadastrado errado. A clinica recebia o
+ * documento de volta pedindo correcao de um dado que estava certo no
+ * sistema.
+ *
+ * Com as reticencias o papel diz que o texto continua, e quem confere sabe
+ * que precisa olhar o cadastro em vez de corrigi-lo.
+ */
+export function cortarComReticencias(
+  texto: string,
+  fonte: { widthOfTextAtSize(t: string, s: number): number },
+  tamanho: number,
+  largura: number,
+): string {
+  if (largura <= 0) return '';
+  if (fonte.widthOfTextAtSize(texto, tamanho) <= largura) return texto;
+
+  let corte = texto;
+  // Tira de dois em dois: a medicao de fonte e caga, e um caractere por vez
+  // multiplicaria o custo sem ganho visivel.
+  while (corte.length > 1 && fonte.widthOfTextAtSize(`${corte}...`, tamanho) > largura) {
+    corte = corte.slice(0, -2);
+  }
+  // Sem espaco nem para as reticencias: devolve o que couber, sem elas.
+  if (corte.length <= 1) {
+    let so = texto;
+    while (so.length > 1 && fonte.widthOfTextAtSize(so, tamanho) > largura) {
+      so = so.slice(0, -1);
+    }
+    return so;
+  }
+  return `${corte.trimEnd()}...`;
+}
+
 /* ------------------------------------------------------------------ */
 
 interface PaginaComTexto {

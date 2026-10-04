@@ -73,7 +73,7 @@ export function FichaDeExameForm({
       );
       setAviso({
         ok: resultado.ok,
-        texto: resultado.ok ? (resultado.message ?? 'Registrado.') : resultado.error,
+        texto: resultado.ok ? (resultado.message ?? 'Ficha salva.') : resultado.error,
       });
       if (resultado.ok) aoSalvar?.(concluir);
     });

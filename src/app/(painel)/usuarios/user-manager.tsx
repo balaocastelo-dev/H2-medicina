@@ -86,7 +86,7 @@ export function UserManager({
   const rodar = (fn: () => Promise<ActionResult<unknown>>) =>
     startTransition(async () => {
       const r = await fn();
-      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Feito.') : r.error });
+      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Usuário atualizado.') : r.error });
     });
 
   const faltamMedicos = MEDICOS_INICIAIS.filter(

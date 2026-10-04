@@ -1,7 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { corDaMarca, desenharCabecalho, type DadosDoCabecalho } from './cabecalho';
-import { protegerFonte, protegerPagina } from './texto-do-pdf';
+import { cortarComReticencias, protegerFonte, protegerPagina } from './texto-do-pdf';
 
 /**
  * Guia de solicitacao de exame, no modelo "Guia de Exame.docx" da clinica.
@@ -84,11 +84,10 @@ export async function buildGuiaDeExame(d: DadosDaGuia): Promise<Uint8Array> {
     const escrever = (x: number, rotulo: string, valor: string | null, largura: number) => {
       pagina.drawText(`${rotulo}:`, { x, y, size: 8, font: B, color: preto });
       const recuo = B.widthOfTextAtSize(`${rotulo}:`, 8) + 5;
-      let texto = valor && valor.trim() ? valor : '—';
-      // Corta em vez de deixar invadir a coluna vizinha.
-      while (F.widthOfTextAtSize(texto, 8) > largura - recuo && texto.length > 4) {
-        texto = texto.slice(0, -2);
-      }
+      const bruto = valor && valor.trim() ? valor : '—';
+      // Corta em vez de deixar invadir a coluna vizinha, e termina em
+      // reticencias para o papel dizer que o texto continua.
+      const texto = cortarComReticencias(bruto, F, 8, largura - recuo);
       pagina.drawText(texto, { x: x + recuo, y, size: 8, font: F, color: preto });
     };
     const meia = LARGURA / 2;

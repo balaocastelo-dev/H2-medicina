@@ -257,7 +257,7 @@ export function PainelContratos({
     startTransition(async () => {
       setLinkDireto(null);
       const r = await gerarContratoPdf(contractId);
-      setMensagem({ ok: r.ok, texto: r.ok ? (r.message ?? 'Gerado.') : r.error });
+      setMensagem({ ok: r.ok, texto: r.ok ? (r.message ?? 'Contrato gerado.') : r.error });
       if (r.ok && r.data) {
         const aberto = await abrirDocumentoEmNovaAba(r.data.documentId);
         if (aberto.ok && !aberto.abriu) setLinkDireto(aberto.url);

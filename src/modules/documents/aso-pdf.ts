@@ -1,7 +1,7 @@
 import 'server-only';
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import { CATEGORIAS, type Riscos } from './riscos';
-import { protegerFonte, protegerPagina } from './texto-do-pdf';
+import { cortarComReticencias, protegerFonte, protegerPagina } from './texto-do-pdf';
 import { escreverRodapeEmTodasAsPaginas } from './rodape-de-todas-as-paginas';
 
 /**
@@ -211,7 +211,20 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
    * muito longa); o A.S.O. continua caindo numa folha no caso comum.
    */
   const paresEmDuasColunas = (pares: [string, string | null][]) => {
-    const validos = pares.filter(([, v]) => v !== null && String(v).trim() !== '');
+    // Campo vazio sai com "—", e nao desaparece.
+    //
+    // Antes a linha era FILTRADA: sem CNPJ, sem cargo e sem setor, os blocos
+    // "Empresa" e "Funcionario" saiam com menos linhas e nada indicava a
+    // ausencia. Quem confere nao distinguia "nao informado" de "o sistema
+    // nao imprimiu" — e o .docx do MESMO atendimento escrevia "Cargo: —",
+    // entao os dois papeis do mesmo paciente discordavam.
+    //
+    // Agora os dois dizem a mesma coisa, e a falta de dado fica visivel para
+    // a clinica completar o cadastro.
+    const validos: [string, string | null][] = pares.map(([rotulo, valor]) => [
+      rotulo,
+      valor !== null && String(valor).trim() !== '' ? valor : '—',
+    ]);
     const alturaDaLinha = 11;
 
     for (let i = 0; i < validos.length; i += 2) {
@@ -450,12 +463,11 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     const x = MARGEM + 4 + coluna * larguraColuna;
     const yLinha = yExames - linha * dy(11.5);
 
-    // Nome cortado antes de invadir a data da coluna ao lado.
+    // Nome cortado antes de invadir a data da coluna ao lado, terminando em
+    // reticencias: "Avaliacao de fatores de risco psicoss" parece nome de
+    // exame errado; com as reticencias, parece o que e.
     const espacoNome = larguraColuna - (exame.data ? 62 : 10);
-    let nome = exame.nome;
-    while (fonte.widthOfTextAtSize(nome, fs(8)) > espacoNome && nome.length > 6) {
-      nome = nome.slice(0, -2);
-    }
+    const nome = cortarComReticencias(exame.nome, fonte, fs(8), espacoNome);
 
     pagina.drawText(nome, { x, y: yLinha, size: fs(8), font: fonte, color: preto });
     if (exame.data) {

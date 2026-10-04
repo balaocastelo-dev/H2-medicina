@@ -37,7 +37,7 @@ export function PainelPagamentos({
   const rodar = (fn: () => Promise<{ ok: boolean; error?: string; message?: string }>) =>
     startTransition(async () => {
       const r = await fn();
-      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Feito.') : (r.error ?? 'Erro.') });
+      setMsg({ ok: r.ok, texto: r.ok ? (r.message ?? 'Pagamento atualizado.') : (r.error ?? 'Erro.') });
     });
 
   return (
