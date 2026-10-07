@@ -49,6 +49,22 @@ export const optionalText = z
   .nullable()
   .optional();
 
+/**
+ * Sigla do conselho — CRM, CRO, COREN...
+ *
+ * Campo pequeno com consequencia grande: no A.S.O. esta sigla e o ROTULO da
+ * linha do registro, entao um numero digitado aqui sai impresso como nome do
+ * campo. Em 06/10 um A.S.O. saiu com "27786: 79775 / SP" por causa disso.
+ *
+ * O documento ja se protege (`siglaDoConselho`, em lib/conselho.ts), mas o
+ * cadastro recusa na entrada: e aqui que da para avisar quem digitou. O
+ * numero do registro tem campo proprio, ao lado.
+ */
+export const conselhoSchema = optionalText.refine(
+  (v) => v === null || v === undefined || !/\d/.test(v),
+  'O conselho é a sigla (CRM, CRO, COREN). O número vai no campo ao lado.',
+);
+
 export const emailSchema = z
   .string()
   .trim()
@@ -125,7 +141,7 @@ export const companySchema = z.object({
   emite_ficha_clinica: z.boolean().default(true),
   // Responsavel pelo PCMSO desta empresa, impresso no A.S.O.
   pcmso_doctor_name: optionalText,
-  pcmso_doctor_council: optionalText,
+  pcmso_doctor_council: conselhoSchema,
   pcmso_doctor_number: optionalText,
   pcmso_doctor_state: ufSchema.optional().nullable(),
   notes: optionalText,
@@ -145,16 +161,47 @@ export const appointmentSchema = z.object({
 });
 export type AppointmentInput = z.infer<typeof appointmentSchema>;
 
+/**
+ * Faixa de valor na triagem: sem teto e sem piso clinico.
+ *
+ *     06/10 08:35 - Isa: sabe aqueles limites de valores da triagem?
+ *                        precisa tirar esses limites
+ *
+ * A triagem ANOTA o que o aparelho mostrou — ela nao julga. Peso de 420 kg,
+ * PA de 310, temperatura de 46: quem recusa isso nao protege ninguem, so
+ * impede a enfermagem de registrar o que mediu, e o valor acaba indo para o
+ * campo de observacoes, onde o medico nao procura e o laudo nao le.
+ *
+ * O que sobra e so o que o banco e a folha exigem: numero de verdade,
+ * nao-negativo, e um teto absurdo (um milhao) para a linha nao estourar a
+ * largura da coluna no papel nem o `numeric` da coluna.
+ */
+const valorDeTriagem = z.coerce
+  .number()
+  .min(0, 'Não pode ser negativo')
+  .max(1_000_000, 'Valor fora de qualquer escala — confira o que foi digitado')
+  .nullable()
+  .optional();
+
+/** Igual ao de cima, mas inteiro: batimentos, respiracoes, PA, SpO2. */
+const inteiroDeTriagem = z.coerce
+  .number()
+  .int('Use um número inteiro')
+  .min(0, 'Não pode ser negativo')
+  .max(1_000_000, 'Valor fora de qualquer escala — confira o que foi digitado')
+  .nullable()
+  .optional();
+
 export const triageSchema = z.object({
   attendance_id: z.string().uuid(),
-  blood_pressure_systolic: z.coerce.number().int().min(40).max(300).nullable().optional(),
-  blood_pressure_diastolic: z.coerce.number().int().min(20).max(200).nullable().optional(),
-  temperature_c: z.coerce.number().min(30).max(45).nullable().optional(),
-  weight_kg: z.coerce.number().min(1).max(400).nullable().optional(),
-  height_cm: z.coerce.number().min(40).max(250).nullable().optional(),
-  heart_rate: z.coerce.number().int().min(20).max(250).nullable().optional(),
-  respiratory_rate: z.coerce.number().int().min(4).max(80).nullable().optional(),
-  oxygen_saturation: z.coerce.number().int().min(30).max(100).nullable().optional(),
+  blood_pressure_systolic: inteiroDeTriagem,
+  blood_pressure_diastolic: inteiroDeTriagem,
+  temperature_c: valorDeTriagem,
+  weight_kg: valorDeTriagem,
+  height_cm: valorDeTriagem,
+  heart_rate: inteiroDeTriagem,
+  respiratory_rate: inteiroDeTriagem,
+  oxygen_saturation: inteiroDeTriagem,
   // Acuidade visual anotada por olho, no formato usado na clinica (20/20).
   acuidade_od: optionalText,
   acuidade_oe: optionalText,

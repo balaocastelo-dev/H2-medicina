@@ -125,17 +125,24 @@ export function CompanyForm({ action, company }: { action: Action; company?: Com
               placeholder="Como deve sair no documento"
             />
           </Field>
-          <Field label="Conselho" error={errors?.pcmso_doctor_council}>
+          {/*
+            Rotulo com a sigla no nome do campo: aqui vai SO a sigla, e ela e
+            impressa como rotulo da linha no A.S.O. Em 06/10 um A.S.O. saiu com
+            "27786: 79775 / SP" porque o numero foi digitado neste campo.
+          */}
+          <Field label="Conselho (sigla)" error={errors?.pcmso_doctor_council}>
             <Input
               name="pcmso_doctor_council"
               defaultValue={company?.pcmso_doctor_council ?? ''}
               placeholder="CRM"
+              maxLength={10}
             />
           </Field>
           <Field label="Número do registro" error={errors?.pcmso_doctor_number}>
             <Input
               name="pcmso_doctor_number"
               defaultValue={company?.pcmso_doctor_number ?? ''}
+              placeholder="79775"
             />
           </Field>
           <Field label="UF do registro" error={errors?.pcmso_doctor_state}>

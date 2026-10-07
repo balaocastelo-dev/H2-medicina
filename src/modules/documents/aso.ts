@@ -11,6 +11,7 @@ import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-resul
 import { urlDeVerificacao } from './verificacao';
 import { umDo, type Embutido } from '@/lib/embed';
 import { publicEnv } from '@/lib/env';
+import { siglaDoConselho } from '@/lib/conselho';
 
 /**
  * A.S.O. — Atestado de Saude Ocupacional.
@@ -232,8 +233,11 @@ export async function gerarAso(
       // vale o da configuracao do sistema, como era antes de 22/09.
       medicoPcmso: {
         nome: pcmsoDaEmpresa?.pcmso_doctor_name ?? pcmsoCfg.nome ?? respCfg.nome ?? null,
-        conselho:
-          pcmsoDaEmpresa?.pcmso_doctor_council ?? pcmsoCfg.conselho ?? respCfg.conselho ?? 'CRM',
+        // `siglaDoConselho` porque esta sigla e o ROTULO da linha no papel:
+        // numero digitado no campo errado saia impresso como "27786: 79775".
+        conselho: siglaDoConselho(
+          pcmsoDaEmpresa?.pcmso_doctor_council ?? pcmsoCfg.conselho ?? respCfg.conselho,
+        ),
         numero: pcmsoDaEmpresa?.pcmso_doctor_number ?? pcmsoCfg.numero ?? respCfg.numero ?? null,
         uf: pcmsoDaEmpresa?.pcmso_doctor_state ?? pcmsoCfg.uf ?? respCfg.uf ?? null,
         rqe: pcmsoCfg.rqe ?? null,
@@ -418,7 +422,9 @@ async function carregarSignatario(
   const base: Signatario = {
     id: perfil?.id ?? ctx.userId,
     nome: perfil?.full_name || ctx.profile.full_name || (respCfg.nome ?? ''),
-    conselho: perfil?.council_type ?? ctx.profile.council_type ?? respCfg.conselho ?? 'CRM',
+    conselho: siglaDoConselho(
+      perfil?.council_type ?? ctx.profile.council_type ?? respCfg.conselho,
+    ),
     numero: perfil?.council_number ?? ctx.profile.council_number ?? respCfg.numero ?? null,
     uf: perfil?.council_state ?? ctx.profile.council_state ?? respCfg.uf ?? null,
     assinatura: null,

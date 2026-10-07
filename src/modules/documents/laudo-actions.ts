@@ -14,6 +14,7 @@ import { qualLaudo } from './qual-laudo';
 import { conferirIshihara, descreverIshihara } from '@/modules/clinical/ishihara';
 import { cabecalhoDaClinica } from './cabecalho';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
+import { siglaDoConselho } from '@/lib/conselho';
 
 interface ExameParaLaudo {
   id: string;
@@ -196,7 +197,8 @@ export async function gerarLaudoDeExame(
       TIPO_EXAME[exame.attendances.appointments?.attendance_kind ?? ''] ?? 'Ocupacional';
     const profissional = {
       nome: perfil?.full_name ?? ctx.profile.full_name,
-      conselho: perfil?.council_type ?? 'CRM',
+      // Mesma regra do A.S.O.: a sigla sai como sigla, nunca como numero.
+      conselho: siglaDoConselho(perfil?.council_type),
       numero: perfil?.council_number ?? null,
       uf: perfil?.council_state ?? null,
     };

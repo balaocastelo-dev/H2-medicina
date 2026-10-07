@@ -14,6 +14,7 @@ import {
 } from 'docx';
 import { CATEGORIAS } from './riscos';
 import type { DadosAso } from './aso-pdf';
+import { siglaDoConselho } from '@/lib/conselho';
 
 /**
  * A.S.O. em Word, a partir dos mesmos dados do A.S.O. em PDF.
@@ -90,8 +91,11 @@ export async function buildAsoDocx(d: DadosAso): Promise<Uint8Array> {
     timeZone: 'America/Sao_Paulo',
   }).format(d.emitidoEm);
 
+  // Mesma regra do PDF: a sigla sai como sigla, nunca como numero digitado
+  // no campo errado do cadastro. Os dois papeis do mesmo atendimento tem de
+  // dizer a mesma coisa.
   const registro = (m: { conselho: string; numero: string | null; uf: string | null }) =>
-    m.numero ? `${m.conselho} ${m.numero}${m.uf ? '/' + m.uf : ''}` : null;
+    m.numero ? `${siglaDoConselho(m.conselho)} ${m.numero}${m.uf ? '/' + m.uf : ''}` : null;
 
   const doc = new Document({
     creator: d.clinica.razaoSocial,

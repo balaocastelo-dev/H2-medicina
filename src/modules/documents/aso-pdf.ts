@@ -3,6 +3,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf
 import { CATEGORIAS, type Riscos } from './riscos';
 import { cortarComReticencias, protegerFonte, protegerPagina } from './texto-do-pdf';
 import { escreverRodapeEmTodasAsPaginas } from './rodape-de-todas-as-paginas';
+import { siglaDoConselho } from '@/lib/conselho';
 
 /**
  * A.S.O. no modelo que a clinica ja usa em papel.
@@ -324,7 +325,10 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     : null;
   paresEmDuasColunas([
     ['Nome', d.medicoPcmso.nome],
-    [d.medicoPcmso.conselho, registroPcmso],
+    // A sigla e o ROTULO desta linha. `siglaDoConselho` garante que ela
+    // saia como sigla ("CRM") e nunca como o numero que alguem digitou no
+    // campo errado do cadastro — era o "27786: 79775 / SP" de 06/10.
+    [siglaDoConselho(d.medicoPcmso.conselho), registroPcmso],
     ['Endereço', d.medicoPcmso.endereco],
     ['Cidade / UF', d.medicoPcmso.cidade],
     ['Bairro', d.medicoPcmso.bairro],
@@ -607,7 +611,7 @@ export async function buildAsoPdf(d: DadosAso): Promise<Uint8Array> {
     x: MARGEM, y: yAss, size: 8.5, font: negrito, color: preto,
   });
   const registro = d.medicoExaminador.numero
-    ? `${d.medicoExaminador.conselho} ${d.medicoExaminador.numero}${d.medicoExaminador.uf ? '/' + d.medicoExaminador.uf : ''}`
+    ? `${siglaDoConselho(d.medicoExaminador.conselho)} ${d.medicoExaminador.numero}${d.medicoExaminador.uf ? '/' + d.medicoExaminador.uf : ''}`
     : '';
   pagina.drawText(`Carimbo e Assinatura — Médico Examinador ${registro}`.trim(), {
     x: MARGEM, y: yAss - 10, size: 7, font: fonte, color: cinza,
