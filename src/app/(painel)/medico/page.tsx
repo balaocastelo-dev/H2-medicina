@@ -34,7 +34,11 @@ export default async function MedicoPage() {
         'id, stage_code, priority, checkin_at, stage_changed_at, current_room_id, patients(id, full_name), companies(trade_name, legal_name), queue_tickets(code), patient_exams(status)',
       )
       .eq('tenant_id', ctx.tenant.id)
-      .in('stage_code', ['aguardando_medico', 'em_consulta', 'aguardando_documentos'])
+      // So o que e do medico. Quem ja foi para documentos passou pelo
+      // consultorio e pelo caixa: listado aqui, com o mesmo selo de quem
+      // espera consulta, parecia paciente esperando medico sem botao de
+      // chamar -- "nao entendi o porque que ele ta em dois lugares", Isa, 14/10.
+      .in('stage_code', ['aguardando_medico', 'em_consulta'])
       .is('finished_at', null)
       .is('deleted_at', null)
       .order('checkin_at')
@@ -87,17 +91,12 @@ export default async function MedicoPage() {
         description="Fila única para todos os consultórios — chamar abre a ficha do paciente"
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3">
         <StatCard label="Aguardando médico" value={aguardando.length} color="#A855F7" />
         <StatCard
           label="Em consulta"
           value={rows.filter((r) => r.stage_code === 'em_consulta').length}
           color="#3B82F6"
-        />
-        <StatCard
-          label="Aguardando documentos"
-          value={rows.filter((r) => r.stage_code === 'aguardando_documentos').length}
-          color="#FACC15"
         />
       </div>
 
@@ -145,7 +144,7 @@ export default async function MedicoPage() {
                     </Td>
                     <Td>
                       <Badge color={r.stage_code === 'em_consulta' ? '#3B82F6' : '#A855F7'}>
-                        {r.stage_code === 'em_consulta' ? 'em consulta' : 'aguardando'}
+                        {r.stage_code === 'em_consulta' ? 'em consulta' : 'aguardando médico'}
                       </Badge>
                     </Td>
                     <Td className="text-slate-500">
