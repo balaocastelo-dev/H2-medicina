@@ -9,7 +9,8 @@ import { umDo, type Embutido } from '@/lib/embed';
 import { ConsultationForm } from '@/modules/clinical/consultation-form';
 import { fichaDoExame, preenchidos } from '@/modules/clinical/fichas-de-exame';
 import { FichaDeExameForm } from '@/modules/clinical/ficha-de-exame';
-import { temFichaNaConsulta } from '@/modules/queue/origin-kind';
+import { consultaSoConcluir, REGRAS, isOriginKind, temFichaNaConsulta } from '@/modules/queue/origin-kind';
+import { ConcluirAtendimentoForm } from '@/modules/clinical/concluir-atendimento-form';
 import type { MedicalConsultation, Triage } from '@/types/entities';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,7 @@ interface AttendanceDetail {
   checkin_at: string;
   notes: string | null;
   procedure_code: string | null;
+  origin_kind: string | null;
   patients: {
     id: string;
     full_name: string;
@@ -86,7 +88,7 @@ export default async function MedicoAtendimentoPage({
   const { data } = await supabase
     .from('attendances')
     .select(
-      'id, stage_code, priority, checkin_at, notes, procedure_code, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), appointments(attendance_kind), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
+      'id, stage_code, priority, checkin_at, notes, procedure_code, origin_kind, patients(id, full_name, cpf, birth_date, gender, job_title, department), companies(trade_name, legal_name), appointments(attendance_kind), triages(*), medical_consultations(*), patient_exams(id, status, finished_at, not_performed_reason, exam_types(name, code), exam_results(conclusion, is_altered, values))',
     )
     .eq('id', id)
     .eq('tenant_id', ctx.tenant.id)
@@ -111,9 +113,16 @@ export default async function MedicoAtendimentoPage({
   // EXAME, com resultado e laudo em papel separado. Virar bloco da consulta
   // faria o resultado deixar de existir como exame -- sem status, sem laudo,
   // e sem aparecer na area do paciente.
-  const fichasDaConsulta = data.patient_exams.filter(
-    (e) => temFichaNaConsulta(e.exam_types?.code) && fichaDoExame(e.exam_types?.code),
-  );
+  const soConcluir = consultaSoConcluir(data.origin_kind);
+  const fichasDaConsulta = soConcluir
+    ? []
+    : data.patient_exams.filter(
+        (e) => temFichaNaConsulta(e.exam_types?.code) && fichaDoExame(e.exam_types?.code),
+      );
+  // O que ja esta no cartao "Para preencher" nao se repete no cartao de
+  // exames: o Romberg aparecia duas vezes na mesma tela.
+  const naConsulta = new Set(fichasDaConsulta.map((e) => e.id));
+  const examesDoCartao = data.patient_exams.filter((e) => !naConsulta.has(e.id));
 
   // O que a recepcao escolheu, em bom portugues, ao lado do nome.
   //
@@ -188,6 +197,24 @@ export default async function MedicoAtendimentoPage({
                     value={`${triage.weight_kg ?? '—'} kg / ${triage.height_cm ?? '—'} cm`}
                   />
                   <Row label="IMC" value={triage.bmi ? String(triage.bmi) : '—'} />
+                  {/* O resto do que a triagem anotou. Sem isso o medico
+                      perguntava de novo diabetes, hipertensao e acuidade. */}
+                  {triage.respiratory_rate !== null && (
+                    <Row label="FR" value={`${triage.respiratory_rate} irpm`} />
+                  )}
+                  {(triage.acuidade_od || triage.acuidade_oe) && (
+                    <Row
+                      label="Acuidade OD / OE"
+                      value={`${triage.acuidade_od || '—'} / ${triage.acuidade_oe || '—'}`}
+                    />
+                  )}
+                  <Row label="Diabetes" value={simNao(triage.diabetes)} />
+                  <Row label="Hipertensão" value={simNao(triage.hipertenso)} />
+                  {triage.observations && (
+                    <p className="mt-2 rounded bg-slate-50 p-2 text-slate-700">
+                      <strong>Observações da triagem:</strong> {triage.observations}
+                    </p>
+                  )}
                   {triage.alerts && (
                     <p className="mt-2 rounded bg-amber-50 p-2 text-amber-800">
                       <strong>Alertas:</strong> {triage.alerts}
@@ -235,8 +262,12 @@ export default async function MedicoAtendimentoPage({
               description={`Chegada: ${formatDateTime(data.checkin_at)}`}
             />
             <CardBody className="space-y-2 text-sm">
-              {data.patient_exams.length === 0 && <p className="text-slate-500">Sem exames.</p>}
-              {data.patient_exams.map((e) => (
+              {examesDoCartao.length === 0 && (
+                <p className="text-slate-500">
+                  {data.patient_exams.length === 0 ? 'Sem exames.' : 'Todos estão no cartão acima.'}
+                </p>
+              )}
+              {examesDoCartao.map((e) => (
                 <div key={e.id} className="border-b border-slate-100 pb-2 last:border-0">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{e.exam_types?.name ?? '—'}</span>
@@ -300,13 +331,24 @@ export default async function MedicoAtendimentoPage({
             rota: o dia em que alguem puser um botao "proximo paciente", o
             buraco abre em silencio. E prontuario.
           */}
-          <ConsultationForm
-            key={id}
-            psicossocialSolicitado={psicossocialSolicitado}
-            attendanceId={id}
-            consultation={consultation ?? null}
-            assinante={assinante}
-          />
+          {soConcluir ? (
+            <ConcluirAtendimentoForm
+              key={id}
+              attendanceId={id}
+              procedencia={
+                isOriginKind(data.origin_kind) ? REGRAS[data.origin_kind].short : 'perícia'
+              }
+              jaConcluido={!!consultation?.finished_at}
+            />
+          ) : (
+            <ConsultationForm
+              key={id}
+              psicossocialSolicitado={psicossocialSolicitado}
+              attendanceId={id}
+              consultation={consultation ?? null}
+              assinante={assinante}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -327,6 +369,11 @@ function comoTexto(valores: Record<string, unknown> | undefined): Record<string,
     saida[chave] = String(valor);
   }
   return saida;
+}
+
+function simNao(v: boolean | null): string {
+  if (v === null || v === undefined) return '—';
+  return v ? 'Sim' : 'Não';
 }
 
 function Row({ label, value }: { label: string; value: string }) {

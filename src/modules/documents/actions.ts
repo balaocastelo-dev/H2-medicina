@@ -15,7 +15,11 @@ import {
   formatMoney,
   formatTime,
 } from '@/lib/format';
-import { regraDe, DENTRO_DO_FORMULARIO_DA_CONSULTA } from '@/modules/queue/origin-kind';
+import {
+  consultaSoConcluir,
+  regraDe,
+  DENTRO_DO_FORMULARIO_DA_CONSULTA,
+} from '@/modules/queue/origin-kind';
 import { avaliarFichaClinica } from './ficha-clinica';
 import { montarComprovanteImpresso } from './comprovante-texto';
 import { gerarLaudoDeExame } from './laudo-actions';
@@ -32,7 +36,7 @@ import {
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { urlDeVerificacao } from './verificacao';
 import { publicEnv } from '@/lib/env';
-import { gerarAso } from './aso';
+import { carregarSignatario, gerarAso } from './aso';
 import type { DocumentKind } from '@/types/entities';
 
 
@@ -64,6 +68,7 @@ interface AttendanceForDocument {
   patient_exams: { status: string; exam_types: { name: string } | null }[];
   // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
   medical_consultations: Embutido<{
+    doctor_id: string | null;
     verdict: string | null;
     valid_until: string | null;
     conclusion: string | null;
@@ -100,7 +105,7 @@ export async function generateAttendanceDocument(
     const { data: attendance } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, procedure_code, patients(full_name, cpf, birth_date, gender, job_title, department, admission_date), companies(trade_name, legal_name, document, emite_ficha_clinica), appointments(attendance_kind), triages(*), patient_exams(status, exam_types(name)), medical_consultations(verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
+        'id, checkin_at, finished_at, exit_at, patient_id, origin_kind, procedure_code, patients(full_name, cpf, birth_date, gender, job_title, department, admission_date), companies(trade_name, legal_name, document, emite_ficha_clinica), appointments(attendance_kind), triages(*), patient_exams(status, exam_types(name)), medical_consultations(doctor_id, verdict, valid_until, conclusion, antecedentes_profissionais, antecedentes_pessoais, estilo_vida, exame_fisico, psicossocial, alteracoes_exame_fisico)',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -387,8 +392,32 @@ export async function generateAttendanceDocument(
         : 'Nenhum agendamento futuro registrado para este paciente no momento da emissao.';
     }
 
-    const signatureName = responsavel.nome ?? null;
-    const signatureRole = [responsavel.conselho, responsavel.numero, responsavel.uf]
+    // Quem assina.
+    //
+    // "na ficha clinica ta ficando automatico o nome da Dra Wania mesmo nao
+    //  sendo ela que realizou o atendimento" -- Isa, 26/10.
+    //
+    // Todo documento saia com o responsavel tecnico das configuracoes. Para
+    // recibo e comprovante isso esta certo: quem responde pela clinica e
+    // ela. Ficha clinica e psicossocial sao o registro de um exame, e quem
+    // assina e o medico que examinou -- o mesmo do A.S.O.
+    const medicoDaConsulta = umDo(attendance.medical_consultations)?.doctor_id ?? null;
+    const assinaOMedico =
+      medicoDaConsulta !== null &&
+      (kind === 'ficha_clinica' ||
+        kind === 'avaliacao_psicossocial' ||
+        kind === 'resumo_atendimento' ||
+        kind === 'documento_final');
+    const medico = assinaOMedico
+      ? await carregarSignatario(ctx, medicoDaConsulta!, responsavel)
+      : null;
+
+    const signatureName = medico ? medico.nome || null : (responsavel.nome ?? null);
+    const signatureRole = (
+      medico
+        ? [medico.conselho, medico.numero, medico.uf]
+        : [responsavel.conselho, responsavel.numero, responsavel.uf]
+    )
       .filter(Boolean)
       .join(' ');
 
@@ -425,6 +454,9 @@ export async function generateAttendanceDocument(
         file_path: path,
         size_bytes: pdfBytes.byteLength,
         verification_code: verificationCode,
+        signed_by: medico?.id ?? null,
+        signer_name: signatureName,
+        signer_council: signatureRole || null,
         // Por tipo, nao "true" em tudo: o portal do paciente autentica com
         // CPF + nascimento, que sao os dois campos impressos no A.S.O. que
         // vai ao RH. Ficha clinica e psicossocial ficam fora dele.
@@ -569,6 +601,10 @@ export async function emitirDocumentosDeSaida(
 
     if ((fichaExistente ?? []).length > 0) {
       // Nada a fazer.
+    } else if (consultaSoConcluir(at.origin_kind)) {
+      // Pericia e SISPER: desde 26/10 o medico so conclui, sem preencher a
+      // ficha. Emitir seria imprimir uma ficha em branco.
+      naoSeAplica.push('ficha clínica (perícia e SISPER: o médico só conclui o atendimento)');
     } else if (!temParecer) {
       // Sem consulta nao ha ficha clinica: ela e montada a partir da
       // triagem e do que o medico registrou. Quem so fez um exame de sala

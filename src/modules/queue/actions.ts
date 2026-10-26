@@ -11,6 +11,7 @@ import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
 import { destinoDaSala } from '@/modules/queue/tv-destino';
 import {
   MINIMO_LETRAS,
+  normalizarBusca,
   ordenarSugestoes,
   termoValido,
   type SugestaoBusca,
@@ -53,6 +54,20 @@ export async function lookupForCheckin(cpfRaw: string): Promise<ActionResult<Tot
 
     const results: TotemLookupResult[] = [];
     for (const p of patients) {
+      // "o cpf nao esta ficando vinculado ao perfil da pessoa quando ela
+      //  passa pelo totem" -- Isa, 26/10.
+      //
+      // A lista do eSisla agenda sem CPF e, para quem ja tinha vindo, criava
+      // um segundo cadastro. O CPF digitado achava o cadastro antigo, sem
+      // agendamento hoje, e a pessoa virava encaixe -- enquanto o agendamento
+      // de verdade ficava no outro, ate virar "ausente".
+      //
+      // Se o dono do CPF nao tem agendamento hoje e ha UM cadastro sem CPF,
+      // com o mesmo nome, agendado para hoje, os dois sao juntados aqui. O
+      // banco confere tudo de novo (`unificar_no_totem`): o totem fica em
+      // area publica e nao pode juntar cadastro qualquer.
+      await juntarAgendamentoSemCpf(supabase, ctx.tenant.id, p, today);
+
       const { data: appointments } = await supabase
         .from('appointments')
         .select(
@@ -102,6 +117,59 @@ export async function lookupForCheckin(cpfRaw: string): Promise<ActionResult<Tot
   } catch (error) {
     return fail(toFriendlyError(error));
   }
+}
+
+async function juntarAgendamentoSemCpf(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  tenantId: string,
+  dono: { id: string; full_name: string; birth_date: string | null },
+  hoje: string,
+): Promise<void> {
+  const { count } = await supabase
+    .from('appointments')
+    .select('id', { count: 'exact', head: true })
+    .eq('tenant_id', tenantId)
+    .eq('patient_id', dono.id)
+    .eq('scheduled_date', hoje)
+    .not('status', 'in', '("cancelado","remarcado")')
+    .is('deleted_at', null);
+  if ((count ?? 0) > 0) return;
+
+  const { data: doDia } = await supabase
+    .from('appointments')
+    .select('patient_id, patients(id, full_name, cpf, birth_date)')
+    .eq('tenant_id', tenantId)
+    .eq('scheduled_date', hoje)
+    .not('status', 'in', '("cancelado","remarcado")')
+    .is('deleted_at', null)
+    .returns<
+      {
+        patient_id: string;
+        patients: {
+          id: string;
+          full_name: string;
+          cpf: string | null;
+          birth_date: string | null;
+        } | null;
+      }[]
+    >();
+
+  const alvo = normalizarBusca(dono.full_name);
+  if (!alvo) return;
+  const candidatos = new Map<string, { birth_date: string | null }>();
+  for (const a of doDia ?? []) {
+    const p = a.patients;
+    if (!p || p.cpf || normalizarBusca(p.full_name) !== alvo) continue;
+    if (dono.birth_date && p.birth_date && dono.birth_date !== p.birth_date) continue;
+    candidatos.set(p.id, { birth_date: p.birth_date });
+  }
+  // Dois cadastros sem CPF com o mesmo nome hoje: nao ha como escolher.
+  if (candidatos.size !== 1) return;
+
+  const [semCpf] = [...candidatos.keys()];
+  // Falhar aqui nao impede o check-in: a pessoa segue como antes (encaixe)
+  // e a recepcao resolve.
+  await supabase.rpc('unificar_no_totem', { p_com_cpf: dono.id, p_sem_cpf: semCpf });
 }
 
 /**

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import { CalendarPlus, Plus, Trash2, UserPlus, Users } from 'lucide-react';
 import {
   Alert,
@@ -19,6 +19,8 @@ import {
   agendarExamesAvulso,
   funcionariosDaEmpresa,
 } from '@/modules/scheduling/avulso-actions';
+import { BuscaSelecao } from '@/components/ui/busca-selecao';
+import { buscarPacientes } from '@/modules/patients/busca-actions';
 
 interface ExamType {
   id: string;
@@ -109,8 +111,31 @@ export function FormularioAvulso({
       prev.map((f) => (f.chave === chave ? { ...f, [campo]: valor } : f)),
     );
 
+  // Quem ja e paciente mas esta sem empresa, ou em outra, nao aparecia: a
+  // lista vinha so dos funcionarios da empresa escolhida, e digitar o nome
+  // de novo criava um segundo cadastro. A busca vai ao banco inteiro.
+  const [daBusca, setDaBusca] = useState<
+    { id: string; full_name: string; cpf: string | null; job_title: string | null }[]
+  >([]);
+  const buscarRemoto = useCallback(async (termo: string) => {
+    const achados = await buscarPacientes(termo);
+    setDaBusca((prev) => {
+      const ids = new Set(prev.map((p) => p.id));
+      return [...prev, ...achados.filter((a) => !ids.has(a.id))];
+    });
+    return achados.map((p) => ({
+      id: p.id,
+      rotulo: p.full_name,
+      detalhe: [p.cpf ? formatCPF(p.cpf) : 'sem CPF', p.company_id === companyId ? null : 'outra empresa ou sem empresa']
+        .filter(Boolean)
+        .join(' · '),
+      busca: p.cpf ?? '',
+    }));
+  }, [companyId]);
+
   const escolherCadastrado = (chave: string, patientId: string) => {
-    const encontrado = cadastrados.find((c) => c.id === patientId);
+    const encontrado =
+      cadastrados.find((c) => c.id === patientId) ?? daBusca.find((c) => c.id === patientId);
     setFuncionarios((prev) =>
       prev.map((f) =>
         f.chave === chave
@@ -297,20 +322,26 @@ export function FormularioAvulso({
                 )}
               </div>
 
-              {cadastrados.length > 0 && (
-                <Field label="Buscar entre os já cadastrados" className="mb-3">
-                  <Select
-                    value={f.patient_id ?? ''}
-                    onChange={(e) => escolherCadastrado(f.chave, e.target.value)}
-                  >
-                    <option value="">Novo funcionário (digitar abaixo)</option>
-                    {cadastrados.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.full_name}
-                        {c.cpf ? ` — ${formatCPF(c.cpf)}` : ''}
-                      </option>
-                    ))}
-                  </Select>
+              {companyId && (
+                <Field
+                  label="Buscar entre os já cadastrados"
+                  className="mb-3"
+                  hint="Deixe em branco para cadastrar um funcionário novo abaixo"
+                >
+                  <BuscaSelecao
+                    name={`cadastrado-${f.chave}`}
+                    opcoes={cadastrados.map((c) => ({
+                      id: c.id,
+                      rotulo: c.full_name,
+                      detalhe: c.cpf ? formatCPF(c.cpf) : 'sem CPF',
+                      busca: c.cpf ?? '',
+                    }))}
+                    valor={f.patient_id ?? ''}
+                    onChange={(id) => escolherCadastrado(f.chave, id)}
+                    placeholder="Nome ou CPF de quem já é paciente"
+                    vazioRotulo="Ninguém encontrado — cadastre abaixo"
+                    buscarRemoto={buscarRemoto}
+                  />
                 </Field>
               )}
 

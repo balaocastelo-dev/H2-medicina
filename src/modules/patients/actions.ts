@@ -7,6 +7,7 @@ import { assertPermission } from '@/lib/auth';
 import { audit } from '@/lib/audit';
 import { patientSchema } from '@/lib/validators';
 import { onlyDigits } from '@/lib/format';
+import { normalizarBusca } from '@/modules/queue/busca-nome';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import type { Patient } from '@/types/entities';
 
@@ -215,24 +216,33 @@ export async function mergePatients(
     if (origemId === destinoId) return fail('Selecione dois cadastros diferentes.');
 
     const supabase = await createClient();
-    const { error } = await supabase.rpc('merge_patients', {
+    const { data: resultado, error } = await supabase.rpc('merge_patients', {
       p_source: origemId,
       p_target: destinoId,
     });
     if (error) return fail(toFriendlyError(error));
 
+    // O banco escolhe o destino: fica o cadastro com CPF, mesmo que a tela
+    // estivesse aberta no outro ("vale o mais completo" -- 13/09).
+    const destinoReal = (resultado as { target?: string } | null)?.target ?? destinoId;
+
     await audit(ctx, {
       action: 'update',
       entity: 'patients',
-      entityId: destinoId,
-      patientId: destinoId,
+      entityId: destinoReal,
+      patientId: destinoReal,
       description: 'Cadastros de paciente unificados',
     });
 
     revalidatePath('/pacientes');
     revalidatePath(`/pacientes/${destinoId}`);
     revalidatePath(`/pacientes/${origemId}`);
-    return ok({ destinoId }, 'Cadastros unificados.');
+    return ok(
+      { destinoId: destinoReal },
+      destinoReal === destinoId
+        ? 'Cadastros unificados.'
+        : 'Cadastros unificados no cadastro que tem CPF.',
+    );
   } catch (error) {
     return fail(toFriendlyError(error));
   }
@@ -263,6 +273,34 @@ export async function findMergeCandidates(
     if (!patient) return fail('Paciente não encontrado.');
 
     const duplicados = await findDuplicates(ctx.tenant.id, patient, patientId);
+
+    // Mesmo nome, quando um dos dois esta sem CPF.
+    //
+    // Os duplicados que a lista do eSisla criava nao tem CPF nem data de
+    // nascimento, e as duas regras acima nunca os achavam: o selo "revisar"
+    // ficava la sem ter como ser resolvido. So sugere -- quem unifica e a
+    // recepcao, olhando os dois.
+    if (duplicados.length === 0) {
+      const chave = normalizarBusca(patient.full_name);
+      const palavras = chave.split(' ').filter(Boolean);
+      if (palavras.length >= 2) {
+        let consulta = supabase
+          .from('patients')
+          .select('id, full_name, cpf')
+          .eq('tenant_id', ctx.tenant.id)
+          .is('deleted_at', null)
+          .neq('id', patientId);
+        for (const p of palavras.slice(0, 5)) consulta = consulta.ilike('search_key', `%${p}%`);
+        const { data: mesmos } = await consulta
+          .limit(20)
+          .returns<{ id: string; full_name: string; cpf: string | null }[]>();
+        for (const m of mesmos ?? []) {
+          if (normalizarBusca(m.full_name) !== chave) continue;
+          if (patient.cpf && m.cpf) continue;
+          duplicados.push({ id: m.id, full_name: m.full_name, rule: 'nome' });
+        }
+      }
+    }
     if (duplicados.length === 0) return ok([]);
 
     const { data } = await supabase

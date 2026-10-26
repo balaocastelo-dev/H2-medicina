@@ -8,7 +8,15 @@ import { audit } from '@/lib/audit';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { isValidCPF } from '@/lib/validators';
 import { umDo } from '@/lib/embed';
-import { mesmoNome, pacienteJaNaAgenda, type JaAgendado } from './mesma-pessoa';
+import {
+  chaveDoNome,
+  mesmoNome,
+  nomeServeParaReconhecer,
+  pacienteJaNaAgenda,
+  reconhecerPeloNome,
+  type CadastroCandidato,
+  type JaAgendado,
+} from './mesma-pessoa';
 
 /** Um registro ja conferido e corrigido na tela. */
 const registroSchema = z.object({
@@ -188,10 +196,46 @@ export async function aplicarTextoColado(
           patientId = pacienteJaNaAgenda(reg.nome, naAgenda);
         }
 
+        // Fora do dia: a matricula, e depois o nome. Ver
+        // `reconhecerPeloNome` em mesma-pessoa.ts.
+        let reconhecidoPeloNome = false;
+        if (!patientId && !cpf && reg.matricula) {
+          const { data: porMatricula } = await supabase
+            .from('patients')
+            .select('id, full_name')
+            .eq('tenant_id', ctx.tenant.id)
+            .eq('registration_number', reg.matricula)
+            .is('deleted_at', null)
+            .limit(5)
+            .returns<{ id: string; full_name: string }[]>();
+          const mesmos = (porMatricula ?? []).filter((p) => mesmoNome(p.full_name, reg.nome));
+          if (mesmos.length === 1) patientId = mesmos[0]!.id;
+        }
+        if (!patientId && !cpf && nomeServeParaReconhecer(reg.nome)) {
+          const palavras = chaveDoNome(reg.nome).split(' ').filter(Boolean);
+          let consulta = supabase
+            .from('patients')
+            .select('id, full_name, registration_number')
+            .eq('tenant_id', ctx.tenant.id)
+            .is('deleted_at', null);
+          for (const p of [palavras[0]!, palavras[palavras.length - 1]!]) {
+            consulta = consulta.ilike('search_key', `%${p}%`);
+          }
+          const { data: candidatos } = await consulta
+            .limit(50)
+            .returns<CadastroCandidato[]>();
+          patientId = reconhecerPeloNome(reg.nome, reg.matricula, candidatos ?? []);
+          reconhecidoPeloNome = patientId !== null;
+        }
+
         if (patientId) {
           // Campo vazio na lista nao apaga o que ja estava no cadastro.
+          // Achado pelo nome, o nome do cadastro fica como esta: a lista pode
+          // trazer outra grafia, e o cadastro com CPF e o que vale.
           const somentePreenchidos = Object.fromEntries(
-            Object.entries(camposPaciente).filter(([, v]) => v !== null && v !== undefined),
+            Object.entries(camposPaciente).filter(
+              ([k, v]) => v !== null && v !== undefined && !(reconhecidoPeloNome && k === 'full_name'),
+            ),
           );
           await supabase
             .from('patients')
@@ -247,7 +291,13 @@ export async function aplicarTextoColado(
             ? reg.tipoAtendimento!
             : 'consulta',
           origin: 'importacao_excel',
-          notes: [reg.observacoes, reg.protocolo ? `Protocolo ${reg.protocolo}` : null]
+          notes: [
+            reg.observacoes,
+            reg.protocolo ? `Protocolo ${reg.protocolo}` : null,
+            // Quem confere na recepcao precisa saber como o cadastro foi
+            // achado: pelo nome, sem CPF na lista.
+            reconhecidoPeloNome ? 'Reconhecido pelo nome (lista sem CPF): confira o CPF' : null,
+          ]
             .filter(Boolean)
             .join(' · ') || null,
           created_by: ctx.userId,

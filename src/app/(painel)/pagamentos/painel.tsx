@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { CheckCircle2, Copy, FileCheck2, QrCode } from 'lucide-react';
+import { CheckCircle2, Copy, FileCheck2, QrCode, XCircle } from 'lucide-react';
 import { Alert, Badge, Button, Card, CardBody, CardHeader } from '@/components/ui';
 import { elapsedFrom, formatCPF, formatMoney } from '@/lib/format';
 import {
@@ -10,6 +10,7 @@ import {
   quitarAtendimento,
   type PixGerado,
 } from '@/modules/finance/attendance-actions';
+import { moveAttendanceStage } from '@/modules/queue/actions';
 
 export interface LinhaPagamento {
   id: string;
@@ -188,6 +189,32 @@ export function PainelPagamentos({
                   <span className="self-center text-sm text-slate-500">
                     Documentos liberados — siga em Documentos.
                   </span>
+                )}
+
+                {/* "na aba pagamentos tem um atendimento com o seu nome preso
+                    ainda que nao conseguimos liberar" -- Isa, 16/10. Nao
+                    havia como tirar daqui um atendimento que nao vai seguir
+                    (teste, desistencia). Cancelar fecha a conta em aberto e
+                    o repasse; cobranca ja paga so sai por estorno. */}
+                {!liberado && pagos.length === 0 && (
+                  <Button
+                    variant="ghost"
+                    loading={pendente}
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          `Cancelar o atendimento de ${l.patients?.full_name ?? 'este paciente'}? A cobrança em aberto será cancelada e ele sai desta lista.`,
+                        )
+                      ) {
+                        return;
+                      }
+                      rodar(() =>
+                        moveAttendanceStage(l.id, 'cancelado', 'Cancelado na tela de Pagamentos'),
+                      );
+                    }}
+                  >
+                    <XCircle className="h-4 w-4" /> Cancelar atendimento
+                  </Button>
                 )}
               </div>
             </CardBody>

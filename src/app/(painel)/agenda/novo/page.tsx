@@ -17,8 +17,10 @@ export default async function NovoAgendamentoPage() {
       .select('id, full_name, cpf, company_id')
       .eq('tenant_id', ctx.tenant.id)
       .is('deleted_at', null)
-      .order('full_name')
-      .limit(500)
+      // Os mais recentes primeiro: quem acabou de ser cadastrado aparece
+      // sem precisar digitar. Os demais vem pela busca no banco.
+      .order('created_at', { ascending: false })
+      .limit(300)
       .returns<
         { id: string; full_name: string; cpf: string | null; company_id: string | null }[]
       >(),

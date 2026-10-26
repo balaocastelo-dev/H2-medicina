@@ -13,7 +13,7 @@ import { generateAttendanceDocument } from '@/modules/documents/actions';
 import { lancarRepasse } from '@/modules/finance/repasse-actions';
 import { type ActionResult, fail, ok, toFriendlyError } from '@/lib/action-result';
 import { sincronizarAgendamento } from '@/modules/queue/sync-appointment';
-import { isOriginKind, REGRAS } from '@/modules/queue/origin-kind';
+import { consultaSoConcluir, isOriginKind, REGRAS } from '@/modules/queue/origin-kind';
 import { dinheiroDigitado } from '@/lib/dinheiro-digitado';
 import { liberarSalaSeVazia } from '@/modules/queue/liberar-sala';
 
@@ -239,7 +239,7 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
     const { data: attendance } = await supabase
       .from('attendances')
-      .select('id, patient_id, current_room_id, procedure_code')
+      .select('id, patient_id, current_room_id, procedure_code, origin_kind')
       .eq('id', parsed.data.attendance_id)
       .eq('tenant_id', ctx.tenant.id)
       .maybeSingle<{
@@ -247,8 +247,14 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
         patient_id: string;
         current_room_id: string | null;
         procedure_code: string | null;
+        origin_kind: string | null;
       }>();
     if (!attendance) return fail('Atendimento não encontrado.');
+
+    // Pericia e SISPER: o medico so conclui. Decidido aqui, pela procedencia
+    // gravada, e nao por um campo do formulario -- um campo escondido
+    // mandado de outro jeito pularia o parecer de um paciente particular.
+    const soConcluir = consultaSoConcluir(attendance.origin_kind);
 
     // A sala e lida agora, antes de qualquer gravacao. O gatilho
     // tg_consultation_progress sobrescreve attendances.current_room_id com o
@@ -257,7 +263,7 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     // proximo nunca voltaria naquele consultorio.
     const salaDaConsulta = attendance.current_room_id;
 
-    if (finish && !parsed.data.verdict) {
+    if (finish && !parsed.data.verdict && !soConcluir) {
       return fail('Informe a conclusão de aptidão antes de finalizar.');
     }
 
@@ -338,7 +344,7 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
 
     // Ao finalizar, o A.S.O. sai sozinho: e o documento que a empresa espera.
     let avisoAso = '';
-    if (finish) {
+    if (finish && !soConcluir) {
       // Assina quem esta logado. A escolha saiu da tela em 22/09 — ninguem
       // assina documento medico no lugar de outro.
       const aso = await gerarAso(ctx, parsed.data.attendance_id, ctx.userId);
@@ -360,17 +366,18 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       if (!ficha.ok && !/não gera ficha|apenas o A\.S\.O\./i.test(ficha.error ?? '')) {
         avisoAso += ` (ficha clínica: ${ficha.error})`;
       }
+    }
 
-      // O repasse do medico nasce do atendimento, nao de digitacao no
-      // financeiro: o procedimento e o que a recepcao escolheu.
-      //
-      // O resultado E lido. Descartar esta chamada foi o que manteve
-      // invisivel, desde que o sistema existe, o fato de que NENHUM repasse
-      // era lancado: a acao falhava, respondia "Atendimento nao
-      // encontrado", e ninguem nunca viu essa frase.
-      //
-      // A falha nao desfaz a consulta -- ela foi assinada de verdade --,
-      // mas aparece no aviso, para alguem poder lancar o repasse a mao.
+    // O repasse do medico nasce do atendimento, nao de digitacao no
+    // financeiro: o procedimento e o que a recepcao escolheu. Vale para todo
+    // atendimento concluido, inclusive pericia e SISPER: o medico atendeu
+    // do mesmo jeito.
+    //
+    // O resultado E lido. Descartar esta chamada foi o que manteve
+    // invisivel, desde que o sistema existe, o fato de que NENHUM repasse
+    // era lancado. A falha nao desfaz a consulta -- ela foi assinada de
+    // verdade --, mas aparece no aviso, para alguem lancar o repasse a mao.
+    if (finish) {
       const repasse = await lancarRepasse(ctx, parsed.data.attendance_id, attendance.procedure_code);
       if (!repasse.ok) {
         avisoAso += ` (o repasse do médico não foi lançado: ${repasse.error})`;
@@ -386,7 +393,7 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
       entityId: existing?.id,
       patientId: attendance.patient_id,
       description: finish
-        ? `Consulta finalizada (${parsed.data.verdict})`
+        ? `Consulta finalizada (${parsed.data.verdict ?? 'atendimento concluído'})`
         : 'Consulta em andamento',
     });
 
@@ -396,7 +403,9 @@ export async function saveConsultation(_prev: unknown, formData: FormData): Prom
     return ok(
       undefined,
       finish
-        ? `Consulta finalizada.${avisoAso} O paciente seguiu para o pagamento.`
+        ? soConcluir
+          ? `Atendimento concluído.${avisoAso}`
+          : `Consulta finalizada.${avisoAso} O paciente seguiu para o pagamento.`
         : 'Consulta salva.',
     );
   } catch (error) {

@@ -36,6 +36,7 @@ interface Candidato {
 const REGRA: Record<string, string> = {
   cpf: 'mesmo CPF',
   nome_nascimento: 'mesmo nome e nascimento',
+  nome: 'mesmo nome — confira antes de unificar',
 };
 
 /** Laudos anexados ao cadastro, com download por link assinado. */
@@ -222,7 +223,13 @@ export function FerramentasDoPaciente({
                       });
                       if (r.ok) {
                         setCandidatos((atual) => atual.filter((x) => x.id !== c.id));
-                        router.refresh();
+                        // O historico pode ter ido para o outro cadastro (o
+                        // que tem CPF): a tela segue para onde ele foi.
+                        if (r.data?.destinoId && r.data.destinoId !== patientId) {
+                          router.push(`/pacientes/${r.data.destinoId}`);
+                        } else {
+                          router.refresh();
+                        }
                       }
                     });
                   }}

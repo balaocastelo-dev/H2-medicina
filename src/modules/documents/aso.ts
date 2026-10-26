@@ -54,6 +54,7 @@ interface AtendimentoAso {
   appointments: { attendance_kind: string } | null;
   // Uma por atendimento: o PostgREST entrega como objeto, nao como lista.
   medical_consultations: Embutido<{
+    doctor_id: string | null;
     verdict: string | null;
     restrictions: string | null;
     valid_until: string | null;
@@ -65,7 +66,7 @@ interface AtendimentoAso {
   patient_exams: {
     status: string;
     finished_at: string | null;
-    exam_types: { name: string } | null;
+    exam_types: { name: string; code: string | null } | null;
   }[];
 }
 
@@ -81,10 +82,45 @@ const TIPO_EXAME: Record<string, string> = {
   consulta: 'Consulta',
 };
 
+/**
+ * A lista de exames impressa no A.S.O.
+ *
+ * Dois pedidos da Isa, 26/10:
+ *
+ * "o ASO nao esta sendo emitido com todos os tipos de exame que precisa ser
+ *  realizado quando possui muitos exames" -- a lista levava so os exames ja
+ *  CONCLUIDOS no instante em que o medico assina. Raio X e laboratorio sao
+ *  feitos fora, e o que ainda estava aberto sumia do papel sem aviso. Agora
+ *  entra todo exame do atendimento; o que ainda nao foi concluido sai sem
+ *  data. Fora ficam so os cancelados e os nao realizados.
+ *
+ * "sai repetitivo no ASO (exame clinico e consulta clinica ocupacional)" --
+ *  a linha fixa "Exame Clinico" e o item CLINICO da lista sao a mesma coisa.
+ *  Fica a linha fixa.
+ */
+export function examesDoAso(
+  exames: AtendimentoAso['patient_exams'],
+  dataDoExameClinico: string,
+): { nome: string; data: string | null }[] {
+  return [
+    { nome: 'Exame Clínico', data: dataDoExameClinico },
+    ...exames
+      .filter((e) => e.status !== 'cancelado' && e.status !== 'nao_realizado')
+      .filter((e) => e.exam_types?.code !== 'CLINICO')
+      .map((e) => ({
+        nome: e.exam_types?.name ?? 'Exame',
+        data: e.status === 'concluido' && e.finished_at ? formatDate(e.finished_at) : null,
+      })),
+  ];
+}
+
 export async function gerarAso(
   ctx: SessionContext,
   attendanceId: string,
-  /** Quem assina. Sem isso, assina quem esta emitindo. */
+  /**
+   * Quem assina. Sem isso, assina o medico que fez a consulta; so na falta
+   * dele, quem esta emitindo.
+   */
   signatarioId?: string | null,
 ): Promise<ActionResult<{ documentId: string }>> {
   try {
@@ -93,7 +129,7 @@ export async function gerarAso(
     const { data: at } = await supabase
       .from('attendances')
       .select(
-        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(verdict, restrictions, valid_until, observations, conclusion, apto_altura, apto_eletricidade), patient_exams(status, finished_at, exam_types(name))',
+        'id, checkin_at, company_id, patient_signature_path, patients(full_name, social_name, cpf, rg, birth_date, gender, job_title, department, registration_number, occupational_risks), companies(legal_name, trade_name, document, street, number, district, city, state, zip_code), appointments(attendance_kind), medical_consultations(doctor_id, verdict, restrictions, valid_until, observations, conclusion, apto_altura, apto_eletricidade), patient_exams(status, finished_at, exam_types(name, code))',
       )
       .eq('id', attendanceId)
       .eq('tenant_id', ctx.tenant.id)
@@ -109,7 +145,16 @@ export async function gerarAso(
     const empresaCfg = (ctx.settings.empresa ?? {}) as Record<string, string | null>;
     const contatoCfg = (ctx.settings.contato ?? {}) as Record<string, string | null>;
     const respCfg = (ctx.settings.responsavel_tecnico ?? {}) as Record<string, string | null>;
-    const signatario = await carregarSignatario(ctx, signatarioId ?? ctx.userId, respCfg);
+    // "os medicos da ficha clinica e do aso estao diferentes" -- Isa, 26/10.
+    //
+    // Emitido pelo kit de saida ou reemitido em Documentos, o A.S.O. saia
+    // com o nome de quem clicou -- a recepcao -- e nao do medico que
+    // examinou. Quem assina e quem fez a consulta.
+    const signatario = await carregarSignatario(
+      ctx,
+      signatarioId ?? consulta.doctor_id ?? ctx.userId,
+      respCfg,
+    );
 
     // A.S.O. sem registro do conselho do examinador nao vale.
     //
@@ -257,15 +302,7 @@ export async function gerarAso(
       assinaturaMedico: signatario.assinatura,
       tipoExame: TIPO_EXAME[at.appointments?.attendance_kind ?? ''] ?? 'Ocupacional',
       // O modelo da clinica imprime a data ao lado de cada exame.
-      exames: [
-        { nome: 'Exame Clínico', data: formatDate(emitidoEm) },
-        ...at.patient_exams
-          .filter((e) => e.status === 'concluido')
-          .map((e) => ({
-            nome: e.exam_types?.name ?? 'Exame',
-            data: e.finished_at ? formatDate(e.finished_at) : null,
-          })),
-      ],
+      exames: examesDoAso(at.patient_exams, formatDate(emitidoEm)),
       // O PDF marca a caixa certa, entao recebe o codigo e nao o rotulo.
       parecer: consulta.verdict,
       aptoAltura: consulta.apto_altura ?? false,
@@ -397,7 +434,7 @@ interface Signatario {
  * cadastro mudar depois, o documento ja impresso continua dizendo a verdade
  * sobre quem assinou.
  */
-async function carregarSignatario(
+export async function carregarSignatario(
   ctx: SessionContext,
   profileId: string,
   respCfg: Record<string, string | null>,

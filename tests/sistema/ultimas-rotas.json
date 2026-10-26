@@ -44,8 +44,8 @@
      "prioridade": "normal"
     },
     "indice": 0,
-    "pacienteId": "17c3e135-b913-432c-ba8f-0d44077c0d33",
-    "atendimentoId": "ee5d04ab-a8fc-4b32-8652-0a0fd92e8f76",
+    "pacienteId": "871739fc-b746-4e6f-80d2-c7bac41044d7",
+    "atendimentoId": "018873d4-0367-403f-8bf2-8ddabc36eb91",
     "passos": [
      {
       "acao": "createPatient",
@@ -198,8 +198,8 @@
      "prioridade": "normal"
     },
     "indice": 1,
-    "pacienteId": "5fc056c7-708d-4caa-ba55-934ed62eab7d",
-    "atendimentoId": "c91d9c2e-213a-4c24-bd25-7a60d466cea8",
+    "pacienteId": "d1bcbf10-7b90-4bd6-b40c-1b9cf37933f8",
+    "atendimentoId": "0b768948-faa3-4079-9d72-f3bc68e82702",
     "passos": [
      {
       "acao": "createPatient",
@@ -315,8 +315,8 @@
      "prioridade": "normal"
     },
     "indice": 2,
-    "pacienteId": "30d0a4e1-a093-4bd0-9ec8-3577202c7f10",
-    "atendimentoId": "69104199-ae1f-400b-b660-2a7f8ad5b61a",
+    "pacienteId": "621de8da-f07e-4265-adcb-710db1f45c03",
+    "atendimentoId": "d779ada9-c3b4-457b-93d2-9a80705882a4",
     "passos": [
      {
       "acao": "createPatient",
@@ -420,8 +420,8 @@
      "prioridade": "normal"
     },
     "indice": 3,
-    "pacienteId": "4d706925-4a38-49b5-940a-1a2ec9a3d6cd",
-    "atendimentoId": "24444429-3acb-4fc5-949c-843a65a471c5",
+    "pacienteId": "3e534417-c1e7-47aa-8e65-87ae403002fd",
+    "atendimentoId": "01dc3270-eb6b-45f7-b09a-11c5b484d3be",
     "passos": [
      {
       "acao": "createPatient",
@@ -521,8 +521,8 @@
      "prioridade": "normal"
     },
     "indice": 4,
-    "pacienteId": "03d7154b-f092-44cd-9f73-aa6ae6650322",
-    "atendimentoId": "2a1c76e6-0d1b-42d2-9037-9471e67cd94d",
+    "pacienteId": "6f0ea8b3-e7de-46c0-8afb-dbe798519fd8",
+    "atendimentoId": "35eca222-c2bb-4e82-8e2f-ab9c0fa66472",
     "passos": [
      {
       "acao": "createPatient",
@@ -616,8 +616,8 @@
      "prioridade": "normal"
     },
     "indice": 5,
-    "pacienteId": "1daa48ac-a4d2-423d-af22-b883301df127",
-    "atendimentoId": "211551fe-ac74-4800-b889-20db0944a6e7",
+    "pacienteId": "40d4d9ce-011a-4bf0-9a06-140157f0ba4d",
+    "atendimentoId": "4760ce4a-420b-4f04-b1b9-62c48ce4e863",
     "passos": [
      {
       "acao": "createPatient",
@@ -827,8 +827,8 @@
      "prioridade": "normal"
     },
     "indice": 6,
-    "pacienteId": "048e175b-93b5-442e-a78f-c59af79ca159",
-    "atendimentoId": "08b13a0d-848d-47cb-87f0-a2a059a003f9",
+    "pacienteId": "fd8ad21e-8671-4ded-84ea-1cbfe118a3e4",
+    "atendimentoId": "cfc4d4f5-b54f-4fbf-baf5-5c9d2f07e081",
     "passos": [
      {
       "acao": "createPatient",
@@ -982,8 +982,8 @@
      "prioridade": "normal"
     },
     "indice": 7,
-    "pacienteId": "0363a79e-c974-4d3b-91cd-9128389764c0",
-    "atendimentoId": "7cc215c8-a801-40c5-b603-3aaa463540ec",
+    "pacienteId": "5ef826e8-d916-4e9f-b7da-b72a406fbf04",
+    "atendimentoId": "122e82b7-0d02-45a7-80a9-7f097f85c08c",
     "passos": [
      {
       "acao": "createPatient",
@@ -1072,8 +1072,8 @@
      "prioridade": "normal"
     },
     "indice": 8,
-    "pacienteId": "a3732eaf-c74a-49b5-b86f-8b746fa0e2f1",
-    "atendimentoId": "21c22f52-a857-4be3-beba-6cbec7df764a",
+    "pacienteId": "d1aec3e0-19d9-425c-8136-ea2fa0c645b5",
+    "atendimentoId": "5405b562-4ba7-4f28-9555-2a7cc642522a",
     "passos": [
      {
       "acao": "createPatient",
@@ -1185,8 +1185,8 @@
      "prioridade": "normal"
     },
     "indice": 9,
-    "pacienteId": "3826f4a2-01b1-499f-a623-a2e2a9f2f1fe",
-    "atendimentoId": "e9c259d4-9a23-444c-b184-8632aa67ab4a",
+    "pacienteId": "d21533dc-9959-4f0f-bae4-4a1a77978d0f",
+    "atendimentoId": "2d5c4ee7-fac9-4abf-b17d-72c32677bd4a",
     "passos": [
      {
       "acao": "createPatient",
@@ -1313,8 +1313,8 @@
      "prioridade": "normal"
     },
     "indice": 10,
-    "pacienteId": "f71f2de9-703f-43b8-810e-6e19369e3ed3",
-    "atendimentoId": "e7c2f7db-ea86-4083-87a8-0af871eb6942",
+    "pacienteId": "0b89c041-d852-41d9-8638-173066dd297e",
+    "atendimentoId": "2723896a-8aa2-4498-922f-080417819026",
     "passos": [
      {
       "acao": "createPatient",
@@ -1416,8 +1416,8 @@
      "prioridade": "normal"
     },
     "indice": 11,
-    "pacienteId": "31c0c59a-c70b-47f3-a462-652a22c8fa0b",
-    "atendimentoId": "d4b426ef-4ebc-43b0-ae4a-2ee1f60fe7cd",
+    "pacienteId": "c1b1ead4-e049-41a4-9cac-d7db7dcfee98",
+    "atendimentoId": "32bb39ae-4fd9-4def-bfe9-ec2e4738a634",
     "passos": [
      {
       "acao": "createPatient",
@@ -1520,8 +1520,8 @@
      "prioridade": "normal"
     },
     "indice": 12,
-    "pacienteId": "d512df66-49a6-42ab-9f38-94c5d0bcd492",
-    "atendimentoId": "5c2f2dab-0926-4304-a89a-e53fc78193d4",
+    "pacienteId": "d4e24705-7e10-42b1-a979-2992458afcf0",
+    "atendimentoId": "9caccb1d-0c23-4c14-95c5-8814e9d3889b",
     "passos": [
      {
       "acao": "createPatient",
@@ -1637,8 +1637,8 @@
      "prioridade": "normal"
     },
     "indice": 13,
-    "pacienteId": "d2f7e57f-eed7-4942-8eea-eeb7fd5febde",
-    "atendimentoId": "9d77b3a4-85c1-407c-9009-b93d49a0a42a",
+    "pacienteId": "7f786494-7ded-4851-a309-585a435fe026",
+    "atendimentoId": "b6184d33-0f9c-4f9c-a52b-2c6df0d06082",
     "passos": [
      {
       "acao": "createPatient",
@@ -1771,8 +1771,8 @@
      "procedimento": "pericia"
     },
     "indice": 14,
-    "pacienteId": "66c7a897-43c8-4acb-b77e-955599c04a55",
-    "atendimentoId": "9b1f587a-7290-4b9f-b049-c476ce25087c",
+    "pacienteId": "0703970f-a666-4c19-8521-c5846eadd9bf",
+    "atendimentoId": "3f567bb1-ce80-41ef-8f23-8b2ed6281bce",
     "passos": [
      {
       "acao": "createPatient",
@@ -1813,7 +1813,7 @@
      {
       "acao": "saveConsultation",
       "ok": true,
-      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+      "mensagem": "Atendimento concluído."
      },
      {
       "acao": "quitarAtendimento",
@@ -1823,7 +1823,7 @@
      {
       "acao": "encerrarAtendimento",
       "ok": true,
-      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+      "mensagem": "Atendimento encerrado. 3 documentos emitidos. Não se aplica a este atendimento: ficha clínica (perícia e SISPER: o médico só conclui o atendimento)."
      }
     ],
     "falhas": []
@@ -1868,8 +1868,8 @@
      "procedimento": "pericia"
     },
     "indice": 15,
-    "pacienteId": "4382398f-6ea4-4acb-a77a-8b1aa4ba6a10",
-    "atendimentoId": "be1248a6-18d9-4630-8ef0-cca38b96c1e0",
+    "pacienteId": "b0510943-ad0d-47a4-9881-483c22518b1b",
+    "atendimentoId": "40280a80-7330-41bc-8c47-70fb1fca9ee0",
     "passos": [
      {
       "acao": "createPatient",
@@ -1934,7 +1934,7 @@
      {
       "acao": "saveConsultation",
       "ok": true,
-      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+      "mensagem": "Atendimento concluído."
      },
      {
       "acao": "quitarAtendimento",
@@ -1944,7 +1944,7 @@
      {
       "acao": "encerrarAtendimento",
       "ok": true,
-      "mensagem": "Atendimento encerrado. 5 documentos no kit (2 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (perícia e SISPER: o médico só conclui o atendimento)."
      }
     ],
     "falhas": []
@@ -1982,8 +1982,8 @@
      "prioridade": "normal"
     },
     "indice": 16,
-    "pacienteId": "31b5abf5-cc91-4477-a6c2-0771940e7659",
-    "atendimentoId": "de0633cc-2f87-4ece-b26e-f49b7640d833",
+    "pacienteId": "d71ecc78-f00a-406c-8728-cda75283482b",
+    "atendimentoId": "aa0e9785-c250-4e10-941e-d5882cb763c0",
     "passos": [
      {
       "acao": "createPatient",
@@ -2024,7 +2024,7 @@
      {
       "acao": "saveConsultation",
       "ok": true,
-      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+      "mensagem": "Atendimento concluído."
      },
      {
       "acao": "quitarAtendimento",
@@ -2034,7 +2034,7 @@
      {
       "acao": "encerrarAtendimento",
       "ok": true,
-      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (Atendimento SISPER não gera ficha clínica.)."
+      "mensagem": "Atendimento encerrado. 3 documentos emitidos. Não se aplica a este atendimento: ficha clínica (perícia e SISPER: o médico só conclui o atendimento)."
      }
     ],
     "falhas": []
@@ -2072,8 +2072,8 @@
      "prioridade": "normal"
     },
     "indice": 17,
-    "pacienteId": "f888ac16-a29a-4777-845b-c9956522aa89",
-    "atendimentoId": "b0c1b741-8e81-43a3-af46-87a1182cd890",
+    "pacienteId": "17be18aa-38df-413e-86c6-3c7229ff1e77",
+    "atendimentoId": "9d73521b-6dda-4d8a-a638-fbaf43dd3119",
     "passos": [
      {
       "acao": "createPatient",
@@ -2124,7 +2124,7 @@
      {
       "acao": "saveConsultation",
       "ok": true,
-      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+      "mensagem": "Atendimento concluído."
      },
      {
       "acao": "quitarAtendimento",
@@ -2134,7 +2134,7 @@
      {
       "acao": "encerrarAtendimento",
       "ok": true,
-      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (Atendimento SISPER não gera ficha clínica.)."
+      "mensagem": "Atendimento encerrado. 3 documentos emitidos. Não se aplica a este atendimento: ficha clínica (perícia e SISPER: o médico só conclui o atendimento)."
      }
     ],
     "falhas": []
@@ -2179,8 +2179,8 @@
      "procedimento": "ingresso"
     },
     "indice": 18,
-    "pacienteId": "126f48f3-695a-4c2a-8e3a-8a9c6d08a49b",
-    "atendimentoId": "1f81225a-3e45-43e6-8f11-e75404b68093",
+    "pacienteId": "cd2c6cc2-524b-4ee2-8501-409237661fd4",
+    "atendimentoId": "f022f12a-57e7-4aed-a26c-8cee2a4bdfbd",
     "passos": [
      {
       "acao": "createPatient",
@@ -2305,8 +2305,8 @@
      "procedimento": "junta_medica"
     },
     "indice": 19,
-    "pacienteId": "d07223a2-76fe-4ea8-9316-6323eee684d4",
-    "atendimentoId": "37b2c902-7c18-41b7-b3f4-be89aa47a091",
+    "pacienteId": "fcfd6e4e-75cb-426d-93fe-15beea0fa83f",
+    "atendimentoId": "b64aa0b5-e26e-4950-9cdd-e22dcb902919",
     "passos": [
      {
       "acao": "createPatient",
@@ -2347,7 +2347,7 @@
      {
       "acao": "saveConsultation",
       "ok": true,
-      "mensagem": "Consulta finalizada. O A.S.O. foi gerado. O paciente seguiu para o pagamento."
+      "mensagem": "Atendimento concluído."
      },
      {
       "acao": "quitarAtendimento",
@@ -2357,7 +2357,7 @@
      {
       "acao": "encerrarAtendimento",
       "ok": true,
-      "mensagem": "Atendimento encerrado. 4 documentos no kit (1 já estavam prontos). Não se aplica a este atendimento: ficha clínica (O procedimento escolhido na recepção não gera ficha clínica.)."
+      "mensagem": "Atendimento encerrado. 3 documentos emitidos. Não se aplica a este atendimento: ficha clínica (perícia e SISPER: o médico só conclui o atendimento)."
      }
     ],
     "falhas": []
@@ -2402,8 +2402,8 @@
      "procedimento": "cps"
     },
     "indice": 20,
-    "pacienteId": "2036d5db-99b6-491d-96d9-4fa7a3e2242f",
-    "atendimentoId": "e1f1ed86-295f-447f-abf1-f231b5c6fc1d",
+    "pacienteId": "76871b83-9daa-4f38-a44d-89563b65d6dc",
+    "atendimentoId": "e6e518dd-a347-4302-88e3-2aa70f2794c7",
     "passos": [
      {
       "acao": "createPatient",
@@ -2507,8 +2507,8 @@
      "procedimento": "seduc"
     },
     "indice": 21,
-    "pacienteId": "898f03ba-7796-4399-99cd-14e86f1626a8",
-    "atendimentoId": "a716abc5-6e62-4850-8ef9-ee5a5790a69d",
+    "pacienteId": "579c05cd-ced2-48f3-b268-f2be01d06f61",
+    "atendimentoId": "bf7affe1-733e-42b2-abe0-bfba78ce6456",
     "passos": [
      {
       "acao": "createPatient",
@@ -2580,7 +2580,7 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "espera": {
      "etapa": "finalizado",
@@ -2601,11 +2601,11 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "indice": 22,
-    "pacienteId": "6730bce4-579e-4dc4-869e-4a169400f27d",
-    "atendimentoId": "4456a819-c540-442e-bde2-eb51b4eb111e",
+    "pacienteId": "8ea5b413-dd18-45f6-a41d-2409ac8b7069",
+    "atendimentoId": "80299c80-681d-420d-bece-892425efab0d",
     "passos": [
      {
       "acao": "createPatient",
@@ -2711,7 +2711,7 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "89baf07d-d239-4dc7-8334-216ce86dd3d5"
+     "empresaId": "83ac9f0c-801d-4516-a4dd-6d34de2846d6"
     },
     "espera": {
      "etapa": "finalizado",
@@ -2732,11 +2732,11 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "89baf07d-d239-4dc7-8334-216ce86dd3d5"
+     "empresaId": "83ac9f0c-801d-4516-a4dd-6d34de2846d6"
     },
     "indice": 23,
-    "pacienteId": "9198f5fb-6b39-4384-b73d-4cef652bc581",
-    "atendimentoId": "935d9a37-c0d1-4ae3-bc97-7c2f50da357e",
+    "pacienteId": "8801655a-a765-46f3-ba93-7ab3182ae83e",
+    "atendimentoId": "2daef650-5071-4ccc-b35a-7c1f7226a9ee",
     "passos": [
      {
       "acao": "createPatient",
@@ -2846,7 +2846,7 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "espera": {
      "etapa": "finalizado",
@@ -2871,11 +2871,11 @@
      "procedencia": "particular",
      "triagem": true,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "indice": 24,
-    "pacienteId": "5c13e4e7-1245-481a-8d4f-29daec923046",
-    "atendimentoId": "af651642-93de-4766-bee1-0bff78285079",
+    "pacienteId": "d82b16ed-73bc-42c4-917f-e5444abfd84b",
+    "atendimentoId": "82897dc1-50d8-4bac-aac2-b344cdd27543",
     "passos": [
      {
       "acao": "createPatient",
@@ -3078,8 +3078,8 @@
      "prioridade": "normal"
     },
     "indice": 25,
-    "pacienteId": "765681ce-6455-4885-bf96-e3e0d5995470",
-    "atendimentoId": "2b6788c9-7d4a-42a3-a2d0-a02f6622b140",
+    "pacienteId": "7e5f8f0b-43d8-4fc9-95c0-d72cf989be6c",
+    "atendimentoId": "29b01cba-c729-4a5c-8e01-2d7896d4423f",
     "passos": [
      {
       "acao": "createPatient",
@@ -3190,8 +3190,8 @@
      "prioridade": "normal"
     },
     "indice": 26,
-    "pacienteId": "968d6e51-7a9b-4cb9-acb1-e2e608d8597f",
-    "atendimentoId": "b1ce50ab-e489-434e-8c6c-1a00268eee76",
+    "pacienteId": "3ad55794-ce29-4033-9d43-4e9a2d0e677b",
+    "atendimentoId": "0093b0e5-e92b-40c0-9273-4cbb491da2dd",
     "passos": [
      {
       "acao": "createPatient",
@@ -3313,8 +3313,8 @@
      "prioridade": "normal"
     },
     "indice": 27,
-    "pacienteId": "cdcf8ab8-176b-4e8b-8356-02c137a1aa91",
-    "atendimentoId": "b4699381-c472-40cd-8901-9ea843c198fa",
+    "pacienteId": "82eff114-68ed-41a2-98ab-b8fa69c64900",
+    "atendimentoId": "1f300801-d130-4fb7-9f5d-b0fd0cb762fc",
     "passos": [
      {
       "acao": "createPatient",
@@ -3429,8 +3429,8 @@
      "prioridade": "normal"
     },
     "indice": 28,
-    "pacienteId": "85f4d4f0-b7c3-494a-9516-282c4c2f70d4",
-    "atendimentoId": "76fff628-b30b-45ec-a7b0-051bc0b3dd30",
+    "pacienteId": "5a14aa86-cc4b-4dc2-8f37-5e448c90c75b",
+    "atendimentoId": "d826afea-21e5-468c-9fa5-54f146ed045e",
     "passos": [
      {
       "acao": "createPatient",
@@ -3554,8 +3554,8 @@
      "prioridade": "normal"
     },
     "indice": 29,
-    "pacienteId": "faddaff7-c933-415f-b4e2-54ac9d3b5926",
-    "atendimentoId": "81878673-2515-418c-9386-ed767be2a3e9",
+    "pacienteId": "2556aca6-f016-443b-941e-223cbc22924b",
+    "atendimentoId": "6c196092-a1e1-4845-ba0a-1cbe274c27fd",
     "passos": [
      {
       "acao": "createPatient",
@@ -3667,8 +3667,8 @@
      "prioridade": "normal"
     },
     "indice": 30,
-    "pacienteId": "1311b32e-9dea-4469-86ae-2ab1436e70af",
-    "atendimentoId": "6cf9c862-23c0-43d4-9aaa-b7d3366dbdfa",
+    "pacienteId": "6bcc2912-38c8-4dc0-b36d-2056c35cb8a1",
+    "atendimentoId": "81b52f23-352f-41e7-b835-e2e2ac6c9029",
     "passos": [
      {
       "acao": "createPatient",
@@ -3800,8 +3800,8 @@
      "prioridade": "normal"
     },
     "indice": 31,
-    "pacienteId": "4ee45ada-06d8-4a05-b4d7-ea0791709617",
-    "atendimentoId": "4239c59b-7a66-4706-956e-148015e9bcf0",
+    "pacienteId": "71673ec1-2cdb-43b5-b020-985dfdac0f56",
+    "atendimentoId": "2886aa71-c5ed-4e39-824c-73286f88d98e",
     "passos": [
      {
       "acao": "createPatient",
@@ -3922,8 +3922,8 @@
      "naoRealiza": "AUDIO"
     },
     "indice": 32,
-    "pacienteId": "9f7f0dec-6d51-43ca-9c16-d3cccbd66749",
-    "atendimentoId": "25a7a9d9-2802-4979-b32b-7d2cfa2e9216",
+    "pacienteId": "ed892089-7061-4634-a4be-86d17ed88a33",
+    "atendimentoId": "397b019a-28eb-4914-b5fb-6adfbd4207d2",
     "passos": [
      {
       "acao": "createPatient",
@@ -4063,8 +4063,8 @@
      "prioridade": "normal"
     },
     "indice": 33,
-    "pacienteId": "d8d3585e-0ce5-4b00-a045-47959f9a81d4",
-    "atendimentoId": "3b720316-7aac-42b9-9a08-251e4d1da870",
+    "pacienteId": "b4c54f2d-07e3-4d24-adf7-dab5fe765377",
+    "atendimentoId": "bf0be33d-d6f8-48ea-8ee5-256972e1795a",
     "passos": [
      {
       "acao": "createPatient",
@@ -4168,8 +4168,8 @@
      "prioridade": "normal"
     },
     "indice": 34,
-    "pacienteId": "5b7cb7e3-1729-4b50-86b1-ba7b5617dc46",
-    "atendimentoId": "11ac5f8e-a579-4201-8a98-f129833b5bb3",
+    "pacienteId": "5f08c0b7-227c-4fe5-a032-cbbc3082537a",
+    "atendimentoId": "4812a104-f30b-4c5f-972b-d6efef493c0e",
     "passos": [
      {
       "acao": "createPatient",
@@ -4284,8 +4284,8 @@
      "prioridade": "normal"
     },
     "indice": 35,
-    "pacienteId": "0ed41fc0-63d1-40ec-9248-aae11d8121d8",
-    "atendimentoId": "64675c64-8fdc-4034-8557-580ee6fd17a1",
+    "pacienteId": "9c9e6967-d554-4761-83ee-a7c3f9dc751c",
+    "atendimentoId": "5e9caa42-6861-4d9c-b921-ca95cadd798d",
     "passos": [
      {
       "acao": "createPatient",
@@ -4390,8 +4390,8 @@
      "desiste": true
     },
     "indice": 36,
-    "pacienteId": "8aa97987-e5c0-453d-a881-50b34c2b728f",
-    "atendimentoId": "3129d761-a90b-4938-810e-ef21f122e0f7",
+    "pacienteId": "d29a5c37-1ec2-4bb4-804f-bae87fddb8cd",
+    "atendimentoId": "23194ca0-b4d5-4f5b-a1ca-7bd1c34cbca3",
     "passos": [
      {
       "acao": "createPatient",
@@ -4469,8 +4469,8 @@
      "prioridade": "normal"
     },
     "indice": 37,
-    "pacienteId": "1049c397-fa46-4f99-beb9-380c0dacd658",
-    "atendimentoId": "a810544e-abff-498d-b691-c88b33b4f39e",
+    "pacienteId": "7aa54888-7735-4f4b-b8b1-91dd726d00a0",
+    "atendimentoId": "11544565-f1ab-42b2-848f-a9e10c5af237",
     "passos": [
      {
       "acao": "createPatient",
@@ -4549,8 +4549,8 @@
      "prioridade": "normal"
     },
     "indice": 38,
-    "pacienteId": "efa51bed-a12c-4ac1-8378-0d5b0f2150f0",
-    "atendimentoId": "86e4dfab-c871-48db-a1af-7f0b63947ee0",
+    "pacienteId": "fff0970b-9b48-48c9-82d7-e99a8c8f9d5e",
+    "atendimentoId": "34b40af2-70fb-4534-958b-bb1fabd83236",
     "passos": [
      {
       "acao": "createPatient",
@@ -4632,7 +4632,7 @@
      "procedencia": "particular",
      "triagem": false,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "espera": {
      "etapa": "finalizado",
@@ -4655,11 +4655,11 @@
      "procedencia": "particular",
      "triagem": false,
      "prioridade": "normal",
-     "empresaId": "f598c395-a7cf-4a08-840f-097eee675e7b"
+     "empresaId": "4940af4f-2a51-4dd1-9abb-85d14c2c95e8"
     },
     "indice": 39,
-    "pacienteId": "2e395b22-41af-4e48-a433-2ee1e6e6c7b6",
-    "atendimentoId": "530c44ab-0b9a-4afd-9c01-f1d5c9b0d911",
+    "pacienteId": "f2a440dc-3a55-4895-86bb-8fa3552caf57",
+    "atendimentoId": "b249e889-3eb9-4384-9756-db4a270395ad",
     "passos": [
      {
       "acao": "createPatient",
@@ -4784,8 +4784,8 @@
      "prioridade": "normal"
     },
     "indice": 40,
-    "pacienteId": "8453b701-555d-42c7-bd50-4478fdc7cc50",
-    "atendimentoId": "a6dad5e1-988b-4412-805d-64f8b137b185",
+    "pacienteId": "1c1db69e-ec88-4423-98f1-dc01a0472906",
+    "atendimentoId": "459f6ef4-6482-42ad-8591-d4fd5e242ddf",
     "passos": [
      {
       "acao": "createPatient",
@@ -4882,8 +4882,8 @@
      "prioridade": "normal"
     },
     "indice": 41,
-    "pacienteId": "c8fda428-062d-4ca5-bb10-18e5a0530924",
-    "atendimentoId": "156e5645-708f-475d-9735-3603f7f3a897",
+    "pacienteId": "55b7b25b-f5a5-4073-89f1-18c723355e76",
+    "atendimentoId": "20e73592-927d-4cdc-99d1-2cea97ea1020",
     "passos": [
      {
       "acao": "createPatient",
@@ -4975,8 +4975,8 @@
      "prioridade": "normal"
     },
     "indice": 42,
-    "pacienteId": "d591a4ec-7a00-44ed-a601-33a00bb589ba",
-    "atendimentoId": "3d306b73-4803-414b-a9ed-ff0689bd7294",
+    "pacienteId": "18b7c64f-abec-494d-8202-e3e1c2fc77a9",
+    "atendimentoId": "04192202-f6a5-4dfc-9de3-754eeb6fbed3",
     "passos": [
      {
       "acao": "createPatient",
@@ -5067,8 +5067,8 @@
      "prioridade": "normal"
     },
     "indice": 43,
-    "pacienteId": "8aca0953-26a2-431c-a5bc-76094ffbe5c4",
-    "atendimentoId": "7ed5b1c2-a811-4738-942d-7d27afb83786",
+    "pacienteId": "8a5e39d3-3fac-4a53-bcd3-da34be51459f",
+    "atendimentoId": "a6973dea-ae9a-4146-bdc4-08c06f376677",
     "passos": [
      {
       "acao": "createPatient",
@@ -5159,8 +5159,8 @@
      "prioridade": "normal"
     },
     "indice": 44,
-    "pacienteId": "c0e55a33-ad72-4b2e-84fa-e07c00649dcb",
-    "atendimentoId": "46c64596-e7ca-4da8-8bb7-9749e5aad46e",
+    "pacienteId": "225b2f91-2557-4d4b-96a9-af557c6a7b80",
+    "atendimentoId": "3046e4af-0cf3-4de5-9c91-c42407ae17de",
     "passos": [
      {
       "acao": "createPatient",
@@ -5253,8 +5253,8 @@
      "prioridade": "prioritario"
     },
     "indice": 45,
-    "pacienteId": "8fb75181-7250-4be7-872c-0c9f3971cbea",
-    "atendimentoId": "84239648-f9fb-44e6-bf7a-988fbac965c1",
+    "pacienteId": "08879c9c-8960-4a9e-9768-803cdb979e8a",
+    "atendimentoId": "8a5e7080-4e28-4ca2-b76f-ebdccc463369",
     "passos": [
      {
       "acao": "createPatient",
@@ -5368,8 +5368,8 @@
      "prioridade": "encaixe"
     },
     "indice": 46,
-    "pacienteId": "bda4a75e-e6eb-4e31-a6ec-b5f08646f07c",
-    "atendimentoId": "06921cf5-1043-4fc8-ab70-ae09db833ad3",
+    "pacienteId": "64602498-f7e2-43a2-a1b8-313cd4e2f910",
+    "atendimentoId": "5bfe9a45-4106-4793-ad85-81f5b289cac6",
     "passos": [
      {
       "acao": "createPatient",
@@ -5477,8 +5477,8 @@
      "prioridade": "normal"
     },
     "indice": 47,
-    "pacienteId": "970493db-8c57-4ea7-b91b-9f9dfd208acc",
-    "atendimentoId": "f21137fd-0864-419f-8a1d-48c7c105ed7d",
+    "pacienteId": "8103b2ce-922d-41a9-851f-4ed9c84ea53b",
+    "atendimentoId": "dbc8db8e-ba43-41fa-a38d-c99c75be1598",
     "passos": [
      {
       "acao": "createPatient",
@@ -5596,8 +5596,8 @@
      "cargo": "Soldador de estruturas metálicas"
     },
     "indice": 48,
-    "pacienteId": "91f86dd1-f2d9-4471-8990-ae3c12e31a9b",
-    "atendimentoId": "c04d4fad-36a9-4b55-8a4f-4f6d59c25ce0",
+    "pacienteId": "e4b4a94e-dff2-4d6e-8ca2-b10d3284f352",
+    "atendimentoId": "48f9730d-bb1b-45e0-8879-b723a718be2e",
     "passos": [
      {
       "acao": "createPatient",
@@ -5694,8 +5694,8 @@
      "naoRealiza": "DINAMO_PAL"
     },
     "indice": 49,
-    "pacienteId": "2d88ac11-d173-4bc2-a4ff-363275553bb8",
-    "atendimentoId": "6cfe2ff5-542d-4116-9a55-476c35c29546",
+    "pacienteId": "becf544e-f2f3-40a6-9905-6e4d1bf70546",
+    "atendimentoId": "1c30fa43-b9bb-4152-890f-4d5ceb564eea",
     "passos": [
      {
       "acao": "createPatient",
@@ -5819,8 +5819,8 @@
      "prioridade": "normal"
     },
     "indice": 50,
-    "pacienteId": "7f19e8ca-25aa-420d-96e2-911adc2115c6",
-    "atendimentoId": "b6af8887-a106-4147-b517-a5089b0293f4",
+    "pacienteId": "1c171188-1c72-4028-bf47-ff2593b70549",
+    "atendimentoId": "f91d77fe-483a-48d6-8edc-c8f7e20ebedf",
     "passos": [
      {
       "acao": "createPatient",
@@ -5975,8 +5975,8 @@
      "prioridade": "normal"
     },
     "indice": 51,
-    "pacienteId": "23442447-e200-4df8-868e-7c886c6c0d3b",
-    "atendimentoId": "d7060eb7-1bfa-4333-9f91-07508f38ed2f",
+    "pacienteId": "f2d77b0e-01ba-4021-bba2-416070198e08",
+    "atendimentoId": "6706e40a-fe6e-4885-a9a5-1a68e29d3aef",
     "passos": [
      {
       "acao": "createPatient",

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardBody, CardHeader, Textarea } from '@/components/ui';
 import {
   BLOCOS_FICHA,
@@ -26,6 +27,9 @@ export function BlocosDaFicha({
   /** Blocos que so aparecem em alguns atendimentos, como o psicossocial. */
   extras?: BlocoFicha[];
 }) {
+  // Controlado pelo mesmo motivo dos campos da consulta: com `defaultValue`,
+  // o React limpava o texto toda vez que o servidor recusava o salvamento.
+  const [textoAlteracoes, setTextoAlteracoes] = useState(alteracoes);
   return (
     <>
       {[...BLOCOS_FICHA, ...extras].map((bloco) => (
@@ -90,7 +94,8 @@ export function BlocosDaFicha({
                 </label>
                 <Textarea
                   name="alteracoes_exame_fisico"
-                  defaultValue={alteracoes}
+                  value={textoAlteracoes}
+                  onChange={(e) => setTextoAlteracoes(e.target.value)}
                   rows={3}
                   placeholder="Descreva aqui apenas os sistemas marcados como alterados."
                 />

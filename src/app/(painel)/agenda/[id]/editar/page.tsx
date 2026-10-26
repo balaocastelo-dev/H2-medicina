@@ -34,7 +34,7 @@ export default async function EditarAgendamentoPage({
     supabase
       .from('appointments')
       .select(
-        'id, patient_id, company_id, scheduled_at, attendance_kind, priority, professional_id, notes, status, appointment_exams(exam_type_id)',
+        'id, patient_id, company_id, scheduled_at, attendance_kind, priority, professional_id, notes, status, appointment_exams(exam_type_id), patients(id, full_name, cpf, company_id)',
       )
       .eq('id', id)
       .eq('tenant_id', ctx.tenant.id)
@@ -50,14 +50,17 @@ export default async function EditarAgendamentoPage({
         notes: string | null;
         status: string;
         appointment_exams: { exam_type_id: string }[];
+        patients: { id: string; full_name: string; cpf: string | null; company_id: string | null } | null;
       }>(),
     supabase
       .from('patients')
       .select('id, full_name, cpf, company_id')
       .eq('tenant_id', ctx.tenant.id)
       .is('deleted_at', null)
-      .order('full_name')
-      .limit(2000)
+      // Os mais recentes primeiro: quem acabou de ser cadastrado aparece
+      // sem precisar digitar. Os demais vem pela busca no banco.
+      .order('created_at', { ascending: false })
+      .limit(300)
       .returns<
         { id: string; full_name: string; cpf: string | null; company_id: string | null }[]
       >(),
@@ -104,7 +107,14 @@ export default async function EditarAgendamentoPage({
         }
         action={updateAppointment}
         rotuloBotao="Salvar alterações"
-        patients={patientsRes.data ?? []}
+        patients={
+          // O paciente deste agendamento entra sempre, mesmo fora dos mais
+          // recentes: sem ele o campo abriria vazio na edicao.
+          agendamento.patients &&
+          !(patientsRes.data ?? []).some((p) => p.id === agendamento.patients?.id)
+            ? [agendamento.patients, ...(patientsRes.data ?? [])]
+            : (patientsRes.data ?? [])
+        }
         companies={(companiesRes.data ?? []).map((c) => ({
           id: c.id,
           label: c.trade_name ?? c.legal_name,

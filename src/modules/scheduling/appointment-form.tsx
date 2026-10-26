@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useCallback, useState } from 'react';
 import Link from 'next/link';
 import {
   Alert,
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { BuscaSelecao } from '@/components/ui/busca-selecao';
 import { formatCPF } from '@/lib/format';
+import { buscarPacientes } from '@/modules/patients/busca-actions';
 import { INTERVALO_PADRAO_MINUTOS } from '@/modules/scheduling/intervalo';
 import type { ActionResult } from '@/lib/action-result';
 import type { Appointment } from '@/types/entities';
@@ -79,7 +80,25 @@ export function AppointmentForm({
   const [selectedExams, setSelectedExams] = useState<string[]>(iniciais?.exam_type_ids ?? []);
   const errors = state && !state.ok ? state.fieldErrors : undefined;
 
-  const patient = patients.find((p) => p.id === patientId);
+  // Pacientes que vieram da busca no banco, fora da lista carregada com a
+  // pagina. Guardados para a empresa dele ser puxada como a dos demais.
+  const [daBusca, setDaBusca] = useState<PatientOption[]>([]);
+  const buscarRemoto = useCallback(async (termo: string) => {
+    const achados = await buscarPacientes(termo);
+    setDaBusca((prev) => {
+      const ids = new Set(prev.map((p) => p.id));
+      return [...prev, ...achados.filter((a) => !ids.has(a.id))];
+    });
+    return achados.map((p) => ({
+      id: p.id,
+      rotulo: p.full_name,
+      detalhe: p.cpf ? formatCPF(p.cpf) : 'sem CPF',
+      busca: p.cpf ?? '',
+    }));
+  }, []);
+
+  const patient =
+    patients.find((p) => p.id === patientId) ?? daBusca.find((p) => p.id === patientId);
 
   /**
    * Escolher o paciente ja traz a empresa dele.
@@ -128,6 +147,7 @@ export function AppointmentForm({
               }}
               placeholder="Buscar por nome ou CPF"
               vazioRotulo="Nenhum paciente com esse nome ou CPF"
+              buscarRemoto={buscarRemoto}
               required
             />
           </Field>

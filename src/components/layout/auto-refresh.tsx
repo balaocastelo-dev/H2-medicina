@@ -46,7 +46,13 @@ export function AutoRefresh({ segundos = 25 }: { segundos?: number }) {
   const router = useRouter();
   const caminho = usePathname();
 
-  const viva = TELAS_VIVAS.some((t) => caminho === t || caminho.startsWith(`${t}/`));
+  // A ficha do paciente no consultorio (/medico/<id>) nao precisa recarregar
+  // sozinha: o medico esta preenchendo, e cada recarga refazia todas as
+  // consultas da tela -- com o banco nos Estados Unidos, peso a toa num
+  // sistema que ja fica lento com a clinica cheia (Isa, 26/10).
+  const viva =
+    !caminho.startsWith('/medico/') &&
+    TELAS_VIVAS.some((t) => caminho === t || caminho.startsWith(`${t}/`));
 
   useEffect(() => {
     if (!viva) return;

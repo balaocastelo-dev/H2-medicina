@@ -83,8 +83,10 @@ export default async function MedicoPage() {
     <div>
       {/* "ir atualizando conforme cada sala chama": com tres consultorios na
           mesma fila, esperar os 20s do painel deixaria duas salas olhando
-          para o mesmo paciente por tempo demais. */}
-      <AutoRefresh segundos={6} />
+          para o mesmo paciente por tempo demais. 10s e nao 6s: chamar ja e
+          atomico no banco (duas salas nao pegam o mesmo paciente), e cada
+          recarga custa uma viagem ate o banco nos EUA por consultorio. */}
+      <AutoRefresh segundos={10} />
 
       <PageHeader
         title="Módulo médico"

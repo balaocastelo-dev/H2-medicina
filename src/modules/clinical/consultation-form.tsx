@@ -146,29 +146,22 @@ export function ConsultationForm({
             {/* "Modulo medico: retirar 'queixa principal' e 'anamnese'" —
                 as colunas continuam no banco para nao perder o que ja foi
                 gravado; apenas sairam da tela. */}
+            {/* "Modulo medico - redundancia nas perguntas da ficha clinica"
+                -- Isa, 26/10. Antecedentes pessoais, medicamentos, alergias
+                e exame fisico eram perguntados duas vezes: aqui, em texto, e
+                nos blocos da ficha logo abaixo, que sao o que sai impresso.
+                "Conclusao" em texto confundia com a conclusao de aptidao.
+                Os cinco sairam da tela; as colunas ficam no banco, e o que
+                ja foi gravado nelas nao e apagado (campo que nao vem no
+                formulario nao e sobrescrito). */}
             <Field label="Historia clínica">
               <Textarea {...campo('clinical_history')} rows={2} />
-            </Field>
-            <Field label="Antecedentes pessoais">
-              <Textarea {...campo('personal_history')} rows={2} />
             </Field>
             <Field label="Antecedentes familiares">
               <Textarea {...campo('family_history')} rows={2} />
             </Field>
-            <Field label="Medicamentos em uso">
-              <Textarea {...campo('medications')} rows={2} />
-            </Field>
-            <Field label="Alergias">
-              <Textarea {...campo('allergies')} rows={2} />
-            </Field>
-            <Field label="Exame fisico">
-              <Textarea {...campo('physical_exam')} rows={2} />
-            </Field>
             <Field label="Diagnostico">
               <Textarea {...campo('diagnosis')} rows={2} />
-            </Field>
-            <Field label="Conclusao">
-              <Textarea {...campo('conclusion')} rows={2} />
             </Field>
             <Field label="Conduta">
               <Textarea {...campo('conduct')} rows={2} />

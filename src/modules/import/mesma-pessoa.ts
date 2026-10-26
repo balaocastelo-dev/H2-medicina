@@ -63,3 +63,54 @@ export function pacienteJaNaAgenda(nome: string, agenda: JaAgendado[]): string |
   if (achados.length !== 1) return null;
   return achados[0]!.patientId;
 }
+
+/**
+ * Quem ja veio antes, numa lista sem CPF.
+ *
+ * "se fazemos o agendamento pelo sistema automatico do proximo dia, e a
+ *  pessoa ja passou pela clinica anteriormente, o sistema nao reconhece o
+ *  novo agendamento" / "ainda esta duplicando os pacientes quando cadastra
+ *  de forma automatica" -- Isa, 26/10.
+ *
+ * A regra acima (nome so dentro do dia) evitava juntar homonimos, mas
+ * deixava cada lista nova criar um cadastro novo para quem ja tinha vindo.
+ * Na pratica a clinica ficou com tres "Raquel Patricia Felipe". O agendamento
+ * ia para o cadastro novo, sem CPF, e no totem o CPF achava o antigo -- sem
+ * agendamento -- e a pessoa virava encaixe.
+ *
+ * Agora, fora do dia, o nome tambem vale, com tres travas:
+ *
+ *   1. nome com tres palavras ou mais. "Maria Silva" e comum demais;
+ *      "Raquel Patricia Felipe" nao e;
+ *   2. UM cadastro so com esse nome. Dois ou mais, ninguem escolhe por
+ *      chute: cria-se o novo, com o selo "revisar", e a recepcao decide;
+ *   3. se a lista e o cadastro tem matricula, elas precisam bater.
+ *
+ * A matricula, quando vem, e conferida antes do nome: e a identidade que o
+ * eSisla usa.
+ */
+export function nomeServeParaReconhecer(nome: string): boolean {
+  return chaveDoNome(nome).split(' ').filter(Boolean).length >= 3;
+}
+
+export interface CadastroCandidato {
+  id: string;
+  full_name: string;
+  registration_number: string | null;
+}
+
+export function reconhecerPeloNome(
+  nome: string,
+  matricula: string | null | undefined,
+  candidatos: CadastroCandidato[],
+): string | null {
+  if (!nomeServeParaReconhecer(nome)) return null;
+  const alvo = chaveDoNome(nome);
+  const iguais = candidatos.filter((c) => chaveDoNome(c.full_name) === alvo);
+  if (iguais.length !== 1) return null;
+  const unico = iguais[0]!;
+  const m = (matricula ?? '').trim();
+  const n = (unico.registration_number ?? '').trim();
+  if (m && n && m !== n) return null;
+  return unico.id;
+}

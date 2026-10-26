@@ -252,3 +252,21 @@ export const DOCUMENTOS_DE_SAIDA = [
 ] as const;
 
 export type DocumentoDeSaida = (typeof DOCUMENTOS_DE_SAIDA)[number];
+
+/**
+ * Atendimento em que o medico so chama e conclui, sem ficha nem parecer.
+ *
+ * "precisamos que quando o agendamento seja dado andamento como pericia, ou
+ *  sisper, todas as perguntas de ficha clinica e apto, da aba modulo
+ *  medico, nao aparecam e seja apenas 'chamar' e 'concluir atendimento'"
+ *                                                    -- Isa, 26/10.
+ *
+ * Pericia e SISPER tem laudo proprio, feito fora do sistema: a ficha
+ * clinica e o parecer de aptidao sao do exame ocupacional da empresa. O
+ * ingresso escolar continua com a consulta completa.
+ */
+export const SO_CONCLUIR_NA_CONSULTA = new Set<string>(['estado', 'sisper']);
+
+export function consultaSoConcluir(origem: string | null | undefined): boolean {
+  return SO_CONCLUIR_NA_CONSULTA.has(origem ?? '');
+}
