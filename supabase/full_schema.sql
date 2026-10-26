@@ -8759,7 +8759,6 @@ declare
   v_ag record;
   v_rank_src int;
   v_rank_dst int;
-  v_outro record;
 begin
   if p_source = p_target then
     raise exception 'Origem e destino nao podem ser o mesmo cadastro' using errcode = '22023';
